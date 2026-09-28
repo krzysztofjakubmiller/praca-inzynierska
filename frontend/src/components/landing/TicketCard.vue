@@ -43,48 +43,51 @@ onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
-  <article
+  <div
     ref="ticket"
     class="ticket"
     :class="`ticket--${stage}`"
     :style="{ '--exam': `var(--exam-${exam.id})`, '--order': order }"
-    :aria-labelledby="`bilet-${exam.id}`"
   >
-    <div class="ticket__main">
-      <div class="ticket__line" aria-hidden="true">
-        <span class="ticket__track" />
-        <StationMarker :shape="exam.solid" class="ticket__marker" />
+    <article class="ticket__paper" :aria-labelledby="`bilet-${exam.id}`">
+      <div class="ticket__main">
+        <div class="ticket__line" aria-hidden="true">
+          <span class="ticket__track" />
+          <StationMarker :shape="exam.solid" class="ticket__marker" />
+        </div>
+        <h3 :id="`bilet-${exam.id}`" class="ticket__name">{{ exam.name }}</h3>
+        <p class="ticket__description">{{ exam.ticketDescription }}</p>
+        <dl class="ticket__options">
+          <div class="ticket__option">
+            <dt>{{ TICKET_NAMES.monthly }}</dt>
+            <dd>
+              <span class="ticket__price">{{ formatPrice(exam.prices.monthly) }}</span>
+              <span class="ticket__term">miesięcznie</span>
+            </dd>
+          </div>
+          <div class="ticket__option">
+            <dt>{{ TICKET_NAMES.annual }}</dt>
+            <dd>
+              <span class="ticket__price">{{ formatPrice(exam.prices.annual) }}</span>
+              <span class="ticket__term">ważny do {{ validUntil }}</span>
+              <span class="ticket__term"
+                >średnio {{ formatPrice(annual.perMonth) }} miesięcznie</span
+              >
+              <span v-if="annual.saving > 0" class="ticket__saving">
+                oszczędzasz {{ formatPrice(annual.saving) }}
+              </span>
+            </dd>
+          </div>
+        </dl>
       </div>
-      <h3 :id="`bilet-${exam.id}`" class="ticket__name">{{ exam.name }}</h3>
-      <p class="ticket__description">{{ exam.ticketDescription }}</p>
-      <dl class="ticket__options">
-        <div class="ticket__option">
-          <dt>{{ TICKET_NAMES.monthly }}</dt>
-          <dd>
-            <span class="ticket__price">{{ formatPrice(exam.prices.monthly) }}</span>
-            <span class="ticket__term">miesięcznie</span>
-          </dd>
-        </div>
-        <div class="ticket__option">
-          <dt>{{ TICKET_NAMES.annual }}</dt>
-          <dd>
-            <span class="ticket__price">{{ formatPrice(exam.prices.annual) }}</span>
-            <span class="ticket__term">ważny do {{ validUntil }}</span>
-            <span class="ticket__term">średnio {{ formatPrice(annual.perMonth) }} miesięcznie</span>
-            <span v-if="annual.saving > 0" class="ticket__saving">
-              oszczędzasz {{ formatPrice(annual.saving) }}
-            </span>
-          </dd>
-        </div>
-      </dl>
-    </div>
-    <div class="ticket__stub">
-      <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
-        Zobacz kosztorys
-        <ArrowIcon />
-      </RouterLink>
-    </div>
-  </article>
+      <div class="ticket__stub">
+        <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
+          Zobacz kosztorys
+          <ArrowIcon />
+        </RouterLink>
+      </div>
+    </article>
+  </div>
 </template>
 
 <style scoped>
@@ -93,15 +96,38 @@ onBeforeUnmount(() => observer?.disconnect())
   --notch: 0.7rem;
   --reach: min(42%, 11rem);
   --arrival: calc(var(--order) * 140ms);
+  /* Cień rysuje filtr, bo idzie po kształcie razem z wyciętymi wcięciami. */
+  filter: drop-shadow(0 1px 1px rgb(29 31 34 / 0.08)) drop-shadow(0 10px 14px rgb(29 31 34 / 0.1));
+  transition:
+    translate 0.3s ease,
+    filter 0.3s ease;
+}
+
+/*
+ * Wcięcia perforacji to prawdziwe otwory w bilecie (maska), wycięte na wysokości linii
+ * oddzielającej część z przyciskiem, która ma stały rozmiar.
+ */
+.ticket__paper {
+  --stub-h: calc(3rem + 2 * var(--pad));
+  --notch-x: 0%;
+  --notch-y: calc(100% - var(--stub-h));
+  --notch-x2: 100%;
+  --notch-y2: var(--notch-y);
   display: grid;
   border-radius: 1.25rem;
   background: var(--surface);
-  box-shadow:
-    0 1px 2px rgb(29 31 34 / 0.06),
-    0 14px 32px -18px rgb(29 31 34 / 0.28);
-  transition:
-    translate 0.3s ease,
-    box-shadow 0.3s ease;
+  mask:
+    radial-gradient(
+      circle var(--notch) at var(--notch-x) var(--notch-y),
+      transparent calc(100% - 1px),
+      #000 100%
+    ),
+    radial-gradient(
+      circle var(--notch) at var(--notch-x2) var(--notch-y2),
+      transparent calc(100% - 1px),
+      #000 100%
+    );
+  mask-composite: intersect;
 }
 
 .ticket__main {
@@ -161,9 +187,7 @@ onBeforeUnmount(() => observer?.disconnect())
 .ticket:focus-within {
   --marker-fill: var(--exam);
   translate: 0 -3px;
-  box-shadow:
-    0 2px 4px rgb(29 31 34 / 0.08),
-    0 22px 40px -20px rgb(29 31 34 / 0.36);
+  filter: drop-shadow(0 2px 2px rgb(29 31 34 / 0.1)) drop-shadow(0 16px 20px rgb(29 31 34 / 0.14));
 }
 
 .ticket:focus-within .ticket__track {
@@ -174,9 +198,7 @@ onBeforeUnmount(() => observer?.disconnect())
   .ticket:hover {
     --marker-fill: var(--exam);
     translate: 0 -3px;
-    box-shadow:
-      0 2px 4px rgb(29 31 34 / 0.08),
-      0 22px 40px -20px rgb(29 31 34 / 0.36);
+    filter: drop-shadow(0 2px 2px rgb(29 31 34 / 0.1)) drop-shadow(0 16px 20px rgb(29 31 34 / 0.14));
   }
 
   .ticket:hover .ticket__track {
@@ -245,59 +267,30 @@ onBeforeUnmount(() => observer?.disconnect())
   font-weight: 650;
 }
 
-/* Część z przyciskiem oddzielona perforacją z dwoma wcięciami. */
+/* Część z przyciskiem oddzielona perforacją. */
 .ticket__stub {
-  position: relative;
   display: flex;
   align-items: center;
-  padding: var(--pad);
+  height: var(--stub-h);
+  padding-inline: var(--pad);
   border-top: 2px dashed var(--hairline);
 }
 
-.ticket__stub::before,
-.ticket__stub::after {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--notch) - 1px);
-  width: calc(2 * var(--notch));
-  height: calc(2 * var(--notch));
-  border-radius: 50%;
-  background: var(--ground);
-}
-
-.ticket__stub::before {
-  left: calc(-1 * var(--notch));
-}
-
-.ticket__stub::after {
-  right: calc(-1 * var(--notch));
-}
-
 @media (min-width: 48rem) {
-  .ticket {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .ticket__paper {
+    --stub-w: 16rem;
+    --notch-x: calc(100% - var(--stub-w));
+    --notch-y: 0%;
+    --notch-x2: var(--notch-x);
+    --notch-y2: 100%;
+    grid-template-columns: minmax(0, 1fr) var(--stub-w);
   }
 
   .ticket__stub {
     justify-content: center;
-    padding-inline: clamp(1.5rem, 0.5rem + 2vw, 2.5rem);
+    height: auto;
     border-top: 0;
     border-left: 2px dashed var(--hairline);
-  }
-
-  .ticket__stub::before,
-  .ticket__stub::after {
-    left: calc(-1 * var(--notch) - 1px);
-  }
-
-  .ticket__stub::before {
-    top: calc(-1 * var(--notch));
-  }
-
-  .ticket__stub::after {
-    top: auto;
-    right: auto;
-    bottom: calc(-1 * var(--notch));
   }
 }
 </style>
