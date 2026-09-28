@@ -111,6 +111,13 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   --marker-fill: var(--exam);
 }
 
+/* Znak zapytania to sama kreska, więc wypełnienie go nie zmienia; aktywny dostaje ciemne tło. */
+.route__stop--about.route__stop--active .route__marker {
+  --marker-stroke: var(--surface);
+  border-radius: 50%;
+  background: var(--ink);
+}
+
 @media (min-width: 48rem) {
   .route__stop + .route__stop::before {
     margin-inline: 0.35rem;
