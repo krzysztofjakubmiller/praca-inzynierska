@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, useTemplateRef } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { ANNUAL_TICKET_VALID_UNTIL, EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 import { useStationProgress } from '@/composables/useStationProgress'
 import { TICKET_NAMES, cheapestTicket, formatPrice } from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
 import RouteStrip from '@/components/landing/RouteStrip.vue'
-import SolidStage from '@/components/landing/SolidStage.vue'
+import SolidCanvas from '@/components/landing/SolidCanvas.vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import TicketCard from '@/components/landing/TicketCard.vue'
 
@@ -19,25 +19,42 @@ const validUntil = new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(ANNUAL_TICKET_VALID_UNTIL))
 const year = new Date().getFullYear()
 
-// Stops in the order of the ride: the exam stations, then the ticket office.
+// Stops in the order of the ride: the start, the exam stations and the ticket office.
 const stops: HTMLElement[] = []
-const readingLine = useTemplateRef<HTMLElement>('readingLine')
-const { position } = useStationProgress(
+// Resting places of the solids on phones, one per exam.
+const slots: HTMLElement[] = []
+const stage = useTemplateRef<HTMLElement>('stage')
+const flat = ref(false)
+
+const { position, readPosition } = useStationProgress(
   () => stops,
-  () => readingLine.value?.getBoundingClientRect().top ?? window.innerHeight / 2,
+  () => window.innerHeight / 2,
 )
 
-const activeStop = computed(() => Math.floor(position.value))
-const stageExam = computed(() => EXAMS[Math.min(Math.max(activeStop.value, 0), EXAMS.length - 1)]!)
+// The start is stop 0, so the exam stations are counted from 1.
+const activeStop = computed(() => Math.floor(position.value) - 1)
+const readStations = () => readPosition() - 1
+const getStage = () => stage.value
+const getSlots = () => slots
 
 function setStop(index: number, element: unknown) {
   if (element instanceof HTMLElement) stops[index] = element
 }
+
+function setSlot(index: number, element: unknown) {
+  if (element instanceof HTMLElement) slots[index] = element
+}
 </script>
 
 <template>
-  <div class="landing">
-    <div ref="readingLine" class="landing__reading-line" aria-hidden="true" />
+  <div class="landing" :class="{ 'landing--flat': flat }">
+    <SolidCanvas
+      :exams="EXAMS"
+      :read-stations="readStations"
+      :get-stage="getStage"
+      :get-slots="getSlots"
+      @unavailable="flat = true"
+    />
 
     <header class="top">
       <a class="top__wordmark" href="#start">{{ PRODUCT_NAME }}</a>
@@ -46,9 +63,14 @@ function setStop(index: number, element: unknown) {
 
     <main>
       <div class="ride">
-        <SolidStage class="ride__stage" :exam="stageExam" />
+        <div ref="stage" class="ride__stage wall" aria-hidden="true" />
 
-        <section id="start" class="ride__stop start" aria-labelledby="start-title">
+        <section
+          id="start"
+          :ref="(element) => setStop(0, element)"
+          class="ride__stop start"
+          aria-labelledby="start-title"
+        >
           <h1 id="start-title" class="start__title">{{ PRODUCT_NAME }}</h1>
           <p class="start__lead">Nie zapamiętujesz odpowiedzi, uczysz się metody.</p>
           <p class="start__text">
@@ -65,22 +87,29 @@ function setStop(index: number, element: unknown) {
           v-for="(exam, index) in EXAMS"
           :id="exam.id"
           :key="exam.id"
-          :ref="(element) => setStop(index, element)"
+          :ref="(element) => setStop(index + 1, element)"
           class="ride__stop station"
           :style="{ '--exam': `var(--exam-${exam.id})` }"
           :aria-labelledby="`${exam.id}-title`"
         >
-          <div class="sign">
-            <StationMarker :shape="exam.solid" class="sign__marker" />
-            <h2 :id="`${exam.id}-title`" class="sign__name">{{ exam.name }}</h2>
+          <div
+            :ref="(element) => setSlot(index, element)"
+            class="station__slot wall"
+            aria-hidden="true"
+          />
+          <div class="station__body">
+            <div class="sign">
+              <StationMarker :shape="exam.solid" class="sign__marker" />
+              <h2 :id="`${exam.id}-title`" class="sign__name">{{ exam.name }}</h2>
+            </div>
+            <p class="station__text">{{ exam.description }}</p>
           </div>
-          <p class="station__text">{{ exam.description }}</p>
         </section>
       </div>
 
       <section
         id="bilety"
-        :ref="(element) => setStop(EXAMS.length, element)"
+        :ref="(element) => setStop(EXAMS.length + 1, element)"
         class="tickets"
         aria-labelledby="bilety-title"
       >
@@ -120,20 +149,6 @@ function setStop(index: number, element: unknown) {
 </template>
 
 <style scoped>
-.landing {
-  --stage-h: clamp(15rem, 44svh, 27rem);
-  --stop-min: calc(100svh - var(--header-h) - var(--stage-h));
-}
-
-/* The line at which a station counts as reached. Read by the scroll tracking. */
-.landing__reading-line {
-  position: fixed;
-  top: calc(var(--header-h) + var(--stage-h) + var(--stop-min) * 0.3);
-  height: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .top {
   position: sticky;
   top: 0;
@@ -156,29 +171,64 @@ function setStop(index: number, element: unknown) {
   white-space: nowrap;
 }
 
+/*
+ * A tiled station wall, fading out towards its edges. Walls lie under the canvas with
+ * the solids (z-index -1), the text lies above it.
+ */
+.wall {
+  position: relative;
+  z-index: -2;
+}
+
+.wall::before {
+  --tile: clamp(1.75rem, 1.2rem + 1.6vw, 2.75rem);
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, rgb(29 31 34 / 0.07) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(29 31 34 / 0.07) 1px, transparent 1px);
+  background-position: center;
+  background-size: var(--tile) var(--tile);
+  mask-image: radial-gradient(closest-side, #000 30%, transparent 100%);
+}
+
+/* Shared by all solids on wide screens only. */
 .ride__stage {
-  position: sticky;
-  top: var(--header-h);
-  z-index: 2;
-  height: var(--stage-h);
-  border-bottom: 1px solid var(--hairline);
+  display: none;
 }
 
 .ride__stop {
-  position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  min-height: var(--stop-min);
-  padding: clamp(1.75rem, 1rem + 3vw, 3rem) var(--gutter) clamp(3rem, 2rem + 5vw, 5rem);
-  scroll-margin-top: calc(var(--header-h) + var(--stage-h));
-  container-type: inline-size;
+  padding: clamp(2rem, 1rem + 3vw, 3rem) var(--gutter) clamp(3rem, 2rem + 5vw, 5rem);
+  scroll-margin-top: var(--header-h);
 }
 
 .start {
-  justify-content: center;
   gap: 1rem;
+}
+
+/* On phones every station has its own place for its solid, which moves with the page. */
+.station {
+  padding-top: 0;
+}
+
+.station__slot {
+  height: clamp(13rem, 36svh, 20rem);
+  margin-inline: calc(-1 * var(--gutter));
+}
+
+.landing--flat .station__slot {
+  display: none;
+}
+
+.station__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  container-type: inline-size;
 }
 
 .start__title {
@@ -297,31 +347,34 @@ function setStop(index: number, element: unknown) {
 }
 
 @media (min-width: 60rem) {
-  .landing {
-    --stage-h: 0px;
-  }
-
-  .landing__reading-line {
-    top: 50svh;
-  }
-
   .ride {
     display: grid;
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   }
 
   .ride__stage {
+    position: sticky;
+    top: var(--header-h);
+    display: block;
     grid-row: 1 / span 4;
     grid-column: 2;
     align-self: start;
     height: calc(100svh - var(--header-h));
-    border-bottom: 0;
     border-left: 1px solid var(--hairline);
   }
 
   .ride__stop {
     grid-column: 1;
     justify-content: center;
+    min-height: calc(100svh - var(--header-h));
+  }
+
+  .station {
+    padding-top: clamp(2rem, 1rem + 3vw, 3rem);
+  }
+
+  .station__slot {
+    display: none;
   }
 
   .tickets {

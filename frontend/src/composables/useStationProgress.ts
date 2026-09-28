@@ -18,20 +18,25 @@ export function stationPosition(tops: number[], heights: number[]): number {
 
 /**
  * Tracks `stationPosition` while the page scrolls. `getLine` returns the reading line
- * as a distance from the top of the viewport.
+ * as a distance from the top of the viewport. `position` is updated once per frame;
+ * `readPosition` measures the page on demand, for code that runs its own frames.
  */
 export function useStationProgress(getStops: () => HTMLElement[], getLine: () => number) {
   const position = ref(-1)
   let frame = 0
 
-  function measure() {
-    frame = 0
+  function readPosition(): number {
     const line = getLine()
     const rects = getStops().map((stop) => stop.getBoundingClientRect())
-    position.value = stationPosition(
+    return stationPosition(
       rects.map((rect) => rect.top - line),
       rects.map((rect) => rect.height),
     )
+  }
+
+  function measure() {
+    frame = 0
+    position.value = readPosition()
   }
 
   function schedule() {
@@ -50,5 +55,5 @@ export function useStationProgress(getStops: () => HTMLElement[], getLine: () =>
     if (frame) cancelAnimationFrame(frame)
   })
 
-  return { position }
+  return { position, readPosition }
 }

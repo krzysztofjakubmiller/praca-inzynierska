@@ -13,8 +13,8 @@ beforeAll(() => {
 
 async function renderAt(path: string) {
   await router.push(path)
-  // jsdom has no WebGL, so the 3D stage is replaced with a stub.
-  const wrapper = mount(App, { global: { plugins: [router], stubs: { SolidStage: true } } })
+  // jsdom has no WebGL, so the canvas with the solids is replaced with a stub.
+  const wrapper = mount(App, { global: { plugins: [router], stubs: { SolidCanvas: true } } })
   await flushPromises()
   return wrapper
 }
