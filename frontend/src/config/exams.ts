@@ -1,0 +1,56 @@
+export type SolidKind = 'sphere' | 'tetrahedron' | 'cube'
+
+export interface Exam {
+  /** Anchor of the station section and suffix of the `--exam-*` colour token. */
+  id: 'e8' | 'matura-podstawowa' | 'matura-rozszerzona'
+  name: string
+  shortName: string
+  solid: SolidKind
+  soon: boolean
+  description: string
+  ticketDescription: string
+  /** Prices in zloty. */
+  prices: { monthly: number; annual: number }
+}
+
+// The price list is not decided yet, so these are placeholders ending in 9.
+export const EXAMS: readonly Exam[] = [
+  {
+    id: 'e8',
+    name: 'Egzamin ósmoklasisty',
+    shortName: 'E8',
+    solid: 'sphere',
+    soon: true,
+    description:
+      'Ta sama metoda dla ósmej klasy: typy zadań z egzaminu, za każdym razem z nowymi liczbami. Właśnie nad tym pracujemy.',
+    ticketDescription: 'Zadania z egzaminu ósmoklasisty z mapą tematów i codziennymi powtórkami.',
+    prices: { monthly: 39, annual: 269 },
+  },
+  {
+    id: 'matura-podstawowa',
+    name: 'Matura podstawowa',
+    shortName: 'Podstawa',
+    solid: 'tetrahedron',
+    soon: false,
+    description:
+      'Mapa tematów podpowie, od czego zacząć, a codzienne powtórki wrócą do każdego typu zadania, zanim zdążysz go zapomnieć.',
+    ticketDescription:
+      'Mapa tematów matury podstawowej, codzienne powtórki, arkusze i asystent przy zadaniach.',
+    prices: { monthly: 49, annual: 309 },
+  },
+  {
+    id: 'matura-rozszerzona',
+    name: 'Matura rozszerzona',
+    shortName: 'Rozszerzona',
+    solid: 'cube',
+    soon: false,
+    description:
+      'Zadanie otwarte rozwiązujesz w zeszycie, a aplikacja przechodzi z tobą przez kolejne punkty schematu oceniania. Gdy utkniesz, podpowie zamiast podać gotowca.',
+    ticketDescription:
+      'Mapa tematów matury rozszerzonej, powtórki, arkusze i zadania otwarte sprawdzane punkt po punkcie.',
+    prices: { monthly: 59, annual: 379 },
+  },
+]
+
+/** Annual tickets bought for the 2027 exams expire on this day. */
+export const ANNUAL_TICKET_VALID_UNTIL = '2027-08-31'
