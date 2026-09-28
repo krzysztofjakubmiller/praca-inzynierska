@@ -1,5 +1,7 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { PRODUCT_NAME } from '@/config/product'
+</script>
 
 <template>
-  <p>Szkielet aplikacji</p>
+  <h1>{{ PRODUCT_NAME }}</h1>
 </template>
