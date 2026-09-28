@@ -47,6 +47,3 @@ export const EXAMS: readonly Exam[] = [
     prices: { monthly: 59, annual: 379 },
   },
 ]
-
-/** Dzień, w którym wygasają bilety roczne na egzaminy w 2027 roku. */
-export const ANNUAL_TICKET_VALID_UNTIL = '2027-08-31'

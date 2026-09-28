@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 
 import { EXAMS, type Exam } from '@/config/exams'
-import { cheapestTicket, formatPrice } from '@/utils/tickets'
+import { annualTicketEnd, cheapestTicket, formatPrice } from '@/utils/tickets'
 
 function exam(overrides: Partial<Exam>): Exam {
   return { ...EXAMS[1]!, ...overrides }
@@ -16,6 +16,17 @@ describe('cheapestTicket', () => {
 
   it('returns nothing when there are no exams', () => {
     expect(cheapestTicket([])).toBeUndefined()
+  })
+})
+
+describe('annualTicketEnd', () => {
+  it('ends on the coming 31 August before September', () => {
+    expect(annualTicketEnd(new Date(2027, 2, 1))).toEqual(new Date(2027, 7, 31))
+    expect(annualTicketEnd(new Date(2027, 7, 31))).toEqual(new Date(2027, 7, 31))
+  })
+
+  it('ends in the next year from September on', () => {
+    expect(annualTicketEnd(new Date(2026, 8, 29))).toEqual(new Date(2027, 7, 31))
   })
 })
 

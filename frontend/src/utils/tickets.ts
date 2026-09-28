@@ -25,6 +25,15 @@ export function cheapestTicket(exams: readonly Exam[]): TicketOffer | undefined 
   return cheapest
 }
 
+/**
+ * Ostatni dzień ważności biletu rocznego kupionego danego dnia: najbliższy 31 sierpnia.
+ * Od września sprzedajemy już bilet na egzaminy w następnym roku.
+ */
+export function annualTicketEnd(today: Date): Date {
+  const year = today.getMonth() >= 8 ? today.getFullYear() + 1 : today.getFullYear()
+  return new Date(year, 7, 31)
+}
+
 const priceFormat = new Intl.NumberFormat('pl-PL', {
   style: 'currency',
   currency: 'PLN',

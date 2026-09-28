@@ -1,23 +1,23 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue'
-import { ANNUAL_TICKET_VALID_UNTIL, EXAMS } from '@/config/exams'
+import { EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 import { useStationProgress } from '@/composables/useStationProgress'
-import { TICKET_NAMES, cheapestTicket, formatPrice } from '@/utils/tickets'
+import { TICKET_NAMES, annualTicketEnd, cheapestTicket, formatPrice } from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
 import RouteStrip from '@/components/landing/RouteStrip.vue'
 import SolidCanvas from '@/components/landing/SolidCanvas.vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import TicketCard from '@/components/landing/TicketCard.vue'
 
+const today = new Date()
 const cheapest = cheapestTicket(EXAMS)
 const validUntil = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
   month: 'long',
   year: 'numeric',
-  timeZone: 'UTC',
-}).format(new Date(ANNUAL_TICKET_VALID_UNTIL))
-const year = new Date().getFullYear()
+}).format(annualTicketEnd(today))
+const year = today.getFullYear()
 
 const STEPS = [
   {
