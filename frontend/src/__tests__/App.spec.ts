@@ -25,8 +25,8 @@ describe('App', () => {
     expect(wrapper.find('h1').text()).toBe(PRODUCT_NAME)
     expect(wrapper.findAll('h2').map((heading) => heading.text())).toEqual([
       ...EXAMS.map((exam) => exam.name),
-      'Bilety',
       'Jak to działa',
+      'Bilety',
     ])
     expect(wrapper.findAll('.ticket')).toHaveLength(EXAMS.length)
     expect(document.title).toBe(PRODUCT_NAME)

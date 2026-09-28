@@ -38,7 +38,7 @@ const STEPS = [
   },
 ]
 
-// Przystanki w kolejności na stronie: start, stacje egzaminów, bilety i opis aplikacji.
+// Przystanki w kolejności na stronie: start, stacje egzaminów, opis aplikacji i bilety.
 const stops: HTMLElement[] = []
 // Miejsca brył na telefonie, po jednym na egzamin.
 const slots: HTMLElement[] = []
@@ -130,42 +130,8 @@ function setSlot(index: number, element: unknown) {
       </div>
 
       <section
-        id="bilety"
-        :ref="(element) => setStop(EXAMS.length + 1, element)"
-        class="tickets"
-        aria-labelledby="bilety-title"
-      >
-        <div class="tickets__head">
-          <div class="sign sign--ink">
-            <StationMarker shape="ticket" class="sign__marker" />
-            <h2 id="bilety-title" class="sign__name">Bilety</h2>
-          </div>
-          <p class="tickets__intro">
-            Bilet miesięczny przedłużasz co miesiąc. Roczny kupujesz raz i działa do końca sierpnia
-            po egzaminie.
-          </p>
-        </div>
-
-        <ol class="tickets__list">
-          <li v-for="(exam, index) in EXAMS" :key="exam.id">
-            <TicketCard :exam="exam" :valid-until="validUntil" :order="index" />
-          </li>
-        </ol>
-
-        <div v-if="cheapest" class="tickets__cheapest">
-          <RouterLink class="button" :to="{ name: 'coming-soon' }">
-            Już od {{ formatPrice(cheapest.price) }}
-            <ArrowIcon />
-          </RouterLink>
-          <p class="tickets__cheapest-note">
-            {{ TICKET_NAMES[cheapest.kind] }}, {{ cheapest.exam.name.toLowerCase() }}
-          </p>
-        </div>
-      </section>
-
-      <section
         id="jak-to-dziala"
-        :ref="(element) => setStop(EXAMS.length + 2, element)"
+        :ref="(element) => setStop(EXAMS.length + 1, element)"
         class="about"
         aria-labelledby="jak-to-dziala-title"
       >
@@ -204,6 +170,40 @@ function setSlot(index: number, element: unknown) {
             </p>
           </div>
         </div>
+
+        <div v-if="cheapest" class="about__cheapest">
+          <RouterLink class="button" :to="{ name: 'coming-soon' }">
+            Już od {{ formatPrice(cheapest.price) }}
+            <ArrowIcon />
+          </RouterLink>
+          <p class="about__cheapest-note">
+            {{ TICKET_NAMES[cheapest.kind] }}, {{ cheapest.exam.name.toLowerCase() }}
+          </p>
+        </div>
+      </section>
+
+      <section
+        id="bilety"
+        :ref="(element) => setStop(EXAMS.length + 2, element)"
+        class="tickets"
+        aria-labelledby="bilety-title"
+      >
+        <div class="tickets__head">
+          <div class="sign sign--ink">
+            <StationMarker shape="ticket" class="sign__marker" />
+            <h2 id="bilety-title" class="sign__name">Bilety</h2>
+          </div>
+          <p class="tickets__intro">
+            Bilet miesięczny przedłużasz co miesiąc. Roczny kupujesz raz i działa do końca sierpnia
+            po egzaminie.
+          </p>
+        </div>
+
+        <ol class="tickets__list">
+          <li v-for="(exam, index) in EXAMS" :key="exam.id">
+            <TicketCard :exam="exam" :valid-until="validUntil" :order="index" />
+          </li>
+        </ol>
       </section>
     </main>
 
@@ -373,6 +373,7 @@ function setSlot(index: number, element: unknown) {
   display: grid;
   gap: clamp(2rem, 1.5rem + 2vw, 3rem);
   padding: clamp(3.5rem, 2rem + 6vw, 7rem) var(--gutter) clamp(4rem, 2.5rem + 6vw, 7rem);
+  border-top: 1px solid var(--hairline);
   scroll-margin-top: var(--header-h);
 }
 
@@ -394,17 +395,6 @@ function setSlot(index: number, element: unknown) {
   gap: 1.25rem;
   padding: 0;
   list-style: none;
-}
-
-.tickets__cheapest {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.75rem 1.25rem;
-}
-
-.tickets__cheapest-note {
-  color: var(--ink-soft);
 }
 
 .about {
@@ -487,6 +477,17 @@ function setSlot(index: number, element: unknown) {
   border-top: 1px solid var(--hairline);
 }
 
+.about__cheapest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.about__cheapest-note {
+  color: var(--ink-soft);
+}
+
 .foot {
   padding: 1.75rem var(--gutter) 2.25rem;
   border-top: 1px solid var(--hairline);
@@ -536,8 +537,7 @@ function setSlot(index: number, element: unknown) {
     top: calc(var(--header-h) + 2rem);
   }
 
-  .tickets__list,
-  .tickets__cheapest {
+  .tickets__list {
     grid-column: 2;
   }
 
@@ -553,7 +553,8 @@ function setSlot(index: number, element: unknown) {
   }
 
   .about__route,
-  .about__notes {
+  .about__notes,
+  .about__cheapest {
     grid-column: 2;
   }
 

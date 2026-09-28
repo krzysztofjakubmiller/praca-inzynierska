@@ -2,7 +2,7 @@
 import type { Exam } from '@/config/exams'
 import StationMarker from './StationMarker.vue'
 
-/** `active` to numer bieżącego przystanku; po egzaminach są bilety i opis aplikacji. */
+/** `active` to numer bieżącego przystanku; po egzaminach są opis aplikacji i bilety. */
 defineProps<{ exams: readonly Exam[]; active: number }>()
 </script>
 
@@ -26,29 +26,29 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
         </a>
       </li>
       <li
-        class="route__stop route__stop--tickets"
+        class="route__stop route__stop--about"
         :class="{ 'route__stop--active': active === exams.length }"
       >
         <a
           class="route__link"
-          href="#bilety"
+          href="#jak-to-dziala"
           :aria-current="active === exams.length ? 'location' : undefined"
         >
-          <StationMarker shape="ticket" class="route__marker" />
-          <span class="route__label">Bilety</span>
+          <StationMarker shape="question" class="route__marker" />
+          <span class="route__label">Jak to działa</span>
         </a>
       </li>
       <li
-        class="route__stop route__stop--about"
+        class="route__stop route__stop--tickets"
         :class="{ 'route__stop--active': active === exams.length + 1 }"
       >
         <a
           class="route__link"
-          href="#jak-to-dziala"
+          href="#bilety"
           :aria-current="active === exams.length + 1 ? 'location' : undefined"
         >
-          <StationMarker shape="question" class="route__marker" />
-          <span class="route__label">Jak to działa</span>
+          <StationMarker shape="ticket" class="route__marker" />
+          <span class="route__label">Bilety</span>
         </a>
       </li>
     </ol>
