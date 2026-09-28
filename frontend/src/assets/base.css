@@ -1,0 +1,133 @@
+:root {
+  --ground: #f2f3f0;
+  --surface: #ffffff;
+  --ink: #1d1f22;
+  --ink-raised: #36393e;
+  --ink-soft: #55595f;
+  --hairline: rgb(29 31 34 / 0.12);
+
+  --exam-e8: #2e6fe0;
+  --exam-matura-podstawowa: #1f9d55;
+  --exam-matura-rozszerzona: #e23b2e;
+
+  --font-sans: 'Mona Sans Variable', system-ui, sans-serif;
+
+  --gutter: clamp(1rem, 0.55rem + 2.2vw, 2.75rem);
+  --header-h: 3.5rem;
+
+  color-scheme: light;
+  scrollbar-color: var(--ink-soft) var(--ground);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root {
+    scroll-behavior: smooth;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p,
+ol,
+ul,
+dl,
+dd {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.22em;
+}
+
+svg,
+canvas {
+  display: block;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+::selection {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65em;
+  min-height: 3rem;
+  padding: 0.7em 1.3em 0.72em 1.4em;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ground);
+  font: inherit;
+  font-weight: 650;
+  line-height: 1.1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.button:hover {
+  --nudge: 0.2em;
+  background: var(--ink-raised);
+}
+
+.button:active {
+  translate: 0 1px;
+}
+
+.button--quiet {
+  background: transparent;
+  color: var(--ink);
+}
+
+.button--quiet:hover {
+  background: var(--ink);
+  color: var(--ground);
+}

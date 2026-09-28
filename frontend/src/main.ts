@@ -1,3 +1,6 @@
+import '@fontsource-variable/mona-sans/wdth.css'
+import './assets/base.css'
+
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
