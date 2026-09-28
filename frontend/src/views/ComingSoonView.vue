@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// Opened straight from a link there is no page to go back to.
+// Po wejściu prosto z linku nie ma strony, do której można wrócić.
 function goBack() {
   if (window.history.state?.back) router.back()
   else router.push({ name: 'home' })

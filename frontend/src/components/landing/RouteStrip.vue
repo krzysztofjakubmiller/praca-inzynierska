@@ -2,10 +2,7 @@
 import type { Exam } from '@/config/exams'
 import StationMarker from './StationMarker.vue'
 
-/**
- * `active` is the index of the current stop; after the exams come the ticket office
- * and the description of the app.
- */
+/** `active` to numer bieżącego przystanku; po egzaminach są bilety i opis aplikacji. */
 defineProps<{ exams: readonly Exam[]; active: number }>()
 </script>
 
@@ -120,7 +117,7 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   }
 }
 
-/* On narrow screens only the markers stay visible; the names remain for screen readers. */
+/* Na wąskim ekranie widać same znaczniki, nazwy zostają dla czytników ekranu. */
 @media (max-width: 47.99rem) {
   .route__stop:not(.route__stop--tickets) .route__label {
     position: absolute;

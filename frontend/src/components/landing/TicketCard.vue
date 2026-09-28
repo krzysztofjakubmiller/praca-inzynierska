@@ -5,15 +5,15 @@ import { TICKET_NAMES, formatPrice } from '@/utils/tickets'
 import ArrowIcon from './ArrowIcon.vue'
 import StationMarker from './StationMarker.vue'
 
-/** `order` is the ticket's place on the list; the lines are drawn one after another. */
+/** `order` to miejsce biletu na liście; linie rysują się po kolei. */
 defineProps<{ exam: Exam; validUntil: string; order: number }>()
 
 const ticket = useTemplateRef<HTMLElement>('ticket')
-// waiting: out of sight, line not drawn yet; arriving: in sight, line being drawn.
+// waiting: bilet poza ekranem, linii jeszcze nie ma; arriving: bilet widoczny, linia się rysuje.
 const stage = ref<'complete' | 'waiting' | 'arriving'>('complete')
 let observer: IntersectionObserver | undefined
 
-// The line is hidden only once the script runs, so without it the ticket is complete.
+// Linię chowamy dopiero w skrypcie, więc bez JavaScriptu bilet jest kompletny.
 onMounted(() => {
   if (!('IntersectionObserver' in window) || !ticket.value) return
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -96,10 +96,7 @@ onBeforeUnmount(() => observer?.disconnect())
   padding: var(--pad);
 }
 
-/*
- * The exam's line runs in from the edge of the ticket to the middle of its station;
- * the station's white fill covers the end of the line.
- */
+/* Linia dochodzi do środka znacznika, a jego białe wypełnienie zakrywa jej koniec. */
 .ticket__line {
   display: flex;
   align-items: center;
@@ -119,7 +116,6 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: 1.6rem;
 }
 
-/* Out of sight: no line yet. In sight: the line runs in from the edge, then its station appears. */
 .ticket--waiting .ticket__track {
   scale: 0 1;
 }
@@ -133,7 +129,7 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 
 .ticket--arriving .ticket__marker {
-  animation: show-station 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--arrival) + 0.6s) both;
+  animation: show-station 0.4s cubic-bezier(0.22, 1, 0.36, 1) calc(var(--arrival) + 0.6s) both;
 }
 
 @keyframes draw-line {
@@ -148,7 +144,6 @@ onBeforeUnmount(() => observer?.disconnect())
   }
 }
 
-/* Pointing at a ticket is like holding it to a validator: the line reaches on and the station lights up. */
 .ticket:focus-within {
   --marker-fill: var(--exam);
   translate: 0 -3px;
@@ -231,7 +226,7 @@ onBeforeUnmount(() => observer?.disconnect())
   font-size: 0.875rem;
 }
 
-/* Tear-off stub, separated by a perforation with two notches. */
+/* Część z przyciskiem oddzielona perforacją z dwoma wcięciami. */
 .ticket__stub {
   position: relative;
   display: flex;

@@ -1,10 +1,7 @@
 <script setup lang="ts">
 import type { SolidKind } from '@/config/exams'
 
-/**
- * An exam station is drawn as the flat shape of its solid, the ticket office as a ticket
- * and the description of the app as a question mark.
- */
+/** Stacja egzaminu to płaski kształt jej bryły; do tego bilet i znak zapytania. */
 defineProps<{ shape: SolidKind | 'ticket' | 'question' }>()
 </script>
 
