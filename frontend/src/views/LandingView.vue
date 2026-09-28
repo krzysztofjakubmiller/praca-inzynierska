@@ -91,6 +91,9 @@ function setSlot(index: number, element: unknown) {
           aria-labelledby="start-title"
         >
           <h1 id="start-title" class="start__title">{{ PRODUCT_NAME }}</h1>
+          <p class="start__audience">
+            Matura z matematyki, podstawowa i rozszerzona, oraz egzamin ósmoklasisty.
+          </p>
           <p class="start__lead">Nie zapamiętujesz odpowiedzi, uczysz się metody.</p>
           <p class="start__text">
             Każda powtórka to ten sam typ zadania z nowymi liczbami, a aplikacja sama pilnuje, kiedy
@@ -297,6 +300,13 @@ function setSlot(index: number, element: unknown) {
   letter-spacing: -0.035em;
   line-height: 0.92;
   margin-bottom: 0.15em;
+}
+
+.start__audience {
+  max-width: 30ch;
+  font-size: clamp(1.0625rem, 0.95rem + 0.5vw, 1.3rem);
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 .start__lead {
