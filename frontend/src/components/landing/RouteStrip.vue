@@ -21,12 +21,12 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
           :href="`#${exam.id}`"
           :aria-current="index === active ? 'location' : undefined"
         >
-          <StationMarker :solid="exam.solid" :soon="exam.soon" class="route__marker" />
+          <StationMarker :shape="exam.solid" class="route__marker" />
           <span class="route__label">{{ exam.shortName }}</span>
         </a>
       </li>
       <li
-        class="route__stop route__stop--terminus"
+        class="route__stop route__stop--tickets"
         :class="{ 'route__stop--active': active === exams.length }"
       >
         <a
@@ -34,7 +34,7 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
           href="#bilety"
           :aria-current="active === exams.length ? 'location' : undefined"
         >
-          <span class="route__terminus" aria-hidden="true" />
+          <StationMarker shape="ticket" class="route__marker" />
           <span class="route__label">Bilety</span>
         </a>
       </li>
@@ -89,16 +89,12 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   font-size: 1.2rem;
 }
 
-.route__stop--active .route__marker {
-  --marker-fill: var(--exam);
+.route__stop--tickets {
+  --exam: var(--ink);
 }
 
-/* The end of a line: a short bar across it. */
-.route__terminus {
-  width: 0.25rem;
-  height: 1.15rem;
-  border-radius: 0.125rem;
-  background: var(--ink);
+.route__stop--active .route__marker {
+  --marker-fill: var(--exam);
 }
 
 @media (min-width: 48rem) {
@@ -107,8 +103,20 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   }
 }
 
+/* On narrow screens only the markers stay visible; the names remain for screen readers. */
 @media (max-width: 47.99rem) {
-  .route__stop:not(.route__stop--terminus) .route__label {
+  .route__stop:not(.route__stop--tickets) .route__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 22.49rem) {
+  .route__stop--tickets .route__label {
     position: absolute;
     width: 1px;
     height: 1px;

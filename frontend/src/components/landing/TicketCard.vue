@@ -10,13 +10,12 @@ defineProps<{ exam: Exam; validUntil: string }>()
 <template>
   <article
     class="ticket"
-    :class="{ 'ticket--soon': exam.soon }"
     :style="{ '--exam': `var(--exam-${exam.id})` }"
     :aria-labelledby="`bilet-${exam.id}`"
   >
     <div class="ticket__main">
       <div class="ticket__line" aria-hidden="true">
-        <StationMarker :solid="exam.solid" :soon="exam.soon" class="ticket__marker" />
+        <StationMarker :shape="exam.solid" class="ticket__marker" />
       </div>
       <h3 :id="`bilet-${exam.id}`" class="ticket__name">{{ exam.name }}</h3>
       <p class="ticket__description">{{ exam.ticketDescription }}</p>
@@ -38,10 +37,7 @@ defineProps<{ exam: Exam; validUntil: string }>()
       </dl>
     </div>
     <div class="ticket__stub">
-      <p v-if="exam.soon" class="ticket__soon">
-        <strong>Wkrótce.</strong> Sprzedaż ruszy, gdy zadania będą gotowe.
-      </p>
-      <RouterLink v-else class="button button--quiet" :to="{ name: 'coming-soon' }">
+      <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
         Zobacz kosztorys
         <ArrowIcon />
       </RouterLink>
@@ -162,28 +158,6 @@ defineProps<{ exam: Exam; validUntil: string }>()
 
 .ticket__stub::after {
   right: calc(-1 * var(--notch));
-}
-
-.ticket__soon {
-  max-width: 28ch;
-  color: var(--ink-soft);
-}
-
-.ticket__soon strong {
-  color: var(--ink);
-}
-
-.ticket--soon {
-  background: rgb(255 255 255 / 0.45);
-  box-shadow: none;
-}
-
-.ticket--soon .ticket__line::before {
-  opacity: 0.35;
-}
-
-.ticket--soon .ticket__price {
-  color: var(--ink-soft);
 }
 
 @media (min-width: 48rem) {

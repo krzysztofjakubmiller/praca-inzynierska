@@ -11,7 +11,6 @@ import StationMarker from '@/components/landing/StationMarker.vue'
 import TicketCard from '@/components/landing/TicketCard.vue'
 
 const cheapest = cheapestTicket(EXAMS)
-const tickets = [...EXAMS].sort((a, b) => Number(a.soon) - Number(b.soon))
 const validUntil = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
   month: 'long',
@@ -72,10 +71,9 @@ function setStop(index: number, element: unknown) {
           :aria-labelledby="`${exam.id}-title`"
         >
           <div class="sign">
-            <StationMarker :solid="exam.solid" :soon="exam.soon" class="sign__marker" />
+            <StationMarker :shape="exam.solid" class="sign__marker" />
             <h2 :id="`${exam.id}-title`" class="sign__name">{{ exam.name }}</h2>
           </div>
-          <p v-if="exam.soon" class="station__soon">wkrótce</p>
           <p class="station__text">{{ exam.description }}</p>
         </section>
       </div>
@@ -87,7 +85,8 @@ function setStop(index: number, element: unknown) {
         aria-labelledby="bilety-title"
       >
         <div class="tickets__head">
-          <div class="sign sign--terminus">
+          <div class="sign sign--tickets">
+            <StationMarker shape="ticket" class="sign__marker" />
             <h2 id="bilety-title" class="sign__name">Bilety</h2>
           </div>
           <p class="tickets__intro">
@@ -97,7 +96,7 @@ function setStop(index: number, element: unknown) {
         </div>
 
         <ol class="tickets__list">
-          <li v-for="exam in tickets" :key="exam.id">
+          <li v-for="exam in EXAMS" :key="exam.id">
             <TicketCard :exam="exam" :valid-until="validUntil" />
           </li>
         </ol>
@@ -239,17 +238,11 @@ function setStop(index: number, element: unknown) {
   text-transform: uppercase;
 }
 
-.sign--terminus {
+.sign--tickets {
   --exam: var(--ink);
-}
-
-.station__soon {
-  align-self: flex-start;
-  padding: 0.15em 0.75em 0.2em;
-  border: 2px dashed var(--ink);
-  border-radius: 999px;
-  font-size: 0.9375rem;
-  font-weight: 650;
+  /* An ink outline would vanish on the ink sign, so the ticket is drawn inverted. */
+  --marker-fill: var(--ink);
+  --marker-stroke: var(--surface);
 }
 
 .station__text {

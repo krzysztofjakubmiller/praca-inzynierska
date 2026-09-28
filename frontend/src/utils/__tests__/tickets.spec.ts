@@ -14,16 +14,8 @@ describe('cheapestTicket', () => {
     expect(cheapest).toEqual({ exam: cheap, kind: 'annual', price: 30 })
   })
 
-  it('skips exams that are not on sale yet', () => {
-    const cheapest = cheapestTicket([
-      exam({ id: 'e8', soon: true, prices: { monthly: 1, annual: 2 } }),
-      exam({ prices: { monthly: 49, annual: 309 } }),
-    ])
-    expect(cheapest?.price).toBe(49)
-  })
-
-  it('returns nothing when no exam is on sale', () => {
-    expect(cheapestTicket([exam({ soon: true })])).toBeUndefined()
+  it('returns nothing when there are no exams', () => {
+    expect(cheapestTicket([])).toBeUndefined()
   })
 })
 

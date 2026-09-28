@@ -6,7 +6,6 @@ export interface Exam {
   name: string
   shortName: string
   solid: SolidKind
-  soon: boolean
   description: string
   ticketDescription: string
   /** Prices in zloty. */
@@ -20,9 +19,8 @@ export const EXAMS: readonly Exam[] = [
     name: 'Egzamin ósmoklasisty',
     shortName: 'E8',
     solid: 'sphere',
-    soon: true,
     description:
-      'Ta sama metoda dla ósmej klasy: typy zadań z egzaminu, za każdym razem z nowymi liczbami. Właśnie nad tym pracujemy.',
+      'Ta sama metoda dla ósmej klasy: typy zadań z egzaminu, za każdym razem z nowymi liczbami.',
     ticketDescription: 'Zadania z egzaminu ósmoklasisty z mapą tematów i codziennymi powtórkami.',
     prices: { monthly: 39, annual: 269 },
   },
@@ -31,7 +29,6 @@ export const EXAMS: readonly Exam[] = [
     name: 'Matura podstawowa',
     shortName: 'Podstawa',
     solid: 'tetrahedron',
-    soon: false,
     description:
       'Mapa tematów podpowie, od czego zacząć, a codzienne powtórki wrócą do każdego typu zadania, zanim zdążysz go zapomnieć.',
     ticketDescription:
@@ -43,7 +40,6 @@ export const EXAMS: readonly Exam[] = [
     name: 'Matura rozszerzona',
     shortName: 'Rozszerzona',
     solid: 'cube',
-    soon: false,
     description:
       'Zadanie otwarte rozwiązujesz w zeszycie, a aplikacja przechodzi z tobą przez kolejne punkty schematu oceniania. Gdy utkniesz, podpowie zamiast podać gotowca.',
     ticketDescription:

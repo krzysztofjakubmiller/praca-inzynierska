@@ -13,11 +13,10 @@ export const TICKET_NAMES: Record<TicketKind, string> = {
   annual: 'Bilet roczny',
 }
 
-/** The lowest price among exams that are already on sale. */
+/** The lowest price among all tickets of all exams. */
 export function cheapestTicket(exams: readonly Exam[]): TicketOffer | undefined {
   let cheapest: TicketOffer | undefined
   for (const exam of exams) {
-    if (exam.soon) continue
     for (const kind of ['monthly', 'annual'] as const) {
       const price = exam.prices[kind]
       if (!cheapest || price < cheapest.price) cheapest = { exam, kind, price }
