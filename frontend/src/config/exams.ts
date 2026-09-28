@@ -1,18 +1,18 @@
 export type SolidKind = 'sphere' | 'tetrahedron' | 'cube'
 
 export interface Exam {
-  /** Anchor of the station section and suffix of the `--exam-*` colour token. */
+  /** Kotwica sekcji stacji i końcówka nazwy koloru `--exam-*`. */
   id: 'e8' | 'matura-podstawowa' | 'matura-rozszerzona'
   name: string
   shortName: string
   solid: SolidKind
   description: string
   ticketDescription: string
-  /** Prices in zloty. */
+  /** Ceny w złotych. */
   prices: { monthly: number; annual: number }
 }
 
-// The price list is not decided yet, so these are placeholders ending in 9.
+// Cennik nie jest jeszcze ustalony, to ceny zastępcze z końcówką 9.
 export const EXAMS: readonly Exam[] = [
   {
     id: 'e8',
@@ -48,5 +48,5 @@ export const EXAMS: readonly Exam[] = [
   },
 ]
 
-/** Annual tickets bought for the 2027 exams expire on this day. */
+/** Dzień, w którym wygasają bilety roczne na egzaminy w 2027 roku. */
 export const ANNUAL_TICKET_VALID_UNTIL = '2027-08-31'

@@ -1,28 +1,27 @@
-// The solids sit on one invisible wheel turning clockwise. A solid's phase says where it is
-// on that wheel, counted in steps between neighbouring solids: 0 is its resting place,
-// positive values are still to come (below), negative ones are already gone (above).
+// Bryły siedzą na jednym niewidocznym kole obracającym się zgodnie z ruchem wskazówek zegara.
+// Faza bryły to jej położenie na kole liczone w krokach między sąsiednimi bryłami: 0 to miejsce
+// spoczynku, wartości dodatnie oznaczają bryłę dopiero nadjeżdżającą (z dołu), ujemne już odjeżdżającą.
 
-/** Angle between neighbouring solids on the wheel. */
+/** Kąt między sąsiednimi bryłami na kole. */
 export const WHEEL_STEP = (40 * Math.PI) / 180
 
-// How fast a solid drifts while it rests, as a share of the average speed.
+// Prędkość powolnego dryfu w spoczynku jako ułamek średniej prędkości.
 const DRIFT = 0.12
-// The higher the power, the longer a solid rests and the more suddenly it leaves.
+// Im wyższa potęga, tym dłużej bryła stoi i tym gwałtowniej odjeżdża.
 const POWER = 4
 
 /**
- * Half of a change of solids, from resting (0) to the moment of swapping (1): slow drift
- * at first, then a sudden rush. Played backwards it is the arrival: fast, then braking.
+ * Połowa zmiany bryły, od spoczynku (0) do chwili mijania się brył (1): najpierw powolny dryf,
+ * potem nagłe przyspieszenie. Odwrócona daje wjazd: najpierw szybko, potem hamowanie.
  */
 function leave(progress: number): number {
   return DRIFT * progress + (1 - DRIFT) * progress ** POWER
 }
 
 /**
- * Wheel position for a scroll position measured in stations, where whole numbers are the
- * middles of stations. Near a middle the wheel barely moves; between stations it turns
- * one step quickly. Before the middle of the first station the first solid stands still,
- * and the wheel stops once it has turned to `last`.
+ * Położenie koła dla pozycji przewijania liczonej w stacjach (liczby całkowite to środki stacji).
+ * Przy środku stacji koło prawie stoi, między stacjami szybko obraca się o jeden krok.
+ * Przed środkiem pierwszej stacji koło stoi, a zatrzymuje się po dojściu do `last`.
  */
 export function stairPhase(position: number, last: number): number {
   if (position <= 0) return 0
@@ -33,9 +32,8 @@ export function stairPhase(position: number, last: number): number {
 }
 
 /**
- * Phase of a solid that travels with the page, from its place on the screen: 1 when its slot
- * is at the bottom edge, 0 in the middle, -1 at the top edge. It rests in the middle of the
- * screen and is half a step away, out of sight, at either edge.
+ * Faza bryły, która jedzie razem ze stroną, zależna od położenia jej miejsca na ekranie:
+ * 1 przy dolnej krawędzi, 0 na środku, -1 przy górnej. Na krawędziach bryła jest pół kroku dalej.
  */
 export function edgePhase(screenPosition: number): number {
   const distance = Math.min(1, Math.abs(screenPosition))
@@ -43,9 +41,9 @@ export function edgePhase(screenPosition: number): number {
 }
 
 /**
- * Offset of a solid from its resting place on a wheel of the given radius, in screen
- * directions: x to the right, y down. The wheel's centre is to the right of the resting
- * place, so a solid arrives from below right and leaves upwards to the right.
+ * Przesunięcie bryły względem miejsca spoczynku na kole o danym promieniu (x w prawo, y w dół).
+ * Środek koła leży na prawo od miejsca spoczynku, więc bryła wjeżdża z dołu i odjeżdża w górę,
+ * w obu przypadkach odchylając się w prawo.
  */
 export function wheelOffset(phase: number, radius: number): { x: number; y: number } {
   const angle = phase * WHEEL_STEP

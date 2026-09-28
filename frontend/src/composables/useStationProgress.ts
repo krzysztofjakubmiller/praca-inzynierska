@@ -1,9 +1,9 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 /**
- * Position of the reader along consecutive stops, e.g. 1.25 means a quarter of the way
- * through the second stop and -1 means no stop has been reached yet.
- * `tops` are measured from the reading line, so a stop is reached once its top is at or above it.
+ * Pozycja czytającego na kolejnych przystankach, np. 1.25 to ćwierć drugiego przystanku,
+ * a -1 oznacza, że żaden nie został jeszcze osiągnięty. `tops` są mierzone od linii czytania,
+ * więc przystanek jest osiągnięty, gdy jego górna krawędź jest na niej lub wyżej.
  */
 export function stationPosition(tops: number[], heights: number[]): number {
   let reached = -1
@@ -17,9 +17,9 @@ export function stationPosition(tops: number[], heights: number[]): number {
 }
 
 /**
- * Tracks `stationPosition` while the page scrolls. `getLine` returns the reading line
- * as a distance from the top of the viewport. `position` is updated once per frame;
- * `readPosition` measures the page on demand, for code that runs its own frames.
+ * Śledzi `stationPosition` podczas przewijania. `getLine` zwraca położenie linii czytania
+ * od górnej krawędzi okna. `position` odświeża się raz na klatkę, a `readPosition` mierzy
+ * stronę na żądanie, dla kodu, który sam liczy klatki.
  */
 export function useStationProgress(getStops: () => HTMLElement[], getLine: () => number) {
   const position = ref(-1)

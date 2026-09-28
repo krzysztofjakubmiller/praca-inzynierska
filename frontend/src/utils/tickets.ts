@@ -13,7 +13,7 @@ export const TICKET_NAMES: Record<TicketKind, string> = {
   annual: 'Bilet roczny',
 }
 
-/** The lowest price among all tickets of all exams. */
+/** Najniższa cena spośród wszystkich biletów na wszystkie egzaminy. */
 export function cheapestTicket(exams: readonly Exam[]): TicketOffer | undefined {
   let cheapest: TicketOffer | undefined
   for (const exam of exams) {

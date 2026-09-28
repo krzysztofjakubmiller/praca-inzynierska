@@ -3,9 +3,9 @@ import type { SolidKind } from '@/config/exams'
 export type Vec3 = readonly [number, number, number]
 
 /**
- * A straight piece of a solid's outline with the outward normals of the surface it lies on.
- * A polyhedron edge has the normals of its two faces, a piece of the sphere grid has one.
- * The stage uses them to tell front edges from back ones.
+ * Odcinek krawędzi bryły razem z normalnymi powierzchni, na której leży. Krawędź wielościanu
+ * ma normalne dwóch ścian, odcinek siatki kuli jedną. Na ich podstawie scena odróżnia
+ * krawędzie przednie od tylnych.
  */
 export interface Edge {
   a: Vec3
@@ -36,8 +36,8 @@ function radians(degrees: number): number {
   return (degrees * Math.PI) / 180
 }
 
-// Every solid is convex and centred at the origin, so a normal pointing
-// towards the origin only needs to be flipped.
+// Bryły są wypukłe i mają środek w początku układu, więc normalną skierowaną
+// do środka wystarczy odwrócić.
 function outwardNormal(corners: Vec3[]): Vec3 {
   const [first, second, third] = corners as [Vec3, Vec3, Vec3]
   const normal = normalize(cross(subtract(second, first), subtract(third, first)))
@@ -59,7 +59,7 @@ function polyhedronEdges(vertices: Vec3[], faces: number[][]): Edge[] {
   return [...edges.values()]
 }
 
-/** Regular tetrahedron standing on its base, vertices on the unit sphere. */
+/** Czworościan foremny stojący na podstawie, wierzchołki na kuli o promieniu 1. */
 function tetrahedron(): Edge[] {
   const baseRadius = Math.sqrt(8) / 3
   const base = [90, 210, 330].map((angle): Vec3 => [
@@ -78,7 +78,7 @@ function tetrahedron(): Edge[] {
   )
 }
 
-/** Cube with vertices on the unit sphere. */
+/** Sześcian z wierzchołkami na kuli o promieniu 1. */
 function cube(): Edge[] {
   const half = 1 / Math.sqrt(3)
   const vertices = Array.from({ length: 8 }, (_, index): Vec3 => [
@@ -100,13 +100,13 @@ function circle(point: (angle: number) => Vec3): Edge[] {
   return Array.from({ length: SPHERE_SEGMENTS }, (_, index) => {
     const a = point((index / SPHERE_SEGMENTS) * 2 * Math.PI)
     const b = point(((index + 1) / SPHERE_SEGMENTS) * 2 * Math.PI)
-    // On the unit sphere the outward normal is the direction of the point itself.
+    // Na kuli o promieniu 1 normalna ma kierunek samego punktu.
     const middle = normalize([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2])
     return { a, b, normals: [middle] }
   })
 }
 
-/** Unit sphere drawn as three parallels and three meridians. */
+/** Kula o promieniu 1 narysowana jako trzy równoleżniki i trzy południki. */
 function sphere(): Edge[] {
   const parallels = [-45, 0, 45].flatMap((latitude) => {
     const ring = Math.cos(radians(latitude))
