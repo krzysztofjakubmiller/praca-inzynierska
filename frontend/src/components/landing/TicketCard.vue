@@ -1,20 +1,48 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import type { Exam } from '@/config/exams'
 import { TICKET_NAMES, formatPrice } from '@/utils/tickets'
 import ArrowIcon from './ArrowIcon.vue'
 import StationMarker from './StationMarker.vue'
 
-defineProps<{ exam: Exam; validUntil: string }>()
+/** `order` is the ticket's place on the list; the lines are drawn one after another. */
+defineProps<{ exam: Exam; validUntil: string; order: number }>()
+
+const ticket = useTemplateRef<HTMLElement>('ticket')
+// waiting: out of sight, line not drawn yet; arriving: in sight, line being drawn.
+const stage = ref<'complete' | 'waiting' | 'arriving'>('complete')
+let observer: IntersectionObserver | undefined
+
+// The line is hidden only once the script runs, so without it the ticket is complete.
+onMounted(() => {
+  if (!('IntersectionObserver' in window) || !ticket.value) return
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  stage.value = 'waiting'
+  observer = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry?.isIntersecting) return
+      stage.value = 'arriving'
+      observer?.disconnect()
+    },
+    { threshold: 0.4 },
+  )
+  observer.observe(ticket.value)
+})
+
+onBeforeUnmount(() => observer?.disconnect())
 </script>
 
 <template>
   <article
+    ref="ticket"
     class="ticket"
-    :style="{ '--exam': `var(--exam-${exam.id})` }"
+    :class="`ticket--${stage}`"
+    :style="{ '--exam': `var(--exam-${exam.id})`, '--order': order }"
     :aria-labelledby="`bilet-${exam.id}`"
   >
     <div class="ticket__main">
       <div class="ticket__line" aria-hidden="true">
+        <span class="ticket__track" />
         <StationMarker :shape="exam.solid" class="ticket__marker" />
       </div>
       <h3 :id="`bilet-${exam.id}`" class="ticket__name">{{ exam.name }}</h3>
@@ -49,12 +77,17 @@ defineProps<{ exam: Exam; validUntil: string }>()
 .ticket {
   --pad: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
   --notch: 0.7rem;
+  --reach: min(42%, 11rem);
+  --arrival: calc(var(--order) * 140ms);
   display: grid;
   border-radius: 1.25rem;
   background: var(--surface);
   box-shadow:
     0 1px 2px rgb(29 31 34 / 0.06),
     0 14px 32px -18px rgb(29 31 34 / 0.28);
+  transition:
+    translate 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .ticket__main {
@@ -63,24 +96,90 @@ defineProps<{ exam: Exam; validUntil: string }>()
   padding: var(--pad);
 }
 
-/* The exam's line runs in from the edge of the ticket and ends at its station. */
+/*
+ * The exam's line runs in from the edge of the ticket to the middle of its station;
+ * the station's white fill covers the end of the line.
+ */
 .ticket__line {
   display: flex;
   align-items: center;
   margin-left: calc(-1 * var(--pad));
 }
 
-.ticket__line::before {
-  content: '';
-  flex: 0 0 min(42%, 11rem);
+.ticket__track {
+  flex: 0 0 var(--reach);
   height: 0.5rem;
-  border-radius: 0 0.25rem 0.25rem 0;
   background: var(--exam);
+  transform-origin: left;
+  transition: flex-basis 0.35s ease;
 }
 
 .ticket__marker {
-  margin-left: -0.3rem;
+  margin-left: -0.8rem;
   font-size: 1.6rem;
+}
+
+/* Out of sight: no line yet. In sight: the line runs in from the edge, then its station appears. */
+.ticket--waiting .ticket__track {
+  scale: 0 1;
+}
+
+.ticket--waiting .ticket__marker {
+  scale: 0;
+}
+
+.ticket--arriving .ticket__track {
+  animation: draw-line 0.9s cubic-bezier(0.22, 1, 0.36, 1) var(--arrival) both;
+}
+
+.ticket--arriving .ticket__marker {
+  animation: show-station 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) calc(var(--arrival) + 0.6s) both;
+}
+
+@keyframes draw-line {
+  from {
+    scale: 0 1;
+  }
+}
+
+@keyframes show-station {
+  from {
+    scale: 0;
+  }
+}
+
+/* Pointing at a ticket is like holding it to a validator: the line reaches on and the station lights up. */
+.ticket:focus-within {
+  --marker-fill: var(--exam);
+  translate: 0 -3px;
+  box-shadow:
+    0 2px 4px rgb(29 31 34 / 0.08),
+    0 22px 40px -20px rgb(29 31 34 / 0.36);
+}
+
+.ticket:focus-within .ticket__track {
+  flex-basis: calc(var(--reach) + 1.5rem);
+}
+
+@media (hover: hover) {
+  .ticket:hover {
+    --marker-fill: var(--exam);
+    translate: 0 -3px;
+    box-shadow:
+      0 2px 4px rgb(29 31 34 / 0.08),
+      0 22px 40px -20px rgb(29 31 34 / 0.36);
+  }
+
+  .ticket:hover .ticket__track {
+    flex-basis: calc(var(--reach) + 1.5rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticket,
+  .ticket__track {
+    transition: none;
+  }
 }
 
 .ticket__name {

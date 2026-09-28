@@ -19,6 +19,26 @@ const validUntil = new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(ANNUAL_TICKET_VALID_UNTIL))
 const year = new Date().getFullYear()
 
+// The description of the app, told as a ride from stop to stop.
+const STEPS = [
+  {
+    title: 'Sprawdzasz, co umiesz',
+    text: 'Zaczynasz od arkusza diagnostycznego, ułożonego jak prawdziwy egzamin. Po nim wiesz, które tematy masz opanowane, a które warto powtórzyć.',
+  },
+  {
+    title: 'Wybierasz, od czego zacząć',
+    text: 'Mapa tematów podpowiada kolejność, ale niczego nie blokuje. Możesz iść jej śladem albo wziąć dowolny temat.',
+  },
+  {
+    title: 'Powtarzasz, zanim zapomnisz',
+    text: 'Codziennie dostajesz kilka zadań. Aplikacja sama wylicza, kiedy wrócić do każdego typu zadania, a liczby za każdym razem są nowe.',
+  },
+  {
+    title: 'Widzisz postęp',
+    text: 'Co kilka tygodni rozwiązujesz podobny arkusz i porównujesz wyniki. Dostajesz też szacunkowy wynik egzaminu, podany jako przedział.',
+  },
+]
+
 // Stops in the order of the ride: the start, the exam stations and the ticket office.
 const stops: HTMLElement[] = []
 // Resting places of the solids on phones, one per exam.
@@ -114,7 +134,7 @@ function setSlot(index: number, element: unknown) {
         aria-labelledby="bilety-title"
       >
         <div class="tickets__head">
-          <div class="sign sign--tickets">
+          <div class="sign sign--ink">
             <StationMarker shape="ticket" class="sign__marker" />
             <h2 id="bilety-title" class="sign__name">Bilety</h2>
           </div>
@@ -125,8 +145,8 @@ function setSlot(index: number, element: unknown) {
         </div>
 
         <ol class="tickets__list">
-          <li v-for="exam in EXAMS" :key="exam.id">
-            <TicketCard :exam="exam" :valid-until="validUntil" />
+          <li v-for="(exam, index) in EXAMS" :key="exam.id">
+            <TicketCard :exam="exam" :valid-until="validUntil" :order="index" />
           </li>
         </ol>
 
@@ -138,6 +158,49 @@ function setSlot(index: number, element: unknown) {
           <p class="tickets__cheapest-note">
             {{ TICKET_NAMES[cheapest.kind] }}, {{ cheapest.exam.name.toLowerCase() }}
           </p>
+        </div>
+      </section>
+
+      <section
+        id="jak-to-dziala"
+        :ref="(element) => setStop(EXAMS.length + 2, element)"
+        class="about"
+        aria-labelledby="jak-to-dziala-title"
+      >
+        <div class="about__head">
+          <div class="sign sign--ink">
+            <StationMarker shape="question" class="sign__marker" />
+            <h2 id="jak-to-dziala-title" class="sign__name">Jak to działa</h2>
+          </div>
+          <p class="about__intro">
+            {{ PRODUCT_NAME }} to aplikacja do nauki matematyki przed egzaminem. Zadania
+            rozwiązujesz w zeszycie, tak jak na egzaminie, a aplikacja prowadzi cię od tematu do
+            tematu.
+          </p>
+        </div>
+
+        <ol class="about__route">
+          <li v-for="step in STEPS" :key="step.title" class="about__stop">
+            <h3 class="about__stop-title">{{ step.title }}</h3>
+            <p>{{ step.text }}</p>
+          </li>
+        </ol>
+
+        <div class="about__notes">
+          <div class="about__note">
+            <h3 class="about__note-title">Gdy utkniesz</h3>
+            <p>
+              Asystent podpowiada kolejny krok, zamiast podawać gotowe rozwiązanie. Odpowiedzi
+              sprawdza program, a nie sztuczna inteligencja, więc wynik jest zawsze policzony.
+            </p>
+          </div>
+          <div class="about__note">
+            <h3 class="about__note-title">Dla rodzica</h3>
+            <p>
+              Rodzic może zaglądać w postępy i prace domowe dziecka, bez możliwości zmian. Jeśli
+              chce, dostaje co tydzień krótkie podsumowanie mailem.
+            </p>
+          </div>
         </div>
       </section>
     </main>
@@ -288,9 +351,9 @@ function setSlot(index: number, element: unknown) {
   text-transform: uppercase;
 }
 
-.sign--tickets {
+.sign--ink {
   --exam: var(--ink);
-  /* An ink outline would vanish on the ink sign, so the ticket is drawn inverted. */
+  /* An ink outline would vanish on the ink sign, so the marker is drawn inverted. */
   --marker-fill: var(--ink);
   --marker-stroke: var(--surface);
 }
@@ -337,6 +400,87 @@ function setSlot(index: number, element: unknown) {
 
 .tickets__cheapest-note {
   color: var(--ink-soft);
+}
+
+.about {
+  display: grid;
+  gap: clamp(2rem, 1.5rem + 2vw, 3rem);
+  padding: clamp(3.5rem, 2rem + 6vw, 7rem) var(--gutter) clamp(4rem, 2.5rem + 6vw, 7rem);
+  border-top: 1px solid var(--hairline);
+  scroll-margin-top: var(--header-h);
+}
+
+.about__head {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+  container-type: inline-size;
+}
+
+.about__intro {
+  max-width: 34ch;
+  font-size: clamp(1.125rem, 1rem + 0.55vw, 1.4rem);
+  line-height: 1.45;
+}
+
+/* The steps lie on one line, like stops on a metro line. */
+.about__route {
+  display: grid;
+  padding: 0;
+  list-style: none;
+}
+
+.about__stop {
+  position: relative;
+  padding: 0 0 2rem 2.5rem;
+}
+
+.about__stop::before {
+  content: '';
+  position: absolute;
+  top: 0.3rem;
+  left: 0;
+  z-index: 1;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+.about__stop:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 0.85rem;
+  bottom: -0.3rem;
+  left: 0.425rem;
+  width: 0.25rem;
+  background: var(--ink);
+}
+
+.about__stop:last-child {
+  padding-bottom: 0;
+}
+
+.about__stop-title,
+.about__note-title {
+  margin-bottom: 0.35rem;
+  font-size: clamp(1.25rem, 1.05rem + 0.8vw, 1.6rem);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+}
+
+.about__stop p,
+.about__note p {
+  max-width: 44ch;
+  color: var(--ink-soft);
+}
+
+.about__notes {
+  display: grid;
+  gap: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hairline);
 }
 
 .foot {
@@ -391,6 +535,27 @@ function setSlot(index: number, element: unknown) {
   .tickets__list,
   .tickets__cheapest {
     grid-column: 2;
+  }
+
+  .about {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+    column-gap: var(--gutter);
+  }
+
+  .about__head {
+    position: sticky;
+    top: calc(var(--header-h) + 2rem);
+  }
+
+  .about__route,
+  .about__notes {
+    grid-column: 2;
+  }
+
+  .about__notes {
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2rem;
   }
 }
 </style>

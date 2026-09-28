@@ -2,7 +2,10 @@
 import type { Exam } from '@/config/exams'
 import StationMarker from './StationMarker.vue'
 
-/** `active` is the index of the current stop; the ticket office comes after the exams. */
+/**
+ * `active` is the index of the current stop; after the exams come the ticket office
+ * and the description of the app.
+ */
 defineProps<{ exams: readonly Exam[]; active: number }>()
 </script>
 
@@ -36,6 +39,19 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
         >
           <StationMarker shape="ticket" class="route__marker" />
           <span class="route__label">Bilety</span>
+        </a>
+      </li>
+      <li
+        class="route__stop route__stop--about"
+        :class="{ 'route__stop--active': active === exams.length + 1 }"
+      >
+        <a
+          class="route__link"
+          href="#jak-to-dziala"
+          :aria-current="active === exams.length + 1 ? 'location' : undefined"
+        >
+          <StationMarker shape="question" class="route__marker" />
+          <span class="route__label">Jak to działa</span>
         </a>
       </li>
     </ol>
@@ -89,7 +105,8 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   font-size: 1.2rem;
 }
 
-.route__stop--tickets {
+.route__stop--tickets,
+.route__stop--about {
   --exam: var(--ink);
 }
 
@@ -115,7 +132,7 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   }
 }
 
-@media (max-width: 22.49rem) {
+@media (max-width: 23.74rem) {
   .route__stop--tickets .route__label {
     position: absolute;
     width: 1px;

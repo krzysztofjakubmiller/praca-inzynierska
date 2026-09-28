@@ -20,7 +20,7 @@ export const EXAMS: readonly Exam[] = [
     shortName: 'E8',
     solid: 'sphere',
     description:
-      'Ta sama metoda dla ósmej klasy: typy zadań z egzaminu, za każdym razem z nowymi liczbami.',
+      'Przygotowanie do egzaminu ósmoklasisty bez wkuwania. Ćwiczysz typy zadań z egzaminu, a każda powtórka ma nowe liczby, więc uczysz się sposobu, a nie wyniku.',
     ticketDescription: 'Zadania z egzaminu ósmoklasisty z mapą tematów i codziennymi powtórkami.',
     prices: { monthly: 39, annual: 269 },
   },
