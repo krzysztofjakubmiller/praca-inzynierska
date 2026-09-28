@@ -3,7 +3,13 @@ import { computed, ref, useTemplateRef } from 'vue'
 import { EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 import { useStationProgress } from '@/composables/useStationProgress'
-import { TICKET_NAMES, annualTicketEnd, cheapestTicket, formatPrice } from '@/utils/tickets'
+import {
+  TICKET_NAMES,
+  annualTicketEnd,
+  annualTicketMonths,
+  cheapestTicket,
+  formatPrice,
+} from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
 import RouteStrip from '@/components/landing/RouteStrip.vue'
 import SolidCanvas from '@/components/landing/SolidCanvas.vue'
@@ -12,11 +18,13 @@ import TicketCard from '@/components/landing/TicketCard.vue'
 
 const today = new Date()
 const cheapest = cheapestTicket(EXAMS)
+const annualEnd = annualTicketEnd(today)
+const annualMonths = annualTicketMonths(today, annualEnd)
 const validUntil = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
   month: 'long',
   year: 'numeric',
-}).format(annualTicketEnd(today))
+}).format(annualEnd)
 const year = today.getFullYear()
 
 const STEPS = [
@@ -201,7 +209,12 @@ function setSlot(index: number, element: unknown) {
 
         <ol class="tickets__list">
           <li v-for="(exam, index) in EXAMS" :key="exam.id">
-            <TicketCard :exam="exam" :valid-until="validUntil" :order="index" />
+            <TicketCard
+              :exam="exam"
+              :valid-until="validUntil"
+              :annual-months="annualMonths"
+              :order="index"
+            />
           </li>
         </ol>
       </section>

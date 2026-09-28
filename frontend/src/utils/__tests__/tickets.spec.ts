@@ -1,7 +1,13 @@
 import { describe, it, expect } from 'vitest'
 
 import { EXAMS, type Exam } from '@/config/exams'
-import { annualTicketEnd, cheapestTicket, formatPrice } from '@/utils/tickets'
+import {
+  annualTicketEnd,
+  annualTicketMonths,
+  annualTicketValue,
+  cheapestTicket,
+  formatPrice,
+} from '@/utils/tickets'
 
 function exam(overrides: Partial<Exam>): Exam {
   return { ...EXAMS[1]!, ...overrides }
@@ -27,6 +33,25 @@ describe('annualTicketEnd', () => {
 
   it('ends in the next year from September on', () => {
     expect(annualTicketEnd(new Date(2026, 8, 29))).toEqual(new Date(2027, 7, 31))
+  })
+})
+
+describe('annualTicketMonths', () => {
+  it('counts the months until the ticket ends', () => {
+    expect(annualTicketMonths(new Date(2026, 8, 29), new Date(2027, 7, 31))).toBe(11)
+  })
+
+  it('counts at least one month', () => {
+    expect(annualTicketMonths(new Date(2027, 7, 30), new Date(2027, 7, 31))).toBe(1)
+  })
+})
+
+describe('annualTicketValue', () => {
+  it('rounds the monthly price down and compares with monthly tickets', () => {
+    expect(annualTicketValue({ monthly: 39, annual: 269 }, 11)).toEqual({
+      perMonth: 24,
+      saving: 160,
+    })
   })
 })
 

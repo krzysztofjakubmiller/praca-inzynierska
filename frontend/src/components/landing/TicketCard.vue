@@ -1,12 +1,22 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 import type { Exam } from '@/config/exams'
-import { TICKET_NAMES, formatPrice } from '@/utils/tickets'
+import { TICKET_NAMES, annualTicketValue, formatPrice } from '@/utils/tickets'
 import ArrowIcon from './ArrowIcon.vue'
 import StationMarker from './StationMarker.vue'
 
-/** `order` to miejsce biletu na liście; linie rysują się po kolei. */
-defineProps<{ exam: Exam; validUntil: string; order: number }>()
+/**
+ * `order` to miejsce biletu na liście; linie rysują się po kolei.
+ * `annualMonths` to liczba miesięcy, na które wystarcza bilet roczny.
+ */
+const props = defineProps<{
+  exam: Exam
+  validUntil: string
+  annualMonths: number
+  order: number
+}>()
+
+const annual = computed(() => annualTicketValue(props.exam.prices, props.annualMonths))
 
 const ticket = useTemplateRef<HTMLElement>('ticket')
 // waiting: bilet poza ekranem, linii jeszcze nie ma; arriving: bilet widoczny, linia się rysuje.
@@ -60,6 +70,10 @@ onBeforeUnmount(() => observer?.disconnect())
           <dd>
             <span class="ticket__price">{{ formatPrice(exam.prices.annual) }}</span>
             <span class="ticket__term">ważny do {{ validUntil }}</span>
+            <span class="ticket__term">średnio {{ formatPrice(annual.perMonth) }} miesięcznie</span>
+            <span v-if="annual.saving > 0" class="ticket__saving">
+              oszczędzasz {{ formatPrice(annual.saving) }}
+            </span>
           </dd>
         </div>
       </dl>
@@ -224,6 +238,11 @@ onBeforeUnmount(() => observer?.disconnect())
 .ticket__term {
   color: var(--ink-soft);
   font-size: 0.875rem;
+}
+
+.ticket__saving {
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
 /* Część z przyciskiem oddzielona perforacją z dwoma wcięciami. */

@@ -34,6 +34,26 @@ export function annualTicketEnd(today: Date): Date {
   return new Date(year, 7, 31)
 }
 
+/** Na ile miesięcy wystarcza bilet roczny kupiony danego dnia (co najmniej na jeden). */
+export function annualTicketMonths(today: Date, end: Date): number {
+  const days = (end.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)
+  return Math.max(1, Math.round(days / (365 / 12)))
+}
+
+/**
+ * Średnia cena biletu rocznego za miesiąc (w dół do pełnych złotych) i oszczędność względem
+ * kupowania biletu miesięcznego przez ten sam czas.
+ */
+export function annualTicketValue(
+  prices: Exam['prices'],
+  months: number,
+): { perMonth: number; saving: number } {
+  return {
+    perMonth: Math.floor(prices.annual / months),
+    saving: prices.monthly * months - prices.annual,
+  }
+}
+
 const priceFormat = new Intl.NumberFormat('pl-PL', {
   style: 'currency',
   currency: 'PLN',
