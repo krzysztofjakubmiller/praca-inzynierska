@@ -7,30 +7,21 @@ import { EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 
 beforeAll(() => {
-  // jsdom does not implement scrolling, which the router does after every navigation.
+  // jsdom nie obsługuje przewijania, a router przewija po każdej zmianie strony.
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 
 async function renderAt(path: string) {
   await router.push(path)
-  // jsdom has no WebGL, so the canvas with the solids is replaced with a stub.
+  // jsdom nie ma WebGL, więc płótno z bryłami zastępujemy atrapą.
   const wrapper = mount(App, { global: { plugins: [router], stubs: { SolidCanvas: true } } })
   await flushPromises()
   return wrapper
 }
 
 describe('App', () => {
-  it('shows the home page at /', async () => {
+  it('shows the landing page at /', async () => {
     const wrapper = await renderAt('/')
-    expect(wrapper.find('h1').text()).toBe(PRODUCT_NAME)
-    expect(document.title).toBe(PRODUCT_NAME)
-  })
-
-  it.each([
-    ['/wizytowka-a', 'Wizytówka A'],
-    ['/wizytowka-b', 'Wizytówka B'],
-  ])('shows the landing page at %s', async (path, title) => {
-    const wrapper = await renderAt(path)
     expect(wrapper.find('h1').text()).toBe(PRODUCT_NAME)
     expect(wrapper.findAll('h2').map((heading) => heading.text())).toEqual([
       ...EXAMS.map((exam) => exam.name),
@@ -38,7 +29,7 @@ describe('App', () => {
       'Jak to działa',
     ])
     expect(wrapper.findAll('.ticket')).toHaveLength(EXAMS.length)
-    expect(document.title).toBe(`${title} · ${PRODUCT_NAME}`)
+    expect(document.title).toBe(PRODUCT_NAME)
   })
 
   it('shows the coming soon page at /wkrotce', async () => {

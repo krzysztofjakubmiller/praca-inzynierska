@@ -19,7 +19,6 @@ const validUntil = new Intl.DateTimeFormat('pl-PL', {
 }).format(new Date(ANNUAL_TICKET_VALID_UNTIL))
 const year = new Date().getFullYear()
 
-// The description of the app, told as a ride from stop to stop.
 const STEPS = [
   {
     title: 'Sprawdzasz, co umiesz',
@@ -39,9 +38,9 @@ const STEPS = [
   },
 ]
 
-// Stops in the order of the ride: the start, the exam stations and the ticket office.
+// Przystanki w kolejności na stronie: start, stacje egzaminów, bilety i opis aplikacji.
 const stops: HTMLElement[] = []
-// Resting places of the solids on phones, one per exam.
+// Miejsca brył na telefonie, po jednym na egzamin.
 const slots: HTMLElement[] = []
 const stage = useTemplateRef<HTMLElement>('stage')
 const flat = ref(false)
@@ -51,7 +50,7 @@ const { position, readPosition } = useStationProgress(
   () => window.innerHeight / 2,
 )
 
-// The start is stop 0, so the exam stations are counted from 1.
+// Start to przystanek 0, więc stacje egzaminów liczymy od 1.
 const activeStop = computed(() => Math.floor(position.value) - 1)
 const readStations = () => readPosition() - 1
 const getStage = () => stage.value
@@ -234,10 +233,7 @@ function setSlot(index: number, element: unknown) {
   white-space: nowrap;
 }
 
-/*
- * A tiled station wall, fading out towards its edges. Walls lie under the canvas with
- * the solids (z-index -1), the text lies above it.
- */
+/* Ściana stacji z kratką. Leży pod płótnem z bryłami (z-index -1), a tekst nad nim. */
 .wall {
   position: relative;
   z-index: -2;
@@ -256,7 +252,7 @@ function setSlot(index: number, element: unknown) {
   mask-image: radial-gradient(closest-side, #000 30%, transparent 100%);
 }
 
-/* Shared by all solids on wide screens only. */
+/* Wspólne miejsce brył, tylko na szerokim ekranie. */
 .ride__stage {
   display: none;
 }
@@ -273,7 +269,7 @@ function setSlot(index: number, element: unknown) {
   gap: 1rem;
 }
 
-/* On phones every station has its own place for its solid, which moves with the page. */
+/* Na telefonie każda stacja ma własne miejsce na bryłę, które jedzie ze stroną. */
 .station {
   padding-top: 0;
 }
@@ -321,7 +317,6 @@ function setSlot(index: number, element: unknown) {
   margin-top: 0.5rem;
 }
 
-/* A station sign is a thick line in the exam's colour, ending with a round cap. */
 .sign {
   display: flex;
   align-items: center;
@@ -333,7 +328,7 @@ function setSlot(index: number, element: unknown) {
   border-radius: 0 999px 999px 0;
   background: var(--exam);
   color: #fff;
-  /* Sized to the column, so the longest word, ÓSMOKLASISTY, stays inside the sign. */
+  /* Rozmiar zależny od szerokości kolumny, żeby najdłuższe słowo, ÓSMOKLASISTY, mieściło się w pasie. */
   font-size: min(12cqi, 4.75rem);
 }
 
@@ -353,7 +348,7 @@ function setSlot(index: number, element: unknown) {
 
 .sign--ink {
   --exam: var(--ink);
-  /* An ink outline would vanish on the ink sign, so the marker is drawn inverted. */
+  /* Czarny kontur zniknąłby na czarnym pasie, więc znacznik ma odwrócone kolory. */
   --marker-fill: var(--ink);
   --marker-stroke: var(--surface);
 }
@@ -423,7 +418,6 @@ function setSlot(index: number, element: unknown) {
   line-height: 1.45;
 }
 
-/* The steps lie on one line, like stops on a metro line. */
 .about__route {
   display: grid;
   padding: 0;

@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { PRODUCT_NAME } from '@/config/product'
-import HomeView from '@/views/HomeView.vue'
+import LandingView from '@/views/LandingView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -14,19 +14,7 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/wizytowka-a',
-      name: 'landing-a',
-      component: () => import('@/views/LandingView.vue'),
-      meta: { title: 'Wizytówka A' },
-    },
-    {
-      path: '/wizytowka-b',
-      name: 'landing-b',
-      component: () => import('@/views/LandingView.vue'),
-      meta: { title: 'Wizytówka B' },
+      component: LandingView,
     },
     {
       path: '/wkrotce',
@@ -50,7 +38,7 @@ const router = createRouter({
   scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) return savedPosition
     if (to.hash) {
-      // scrollIntoView respects scroll-margin, which keeps the section clear of the sticky header.
+      // scrollIntoView uwzględnia scroll-margin, więc sekcja nie chowa się pod nagłówkiem.
       document.getElementById(decodeURIComponent(to.hash.slice(1)))?.scrollIntoView()
       return false
     }

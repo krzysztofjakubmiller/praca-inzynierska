@@ -6,19 +6,19 @@ import { edgePhase, stairPhase } from '@/solids/wheel'
 
 const props = defineProps<{
   exams: readonly Exam[]
-  /** Scroll position in stations: 0.5 means the middle of the first station is at mid-screen. */
+  /** Pozycja przewijania w stacjach: 0.5 oznacza środek pierwszej stacji na środku ekranu. */
   readStations: () => number
-  /** The resting place shared by all solids on wide screens; hidden on phones. */
+  /** Wspólne miejsce wszystkich brył na szerokim ekranie; na telefonie ukryte. */
   getStage: () => HTMLElement | null
-  /** One resting place per exam on phones; hidden on wide screens. */
+  /** Na telefonie osobne miejsce dla każdego egzaminu; na szerokim ekranie ukryte. */
   getSlots: () => HTMLElement[]
 }>()
 
 const emit = defineEmits<{ unavailable: [] }>()
 
-// When the page opens, the first solid rises into place.
+// Czas wjazdu pierwszej bryły po otwarciu strony.
 const INTRO_MS = 1100
-// How quickly the solids catch up with the scroll; smooths out the steps of a mouse wheel.
+// Opóźnienie, z jakim bryły doganiają przewijanie; wygładza skoki kółka myszy.
 const FOLLOW_MS = 90
 
 const canvas = useTemplateRef<HTMLCanvasElement>('canvas')
@@ -37,12 +37,12 @@ function targets(): SolidFrame[] {
   const still = reducedMotion.matches
   const stage = props.getStage()?.getBoundingClientRect()
   if (stage && stage.width > 0) {
-    // Wide screens: all solids share one wheel, turned by the scroll position.
+    // Szeroki ekran: wszystkie bryły na jednym kole, obracanym przez przewijanie.
     const wheel = stairPhase(props.readStations() - 0.5, props.exams.length)
     const turn = still ? Math.round(wheel) : wheel
     return props.exams.map((_, index) => ({ place: stage, phase: index - turn }))
   }
-  // Phones: each solid travels with its slot and plays its part of the wheel on the way.
+  // Telefon: każda bryła jedzie ze swoim miejscem i przechodzi swój fragment koła.
   const middle = window.innerHeight / 2
   return props.getSlots().map((slot) => {
     const place = slot.getBoundingClientRect()
@@ -87,7 +87,7 @@ function resize() {
 }
 
 onMounted(async () => {
-  // three.js is loaded only here, so the text of the page does not wait for it.
+  // three.js ładujemy dopiero tutaj, żeby tekst strony na niego nie czekał.
   const { createSolidScene } = await import('@/solids/scene')
   if (!alive || !canvas.value) return
   const style = getComputedStyle(canvas.value)
@@ -98,7 +98,7 @@ onMounted(async () => {
   try {
     scene = createSolidScene(canvas.value, specs, style.getPropertyValue('--ground').trim())
   } catch {
-    // No WebGL: the page still works, the text carries all of the content.
+    // Bez WebGL strona działa dalej, cała treść jest w tekście.
     unavailable.value = true
     emit('unavailable')
     return
@@ -108,7 +108,7 @@ onMounted(async () => {
   resizeObserver = new ResizeObserver(resize)
   resizeObserver.observe(canvas.value)
   window.addEventListener('scroll', requestRender, { passive: true })
-  // Late fonts change the height of the text and move the places of the solids.
+  // Doładowany krój zmienia wysokość tekstu, a z nią miejsca brył.
   document.fonts.ready.then(requestRender)
 })
 
@@ -127,7 +127,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* One canvas for the whole screen, under the text and above the station walls. */
+/* Jedno płótno na cały ekran: pod tekstem, nad ścianami stacji. */
 .solids {
   position: fixed;
   top: 0;
