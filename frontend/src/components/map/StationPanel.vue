@@ -202,6 +202,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 <style scoped>
 .station-panel {
   display: grid;
+  /* Bez tego najdłuższe słowo tytułu poszerza panel ponad kolumnę. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 1rem;
   /* Bez dolnego marginesu: dół zajmuje przyklejony pasek przycisków. */
@@ -223,6 +225,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   font-stretch: 90%;
   letter-spacing: -0.02em;
   line-height: 1;
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .station-panel__title:focus {
