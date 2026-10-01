@@ -9,12 +9,28 @@ import { PRODUCT_NAME } from '@/config/product'
 beforeAll(() => {
   // jsdom nie obsługuje przewijania, a router przewija po każdej zmianie strony.
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  // jsdom nie ma też obserwatora rozmiaru ani zapytań o media, z których korzysta strona mapy.
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  )
+  vi.stubGlobal('matchMedia', () => ({
+    matches: false,
+    addEventListener() {},
+    removeEventListener() {},
+  }))
 })
 
 async function renderAt(path: string) {
   await router.push(path)
-  // jsdom nie ma WebGL, więc płótno z bryłami zastępujemy atrapą.
-  const wrapper = mount(App, { global: { plugins: [router], stubs: { SolidCanvas: true } } })
+  // jsdom nie ma WebGL ani pomiaru tekstu, więc płótno z bryłami i mapę zastępujemy atrapami.
+  const wrapper = mount(App, {
+    global: { plugins: [router], stubs: { SolidCanvas: true, MetroMap: true } },
+  })
   await flushPromises()
   return wrapper
 }
