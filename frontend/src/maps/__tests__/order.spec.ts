@@ -1,0 +1,62 @@
+import { describe, it, expect } from 'vitest'
+
+import { BASIC_MAP } from '@/maps'
+import { lineStops, listGroups, listOrder } from '@/maps/order'
+import type { Station } from '@/maps/types'
+
+describe('listGroups', () => {
+  it('groups topics by line and mentions a transfer again only in passing', () => {
+    const groups = listGroups(BASIC_MAP).map(({ line, stops }) => [
+      line.name,
+      stops.filter((stop) => stop.repeat).map((stop) => stop.id),
+    ])
+    expect(groups).toEqual([
+      ['Liczbowa', []],
+      ['Funkcyjna', ['algebra']],
+      ['Statystyczna', ['numbers-powers']],
+      ['Geometryczna', ['linear-function']],
+    ])
+  })
+})
+
+describe('listOrder', () => {
+  it('lists the basic matura topics line by line, each once', () => {
+    const stations: Readonly<Record<string, Station>> = BASIC_MAP.graph.stations
+    const names = listOrder(BASIC_MAP).map((id) => stations[id]!.name)
+    expect(names).toEqual([
+      'Logarytmy',
+      'Liczby. Potęgi',
+      'Algebra',
+      'Dowody (algebra)',
+      'Równania. Nierówności',
+      'Wykresy',
+      'Wielomiany',
+      'Wartość bezwzględna',
+      'Funkcja liniowa',
+      'Układ równań',
+      'Ciągi',
+      'Funkcja kwadratowa',
+      'Optymalizacja',
+      'Inne funkcje',
+      'Procenty',
+      'Statystyka',
+      'Kombinatoryka',
+      'Rachunek prawdopodobieństwa',
+      'Geometria analityczna',
+      'Trygonometria',
+      'Planimetria',
+      'Stereometria',
+      'Dowody (geometria)',
+    ])
+  })
+})
+
+describe('lineStops', () => {
+  it('gives the neighbours on every line through a transfer station', () => {
+    const stops = lineStops(BASIC_MAP, 'linear-function')
+    expect(stops.map(({ line, previous, next }) => [line.name, previous, next])).toEqual([
+      ['Funkcyjna', 'absolute-value', 'systems-of-equations'],
+      ['Geometryczna', undefined, 'analytic-geometry'],
+    ])
+  })
+})
