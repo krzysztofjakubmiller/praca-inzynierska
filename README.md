@@ -41,7 +41,9 @@ python -m app.seed
 uvicorn app.main:app --reload
 ```
 
-API działa pod `http://localhost:8000`, dokumentacja pod `/docs`.
+API działa pod `http://localhost:8000`, dokumentacja pod `/docs`. Serwer deweloperski frontendu przekazuje zapytania `/api` do backendu.
+
+Panel właściciela (`/panel`) służy do importu zadań i ich sprawdzania. Nie ma logowania, więc działa tylko lokalnie.
 
 ## Komendy
 

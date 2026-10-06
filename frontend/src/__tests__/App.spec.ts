@@ -36,8 +36,15 @@ async function renderAt(path: string) {
 }
 
 describe('App', () => {
-  it('shows the landing page at /', async () => {
+  it('shows links to all pages at /', async () => {
     const wrapper = await renderAt('/')
+    expect(wrapper.find('h1').text()).toBe('Strony')
+    expect(wrapper.findAll('a').map((link) => link.text())).toContain('Panel właściciela')
+    expect(document.title).toBe(`Strony · ${PRODUCT_NAME}`)
+  })
+
+  it('shows the landing page at /wizytowka', async () => {
+    const wrapper = await renderAt('/wizytowka')
     expect(wrapper.find('h1').text()).toBe(PRODUCT_NAME)
     expect(wrapper.findAll('h2').map((heading) => heading.text())).toEqual([
       ...EXAMS.map((exam) => exam.name),

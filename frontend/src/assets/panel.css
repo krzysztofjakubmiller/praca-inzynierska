@@ -1,0 +1,115 @@
+.panel {
+  --panel-danger: #b42318;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  max-width: 96rem;
+  margin-inline: auto;
+  padding: var(--gutter);
+}
+
+.panel h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.panel h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+}
+
+.panel__card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 1rem;
+  padding: var(--sheet-pad);
+  border: 1px solid var(--hairline);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.panel label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Lista egzaminów ma długie nazwy, więc pole nie może być szersze niż jego kolumna. */
+.panel input:not([type='checkbox'], [type='file']),
+.panel select,
+.panel textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 0.55em 0.7em;
+  border: 1px solid var(--ink-soft);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+/* LaTeX łatwiej poprawiać pismem o stałej szerokości, bo widać każdy ukośnik. */
+.panel textarea,
+.panel pre {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+
+.panel textarea {
+  resize: vertical;
+}
+
+.panel input[type='file'] {
+  max-width: 100%;
+}
+
+.panel pre {
+  white-space: pre-wrap;
+}
+
+.panel .button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.panel__problems {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem 1rem 1rem 2.25rem;
+  border: 2px solid var(--panel-danger);
+  border-radius: 0.75rem;
+  color: var(--panel-danger);
+  font-weight: 600;
+}
+
+.panel__notice {
+  font-weight: 600;
+}
+
+.panel__status {
+  padding: 0.15em 0.6em;
+  border-radius: 999px;
+  background: var(--hairline);
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.panel__status[data-status='sprawdzone'] {
+  background: var(--exam-matura-podstawowa);
+  color: #fff;
+}

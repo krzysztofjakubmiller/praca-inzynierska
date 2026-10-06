@@ -14,7 +14,25 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
+      component: () => import('@/views/StartView.vue'),
+      meta: { title: 'Strony' },
+    },
+    {
+      path: '/wizytowka',
+      name: 'landing',
       component: LandingView,
+    },
+    {
+      path: '/panel',
+      name: 'panel',
+      component: () => import('@/views/PanelView.vue'),
+      meta: { title: 'Panel' },
+    },
+    {
+      path: '/panel/zadanie/:id',
+      name: 'panel-task',
+      component: () => import('@/views/PanelTaskView.vue'),
+      meta: { title: 'Zadanie' },
     },
     {
       path: '/wkrotce',
