@@ -1,0 +1,26 @@
+from sqlalchemy import func, select
+
+from app.models import Exam, SourceKind, Topic
+from app.seed import seed
+
+
+def count(session, model):
+    return session.scalar(select(func.count()).select_from(model))
+
+
+def test_seed_runs_again_without_duplicates(session):
+    # Pierwszy raz skrypt uruchomił conftest przy tworzeniu bazy testowej.
+    seed(session)
+    session.flush()
+
+    assert count(session, Exam) == 3
+    assert count(session, SourceKind) == 12
+    assert count(session, Topic) == 23
+
+
+def test_resit_only_in_basic_matura(session):
+    exams = session.scalars(
+        select(Exam.code).join(SourceKind).where(SourceKind.code == "poprawkowy")
+    ).all()
+
+    assert exams == ["matura-podstawowa"]
