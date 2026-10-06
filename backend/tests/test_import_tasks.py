@@ -3,7 +3,7 @@ import json
 import pytest
 from sqlalchemy import func, select
 
-from app.import_tasks import ImportRejected, import_tasks
+from app.import_tasks import ImportRejected, import_tasks, parse_json
 from app.models import Task
 
 
@@ -46,10 +46,10 @@ def task_count(session):
 
 
 def test_tasks_are_saved_for_review(session):
-    count = import_tasks(session, task_file(task(), task(number=4, answer=None)))
+    ids = import_tasks(session, task_file(task(), task(number=4, answer=None)))
 
     saved = session.scalars(select(Task).order_by(Task.number)).all()
-    assert count == 2
+    assert ids == [task.id for task in saved]
     assert [task.review_status for task in saved] == ["do-sprawdzenia", "do-sprawdzenia"]
     assert saved[0].choices == {"A": "$1$", "B": "$2$", "C": "$3$", "D": "$4$"}
     assert saved[0].ai_content == saved[0].content
@@ -63,7 +63,7 @@ def test_manual_reading_has_no_ai_copy(session):
 
 
 def test_all_answer_formats_are_accepted(session):
-    count = import_tasks(
+    ids = import_tasks(
         session,
         task_file(
             task(),
@@ -84,7 +84,7 @@ def test_all_answer_formats_are_accepted(session):
         ),
     )
 
-    assert count == 5
+    assert len(ids) == 5
 
 
 def test_structure_problems_are_listed_together(session):
@@ -174,3 +174,15 @@ def test_task_repeated_in_file_is_rejected(session):
 
 def test_not_a_task_file(session):
     assert rejected(session, []) == ["plik: to nie jest obiekt {...}"]
+
+
+def test_json_in_code_block_is_accepted():
+    assert parse_json('```json\n{"exam": "e8"}\n```') == {"exam": "e8"}
+
+
+def test_broken_json_gets_a_hint():
+    # W JSON-ie \s nie jest poprawną sekwencją, więc tekst w ogóle się nie wczyta.
+    with pytest.raises(ImportRejected) as error:
+        parse_json(r'{"content": "$\sqrt{2}$"}')
+
+    assert "pojedynczy ukośnik" in error.value.problems[0]

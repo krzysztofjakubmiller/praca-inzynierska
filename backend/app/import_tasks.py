@@ -111,9 +111,25 @@ def task_label(index: int, task: TaskIn) -> str:
     return f"zadanie {index} ({task.source} {task.year}, nr {number})"
 
 
+def parse_json(text: str):
+    text = text.strip()
+    # Gemini mimo instrukcji często owija odpowiedź w blok ```json ... ```.
+    if text.startswith("```"):
+        text = text.split("\n", 1)[-1].removesuffix("```")
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as error:
+        raise ImportRejected(
+            [
+                f"niepoprawny JSON (wiersz {error.lineno}, kolumna {error.colno}): {error.msg}; "
+                "najczęstsza przyczyna to pojedynczy ukośnik w LaTeX-u"
+            ]
+        ) from None
+
+
 # Zapisuje cały plik albo nic: przy jakimkolwiek błędzie rzuca ImportRejected ze wszystkimi
-# problemami naraz. Zatwierdzenie transakcji należy do wywołującego.
-def import_tasks(session: Session, data) -> int:
+# problemami naraz. Zwraca id nowych zadań. Zatwierdzenie transakcji należy do wywołującego.
+def import_tasks(session: Session, data) -> list[int]:
     try:
         file = TaskFile.model_validate(data)
     except ValidationError as error:
@@ -172,8 +188,9 @@ def import_tasks(session: Session, data) -> int:
     if problems:
         raise ImportRejected(problems)
 
+    saved = []
     for task in tasks:
-        session.add(
+        saved.append(
             Task(
                 exam_id=exam.id,
                 topic_id=topic.id,
@@ -193,31 +210,26 @@ def import_tasks(session: Session, data) -> int:
                 ai_content=task.content if file.read_method != "recznie" else None,
             )
         )
+    session.add_all(saved)
     session.flush()
-    return len(tasks)
+    return [task.id for task in saved]
 
 
 def main() -> None:
     if len(sys.argv) != 2:
         sys.exit("Użycie: python -m app.import_tasks plik.json")
-    try:
-        data = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    except json.JSONDecodeError as error:
-        sys.exit(
-            f"Niepoprawny JSON (wiersz {error.lineno}, kolumna {error.colno}): {error.msg}. "
-            "Najczęstsza przyczyna to pojedynczy ukośnik w LaTeX-u."
-        )
+    text = Path(sys.argv[1]).read_text(encoding="utf-8")
 
     with SessionLocal() as session:
         try:
-            count = import_tasks(session, data)
+            ids = import_tasks(session, parse_json(text))
         except ImportRejected as rejected:
             print("Plik odrzucony, nic nie zapisano:")
             for problem in rejected.problems:
                 print(f"- {problem}")
             sys.exit(1)
         session.commit()
-    print(f"Zapisano zadań: {count}")
+    print(f"Zapisano zadań: {len(ids)}")
 
 
 if __name__ == "__main__":
