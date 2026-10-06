@@ -61,3 +61,4 @@ W folderze `backend`:
 - `alembic upgrade head` - zastosowanie migracji
 - `alembic revision --autogenerate -m "opis"` - nowa migracja po zmianie `app/models.py`
 - `python -m app.seed` - dane startowe: egzaminy, rodzaje źródeł, tematy
+- `python -m app.import_tasks plik.json` - import zadań z pliku JSON (cały plik albo nic)
