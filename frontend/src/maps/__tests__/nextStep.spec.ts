@@ -45,16 +45,16 @@ describe('nextStep', () => {
   })
 
   it('continues the last topic when nothing waits', () => {
-    expect(nextStep(BASIC_MAP, progress([0], 'polynomials'), done, today)).toEqual({
+    expect(nextStep(BASIC_MAP, progress([0], 'wielomiany'), done, today)).toEqual({
       kind: 'continue',
-      stationId: 'polynomials',
+      stationId: 'wielomiany',
     })
   })
 
   it('suggests the first topic of the list when the student has not started any', () => {
     expect(nextStep(BASIC_MAP, progress([]), done, today)).toEqual({
       kind: 'continue',
-      stationId: 'logarithms',
+      stationId: 'logarytmy',
     })
   })
 })

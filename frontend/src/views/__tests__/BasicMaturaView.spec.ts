@@ -76,7 +76,7 @@ describe('BasicMaturaView on a computer', () => {
 
   it('puts the chosen topic in place of the menu and brings the menu back', async () => {
     const page = await render(true)
-    await pickStation(page, 'polynomials')
+    await pickStation(page, 'wielomiany')
     expect(side(page).find('h2').text()).toBe('Wielomiany')
     expect(side(page).find('nav').exists()).toBe(false)
     await button(page, 'Zamknij').trigger('click')
@@ -95,7 +95,7 @@ describe('BasicMaturaView on a computer', () => {
   it('unfolds the menu with the chosen topic and leaves it open after closing', async () => {
     const page = await render(true)
     await button(page, 'Zwiń menu').trigger('click')
-    await pickStation(page, 'logarithms')
+    await pickStation(page, 'logarytmy')
     expect(side(page).classes()).not.toContain('exam-side--collapsed')
     expect(side(page).find('h2').text()).toBe('Logarytmy')
     await button(page, 'Zamknij').trigger('click')
@@ -137,7 +137,7 @@ describe('BasicMaturaView next step', () => {
   it('floats the next step over the map on a phone and hides it under the topic', async () => {
     const page = await render(false)
     expect(page.find('.exam-page__next').text()).toBe('Powtórki · 78')
-    await pickStation(page, 'polynomials')
+    await pickStation(page, 'wielomiany')
     expect(page.find('.exam-page__next').exists()).toBe(false)
   })
 })

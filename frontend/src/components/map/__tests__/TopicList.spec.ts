@@ -62,11 +62,11 @@ describe('TopicList', () => {
     expect(related.map((link) => link.text())).toEqual(['Wykresy', 'Wartość bezwzględna'])
     await related[0]!.trigger('click')
     await list.find('.topic-list__pass').trigger('click')
-    expect(list.emitted('select')).toEqual([['polynomials'], ['graphs'], ['algebra']])
+    expect(list.emitted('select')).toEqual([['wielomiany'], ['wykresy'], ['algebra']])
   })
 
   it('marks the topic whose panel is open', () => {
-    const list = render('graphs')
+    const list = render('wykresy')
     expect(card(list, 'Wykresy').classes()).toContain('topic-card--selected')
     expect(list.findAll('.topic-card--selected')).toHaveLength(1)
   })

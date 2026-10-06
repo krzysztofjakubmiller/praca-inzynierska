@@ -13,8 +13,8 @@ describe('listGroups', () => {
     expect(groups).toEqual([
       ['Liczbowa', []],
       ['Funkcyjna', ['algebra']],
-      ['Statystyczna', ['numbers-powers']],
-      ['Geometryczna', ['linear-function']],
+      ['Statystyczna', ['liczby-potegi']],
+      ['Geometryczna', ['funkcja-liniowa']],
     ])
   })
 })
@@ -53,10 +53,10 @@ describe('listOrder', () => {
 
 describe('lineStops', () => {
   it('gives the neighbours on every line through a transfer station', () => {
-    const stops = lineStops(BASIC_MAP, 'linear-function')
+    const stops = lineStops(BASIC_MAP, 'funkcja-liniowa')
     expect(stops.map(({ line, previous, next }) => [line.name, previous, next])).toEqual([
-      ['Funkcyjna', 'absolute-value', 'systems-of-equations'],
-      ['Geometryczna', undefined, 'analytic-geometry'],
+      ['Funkcyjna', 'wartosc-bezwzgledna', 'uklad-rownan'],
+      ['Geometryczna', undefined, 'geometria-analityczna'],
     ])
   })
 })

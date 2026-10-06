@@ -12,30 +12,30 @@ function daysAgo(days: number): Date {
 // widać każdy stan stacji: pusty, częściowy i pełny kontur na każdym kształcie i od 0 do 4
 // pasażerów.
 export const BASIC_DEMO_PROGRESS: MapProgress<BasicStationId> = {
-  lastStation: 'polynomials',
+  lastStation: 'wielomiany',
   topics: {
-    percentages: {
+    procenty: {
       total: 24,
       done: 24,
       due: 2,
       recent: { attempts: 20, correct: 18 },
       lastActivity: daysAgo(12),
     },
-    statistics: {
+    statystyka: {
       total: 30,
       done: 21,
       due: 0,
       recent: { attempts: 20, correct: 13 },
       lastActivity: daysAgo(9),
     },
-    logarithms: {
+    logarytmy: {
       total: 36,
       done: 12,
       due: 7,
       recent: { attempts: 12, correct: 5 },
       lastActivity: daysAgo(3),
     },
-    'numbers-powers': {
+    'liczby-potegi': {
       total: 40,
       done: 40,
       due: 12,
@@ -49,84 +49,84 @@ export const BASIC_DEMO_PROGRESS: MapProgress<BasicStationId> = {
       recent: { attempts: 20, correct: 15 },
       lastActivity: daysAgo(2),
     },
-    'proofs-algebra': {
+    'dowody-algebra': {
       total: 16,
       done: 2,
       due: 2,
       recent: { attempts: 2, correct: 1 },
       lastActivity: daysAgo(20),
     },
-    'equations-inequalities': {
+    'rownania-nierownosci': {
       total: 44,
       done: 30,
       due: 9,
       recent: { attempts: 20, correct: 16 },
       lastActivity: daysAgo(1),
     },
-    graphs: {
+    wykresy: {
       total: 20,
       done: 9,
       due: 1,
       recent: { attempts: 9, correct: 6 },
       lastActivity: daysAgo(4),
     },
-    polynomials: {
+    wielomiany: {
       total: 32,
       done: 14,
       due: 11,
       recent: { attempts: 14, correct: 6 },
       lastActivity: daysAgo(0),
     },
-    'absolute-value': {
+    'wartosc-bezwzgledna': {
       total: 18,
       done: 3,
       due: 0,
       recent: { attempts: 3, correct: 2 },
       lastActivity: daysAgo(6),
     },
-    combinatorics: {
+    kombinatoryka: {
       total: 22,
       done: 6,
       due: 3,
       recent: { attempts: 6, correct: 4 },
       lastActivity: daysAgo(5),
     },
-    'analytic-geometry': {
+    'geometria-analityczna': {
       total: 34,
       done: 5,
       due: 0,
       recent: { attempts: 5, correct: 5 },
       lastActivity: daysAgo(15),
     },
-    probability: {
+    'rachunek-prawdopodobienstwa': {
       total: 30,
       done: 18,
       due: 3,
       recent: { attempts: 20, correct: 12 },
       lastActivity: daysAgo(7),
     },
-    'quadratic-function': {
+    'funkcja-kwadratowa': {
       total: 32,
       done: 8,
       due: 8,
       recent: { attempts: 8, correct: 3 },
       lastActivity: daysAgo(10),
     },
-    trigonometry: {
+    trygonometria: {
       total: 26,
       done: 26,
       due: 10,
       recent: { attempts: 20, correct: 19 },
       lastActivity: daysAgo(4),
     },
-    optimization: {
+    optymalizacja: {
       total: 14,
       done: 7,
       due: 5,
       recent: { attempts: 7, correct: 4 },
       lastActivity: daysAgo(8),
     },
-    'plane-geometry': {
+    planimetria: {
       total: 20,
       done: 18,
       due: 0,
