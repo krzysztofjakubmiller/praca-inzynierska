@@ -56,9 +56,9 @@ describe('TopicList', () => {
 
   it('opens a topic from its card, its related topics and a transfer mention', async () => {
     const list = render()
-    const polynomials = card(list, 'Wielomiany')
-    await polynomials.find('h3 button').trigger('click')
-    const related = polynomials.findAll('.topic-card__link')
+    const wielomiany = card(list, 'Wielomiany')
+    await wielomiany.find('h3 button').trigger('click')
+    const related = wielomiany.findAll('.topic-card__link')
     expect(related.map((link) => link.text())).toEqual(['Wykresy', 'Wartość bezwzględna'])
     await related[0]!.trigger('click')
     await list.find('.topic-list__pass').trigger('click')

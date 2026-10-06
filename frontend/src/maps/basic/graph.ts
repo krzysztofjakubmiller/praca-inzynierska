@@ -149,13 +149,13 @@ export type BasicStationId = keyof typeof stations
 
 const lines: Line<BasicStationId>[] = [
   {
-    id: 'numeric',
+    id: 'liczbowa',
     name: 'Liczbowa',
     color: 1,
     stations: ['logarytmy', 'liczby-potegi', 'algebra', 'dowody-algebra'],
   },
   {
-    id: 'functional',
+    id: 'funkcyjna',
     name: 'Funkcyjna',
     color: 2,
     stations: [
@@ -173,7 +173,7 @@ const lines: Line<BasicStationId>[] = [
     ],
   },
   {
-    id: 'statistical',
+    id: 'statystyczna',
     name: 'Statystyczna',
     color: 3,
     stations: [
@@ -185,7 +185,7 @@ const lines: Line<BasicStationId>[] = [
     ],
   },
   {
-    id: 'geometric',
+    id: 'geometryczna',
     name: 'Geometryczna',
     color: 4,
     stations: [

@@ -120,10 +120,10 @@ describe('BasicMaturaView list', () => {
     await views[1]!.trigger('click')
     expect(views[1]!.attributes('aria-pressed')).toBe('true')
     expect(page.findComponent(MapStub).exists()).toBe(false)
-    const polynomials = page
+    const wielomiany = page
       .findAll('.topic-card h3 button')
       .find((button) => button.text() === 'Wielomiany')!
-    await polynomials.trigger('click')
+    await wielomiany.trigger('click')
     expect(side(page).find('h2').text()).toBe('Wielomiany')
   })
 })
