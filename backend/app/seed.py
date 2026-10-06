@@ -12,21 +12,13 @@ EXAMS = {
 
 SOURCE_KINDS = {
     "matura-podstawowa": {
-        "maj": "Termin główny",
-        "czerwiec": "Termin dodatkowy",
-        "sierpien": "Termin poprawkowy",
-        "probny": "Próbny egzamin maturalny",
+        "maj": "Maj",
+        "czerwiec": "Czerwiec",
+        "sierpien": "Sierpień",
+        "probny": "Próbny",
     },
-    "matura-rozszerzona": {
-        "maj": "Termin główny",
-        "czerwiec": "Termin dodatkowy",
-        "probny": "Próbny egzamin maturalny",
-    },
-    "e8": {
-        "maj": "Termin główny",
-        "czerwiec": "Termin dodatkowy",
-        "probny": "Próbny egzamin ósmoklasisty",
-    },
+    "matura-rozszerzona": {"maj": "Maj", "czerwiec": "Czerwiec", "probny": "Próbny"},
+    "e8": {"maj": "Maj", "czerwiec": "Czerwiec", "probny": "Próbny"},
 }
 
 # Kody takie same jak klucze stacji w frontend/src/maps/basic/graph.ts.
