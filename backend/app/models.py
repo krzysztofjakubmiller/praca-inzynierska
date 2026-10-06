@@ -67,7 +67,7 @@ class Task(Base):
             ["source_kind.exam_id", "source_kind.id"],
             name="task_source_kind_same_exam",
         ),
-        # Puste miesiąc i podpunkt też muszą się liczyć, inaczej to samo zadanie weszłoby dwa razy.
+        # Pusty podpunkt też musi się liczyć, inaczej to samo zadanie weszłoby dwa razy.
         UniqueConstraint(
             "source_kind_id",
             "year",
@@ -103,15 +103,15 @@ class Task(Base):
     source_kind_id: Mapped[int]
 
     year: Mapped[int] = mapped_column(SmallInteger)
-    month: Mapped[int | None] = mapped_column(SmallInteger)
+    month: Mapped[int] = mapped_column(SmallInteger)
     number: Mapped[int] = mapped_column(SmallInteger)
     subnumber: Mapped[int | None] = mapped_column(SmallInteger)
-    page: Mapped[int | None] = mapped_column(SmallInteger)
 
     content: Mapped[str]
     has_figure: Mapped[bool] = mapped_column(default=False)
     answer_format: Mapped[str]
-    choices: Mapped[list[str] | None] = mapped_column(JSONB)
+    # Etykieta z arkusza i jej treść, np. {"A": "$2$", "B": "$3$"}.
+    choices: Mapped[dict[str, str] | None] = mapped_column(JSONB)
     answer: Mapped[str | None]
     max_points: Mapped[int] = mapped_column(SmallInteger)
 

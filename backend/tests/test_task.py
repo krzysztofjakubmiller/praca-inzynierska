@@ -19,13 +19,13 @@ def make_task(session, **changes):
     fields = dict(
         exam_id=exam_id(session, "matura-podstawowa"),
         topic_id=row_id(session, Topic, "matura-podstawowa", "logarytmy"),
-        source_kind_id=row_id(session, SourceKind, "matura-podstawowa", "glowny"),
+        source_kind_id=row_id(session, SourceKind, "matura-podstawowa", "maj"),
         year=2024,
         month=5,
         number=5,
         content="Liczba $\\log_2 8$ jest równa",
         answer_format="wielokrotny-wybor",
-        choices=["1", "2", "3", "4"],
+        choices={"A": "$1$", "B": "$2$", "C": "$3$", "D": "$4$"},
         answer="C",
         max_points=1,
         read_method="recznie",
@@ -64,7 +64,7 @@ def test_topic_must_belong_to_task_exam(session):
         make_task(
             session,
             exam_id=exam_id(session, "matura-rozszerzona"),
-            source_kind_id=row_id(session, SourceKind, "matura-rozszerzona", "glowny"),
+            source_kind_id=row_id(session, SourceKind, "matura-rozszerzona", "maj"),
         )
 
 
@@ -72,7 +72,7 @@ def test_source_kind_must_belong_to_task_exam(session):
     with pytest.raises(IntegrityError, match="task_source_kind_same_exam"):
         make_task(
             session,
-            source_kind_id=row_id(session, SourceKind, "matura-rozszerzona", "glowny"),
+            source_kind_id=row_id(session, SourceKind, "matura-rozszerzona", "maj"),
         )
 
 
@@ -90,6 +90,7 @@ def test_reviewed_task_needs_answer(session):
         ({"review_status": "gotowe"}, "task_review_status_valid"),
         ({"read_method": "chatgpt"}, "task_read_method_valid"),
         ({"month": 13}, "task_month_valid"),
+        ({"month": None}, '"month"'),
         ({"max_points": 0}, "task_max_points_positive"),
     ],
 )

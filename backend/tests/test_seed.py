@@ -14,13 +14,13 @@ def test_seed_runs_again_without_duplicates(session):
     session.flush()
 
     assert count(session, Exam) == 3
-    assert count(session, SourceKind) == 12
+    assert count(session, SourceKind) == 10
     assert count(session, Topic) == 23
 
 
-def test_resit_only_in_basic_matura(session):
+def test_august_only_in_basic_matura(session):
     exams = session.scalars(
-        select(Exam.code).join(SourceKind).where(SourceKind.code == "poprawkowy")
+        select(Exam.code).join(SourceKind).where(SourceKind.code == "sierpien")
     ).all()
 
     assert exams == ["matura-podstawowa"]

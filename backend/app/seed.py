@@ -12,21 +12,19 @@ EXAMS = {
 
 SOURCE_KINDS = {
     "matura-podstawowa": {
-        "glowny": "Termin główny",
-        "dodatkowy": "Termin dodatkowy",
-        "poprawkowy": "Termin poprawkowy",
+        "maj": "Termin główny",
+        "czerwiec": "Termin dodatkowy",
+        "sierpien": "Termin poprawkowy",
         "probny": "Próbny egzamin maturalny",
-        "informator": "Informator",
     },
     "matura-rozszerzona": {
-        "glowny": "Termin główny",
-        "dodatkowy": "Termin dodatkowy",
+        "maj": "Termin główny",
+        "czerwiec": "Termin dodatkowy",
         "probny": "Próbny egzamin maturalny",
-        "informator": "Informator",
     },
     "e8": {
-        "glowny": "Termin główny",
-        "dodatkowy": "Termin dodatkowy",
+        "maj": "Termin główny",
+        "czerwiec": "Termin dodatkowy",
         "probny": "Próbny egzamin ósmoklasisty",
     },
 }
