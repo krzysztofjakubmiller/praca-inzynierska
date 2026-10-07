@@ -65,6 +65,16 @@ def test_options_list_topics_and_sources_of_each_exam(client):
     assert exams["e8"]["topics"] == []
 
 
+def test_options_count_tasks_of_each_topic(client):
+    import_tasks(client, 1, 2)
+
+    exams = {exam["code"]: exam for exam in client.get("/api/panel/options").json()}
+    counts = {topic["code"]: topic["tasks"] for topic in exams["matura-podstawowa"]["topics"]}
+
+    assert counts["logarytmy"] == 2
+    assert counts["algebra"] == 0
+
+
 def test_imported_tasks_are_listed_for_review(client):
     ids = import_tasks(client, 1, 2)
 
@@ -135,6 +145,49 @@ def test_deleted_task_is_gone(client, session):
     assert client.delete(f"/api/panel/tasks/{task_id}").status_code == 204
     assert client.get(f"/api/panel/tasks/{task_id}").status_code == 404
     assert session.scalar(select(Task.id)) is None
+
+
+def test_topic_of_many_tasks_changes_at_once(client):
+    first, second, third = import_tasks(client, 1, 2, 3)
+
+    response = client.post(
+        "/api/panel/tasks/topic", json={"ids": [first, third], "topic": "algebra"}
+    )
+
+    assert response.json() == {"changed": 2}
+    topics = [
+        client.get(f"/api/panel/tasks/{task_id}").json()["topic"]
+        for task_id in (first, second, third)
+    ]
+    assert topics == ["algebra", "logarytmy", "algebra"]
+
+
+def test_topic_change_rejects_unknown_topic_and_missing_task(client):
+    [task_id] = import_tasks(client, 1)
+
+    unknown = client.post(
+        "/api/panel/tasks/topic", json={"ids": [task_id], "topic": "potegi"}
+    )
+    missing = client.post(
+        "/api/panel/tasks/topic", json={"ids": [task_id, 999], "topic": "algebra"}
+    )
+
+    assert unknown.json()["detail"] == ["nieznany temat potegi"]
+    assert missing.json()["detail"] == ["części zaznaczonych zadań nie ma w bazie"]
+    assert client.get(f"/api/panel/tasks/{task_id}").json()["topic"] == "logarytmy"
+
+
+def test_reviewed_tasks_go_back_to_review(client, session):
+    first, second = import_tasks(client, 1, 2)
+    edit(client, first, review_status="sprawdzone")
+    edit(client, second, review_status="sprawdzone")
+
+    response = client.post("/api/panel/tasks/reopen", json={"ids": [first, second]})
+
+    assert response.json() == {"changed": 2}
+    tasks = [session.get(Task, task_id) for task_id in (first, second)]
+    assert [task.review_status for task in tasks] == ["do-sprawdzenia", "do-sprawdzenia"]
+    assert [task.reviewed_at for task in tasks] == [None, None]
 
 
 def test_next_task_skips_reviewed_and_wraps_around(client):

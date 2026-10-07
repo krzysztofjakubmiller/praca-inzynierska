@@ -7,7 +7,8 @@ export interface Option {
 }
 
 export interface ExamOptions extends Option {
-  topics: Option[]
+  /** tasks to liczba zadań tematu w bazie, niezależnie od statusu. */
+  topics: (Option & { tasks: number })[]
   sources: Option[]
 }
 
@@ -96,6 +97,9 @@ export const panelApi = {
   task: (id: number) => request<TaskDetails>(`/tasks/${id}`),
   save: (id: number, task: TaskUpdate) => request<TaskDetails>(`/tasks/${id}`, json('PUT', task)),
   remove: (id: number) => request<void>(`/tasks/${id}`, { method: 'DELETE' }),
+  changeTopic: (ids: number[], topic: string) =>
+    request<{ changed: number }>('/tasks/topic', json('POST', { ids, topic })),
+  reopen: (ids: number[]) => request<{ changed: number }>('/tasks/reopen', json('POST', { ids })),
   next: (after: number) => request<{ id: number | null }>(`/next?after=${after}`),
   importText: (text: string) => request<{ ids: number[] }>('/import', json('POST', { text })),
 }

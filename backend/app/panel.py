@@ -3,7 +3,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,14 @@ router = APIRouter(prefix="/api/panel")
 class TaskUpdate(TaskIn):
     topic: str
     review_status: Literal["do-sprawdzenia", "sprawdzone"]
+
+
+class TaskIds(BaseModel):
+    ids: list[int]
+
+
+class TopicChange(TaskIds):
+    topic: str
 
 
 class ImportText(BaseModel):
@@ -61,6 +69,9 @@ def task_details(session: Session, task: Task) -> dict:
 
 @router.get("/options")
 def options(session: Session = Depends(get_session)):
+    task_counts = dict(
+        session.execute(select(Task.topic_id, func.count()).group_by(Task.topic_id)).all()
+    )
     result = []
     for exam in session.scalars(select(Exam).order_by(Exam.id)):
         topics = session.scalars(select(Topic).where(Topic.exam_id == exam.id).order_by(Topic.id))
@@ -71,7 +82,10 @@ def options(session: Session = Depends(get_session)):
             {
                 "code": exam.code,
                 "name": exam.name,
-                "topics": [{"code": topic.code, "name": topic.name} for topic in topics],
+                "topics": [
+                    {"code": topic.code, "name": topic.name, "tasks": task_counts.get(topic.id, 0)}
+                    for topic in topics
+                ],
                 "sources": [{"code": source.code, "name": source.name} for source in sources],
             }
         )
@@ -172,6 +186,44 @@ def update_task(task_id: int, update: TaskUpdate, session: Session = Depends(get
 def delete_task(task_id: int, session: Session = Depends(get_session)):
     session.delete(load_task(session, task_id))
     session.commit()
+
+
+def load_tasks(session: Session, ids: list[int]) -> list[Task]:
+    tasks = session.scalars(select(Task).where(Task.id.in_(ids))).all()
+    if not tasks or len(tasks) != len(set(ids)):
+        raise rejected(["części zaznaczonych zadań nie ma w bazie"])
+    return tasks
+
+
+# Zmienia temat wielu zadań naraz: wszystkie albo żadne.
+@router.post("/tasks/topic")
+def change_topic(body: TopicChange, session: Session = Depends(get_session)):
+    tasks = load_tasks(session, body.ids)
+    exam_ids = {task.exam_id for task in tasks}
+    if len(exam_ids) > 1:
+        raise rejected(["zaznaczone zadania są z różnych egzaminów"])
+    topic = session.scalar(
+        select(Topic).where(Topic.exam_id == exam_ids.pop(), Topic.code == body.topic)
+    )
+    if topic is None:
+        raise rejected([f"nieznany temat {body.topic}"])
+
+    for task in tasks:
+        task.topic_id = topic.id
+    session.commit()
+    return {"changed": len(tasks)}
+
+
+# Masowo można tylko cofnąć zadania do sprawdzenia; „sprawdzone” zostaje decyzją dla
+# każdego zadania osobno.
+@router.post("/tasks/reopen")
+def reopen_tasks(body: TaskIds, session: Session = Depends(get_session)):
+    tasks = load_tasks(session, body.ids)
+    for task in tasks:
+        task.review_status = "do-sprawdzenia"
+        task.reviewed_at = None
+    session.commit()
+    return {"changed": len(tasks)}
 
 
 # Następne zadanie do sprawdzenia po podanym id; po ostatnim wraca do początku listy.

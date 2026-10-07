@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MathText from '@/components/panel/MathText.vue'
 import { panelApi, type ExamOptions, type TaskSummary } from '@/panel/api'
@@ -22,18 +22,30 @@ const topics = computed(
 const allSelected = computed(
   () => tasks.value.length > 0 && selected.value.length === tasks.value.length,
 )
-
-onMounted(() =>
-  run(async () => {
-    exams.value = await panelApi.options()
-  }),
+// Temat można zmienić tylko zadaniom z jednego egzaminu, bo każdy egzamin ma własne tematy.
+const selectedExam = computed(() => {
+  const codes = new Set(
+    tasks.value.filter((task) => selected.value.includes(task.id)).map((task) => task.exam),
+  )
+  return codes.size === 1 ? [...codes][0] : null
+})
+const moveTopics = computed(
+  () => exams.value.find((exam) => exam.code === selectedExam.value)?.topics ?? [],
 )
+const newTopic = ref('')
+
+// Opcje pobierane razem z listą, żeby liczby zadań przy tematach były aktualne po każdej zmianie.
+async function refreshTasks() {
+  ;[tasks.value, exams.value] = await Promise.all([
+    panelApi.tasks(filters.value),
+    panelApi.options(),
+  ])
+  selected.value = []
+}
 
 function loadTasks() {
   selected.value = []
-  return run(async () => {
-    tasks.value = await panelApi.tasks(filters.value)
-  })
+  return run(refreshTasks)
 }
 
 watch(filters, loadTasks, { deep: true, immediate: true })
@@ -59,15 +71,33 @@ function importTasks() {
   })
 }
 
-async function removeSelected() {
+function removeSelected() {
   const count = selected.value.length
   if (!window.confirm(`Usunąć zaznaczone zadania (${count}) z bazy?`)) return
   notice.value = ''
-  await run(async () => {
+  return run(async () => {
     for (const id of selected.value) await panelApi.remove(id)
+    await refreshTasks()
     notice.value = `Usunięto zadań: ${count}.`
   })
-  await loadTasks()
+}
+
+function moveSelected() {
+  notice.value = ''
+  return run(async () => {
+    const { changed } = await panelApi.changeTopic(selected.value, newTopic.value)
+    await refreshTasks()
+    notice.value = `Zmieniono temat zadań: ${changed}.`
+  })
+}
+
+function reopenSelected() {
+  notice.value = ''
+  return run(async () => {
+    const { changed } = await panelApi.reopen(selected.value)
+    await refreshTasks()
+    notice.value = `Przywrócono do sprawdzenia: ${changed}.`
+  })
 }
 
 function startReview() {
@@ -128,7 +158,7 @@ function startReview() {
           <select v-model="filters.topic" :disabled="!filters.exam">
             <option value="">wszystkie</option>
             <option v-for="topic in topics" :key="topic.code" :value="topic.code">
-              {{ topic.name }}
+              {{ topic.name }} ({{ topic.tasks }})
             </option>
           </select>
         </label>
@@ -148,14 +178,41 @@ function startReview() {
           <input type="checkbox" :checked="allSelected" @change="toggleAll" />
           Zaznacz wszystkie
         </label>
-        <button
-          type="button"
-          class="button button--quiet task-list__delete"
-          :disabled="!selected.length"
-          @click="removeSelected"
-        >
-          Usuń zaznaczone ({{ selected.length }})
-        </button>
+        <div class="task-list__actions">
+          <label class="task-list__move">
+            Przenieś do tematu
+            <select v-model="newTopic" :disabled="!selectedExam">
+              <option value="" disabled>wybierz</option>
+              <option v-for="topic in moveTopics" :key="topic.code" :value="topic.code">
+                {{ topic.name }}
+              </option>
+            </select>
+          </label>
+          <button
+            type="button"
+            class="button button--quiet"
+            :disabled="!selectedExam || !newTopic"
+            @click="moveSelected"
+          >
+            Zmień temat
+          </button>
+          <button
+            type="button"
+            class="button button--quiet"
+            :disabled="!selected.length"
+            @click="reopenSelected"
+          >
+            Przywróć do sprawdzenia
+          </button>
+          <button
+            type="button"
+            class="button button--quiet task-list__delete"
+            :disabled="!selected.length"
+            @click="removeSelected"
+          >
+            Usuń zaznaczone ({{ selected.length }})
+          </button>
+        </div>
       </div>
 
       <ol v-if="tasks.length" class="task-list">
@@ -196,6 +253,17 @@ function startReview() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
   gap: 1rem;
+}
+
+.task-list__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+}
+
+.task-list__move {
+  min-width: 14rem;
 }
 
 .panel .task-list__check {
