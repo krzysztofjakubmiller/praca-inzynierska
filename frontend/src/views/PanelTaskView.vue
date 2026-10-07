@@ -28,6 +28,9 @@ const closed = computed(() => form.value?.answer_format !== 'otwarte')
 const sourceName = computed(
   () => exam.value?.sources.find((source) => source.code === form.value?.source)?.name,
 )
+const topicName = computed(
+  () => exam.value?.topics.find((topic) => topic.code === form.value?.topic)?.name,
+)
 
 function fill(details: TaskDetails) {
   task.value = details
@@ -100,13 +103,17 @@ function remove() {
 
 <template>
   <main class="panel">
-    <header class="panel__header">
+    <header class="review__header">
       <RouterLink :to="{ name: 'panel' }">Lista zadań</RouterLink>
-      <template v-if="task">
-        <h1>Zadanie {{ task.id }}</h1>
-        <span class="panel__status" :data-status="task.review_status">
-          {{ STATUS_LABELS[task.review_status] }}
-        </span>
+      <template v-if="task && form">
+        <!-- Opis z formularza, więc zmienia się na bieżąco przy poprawianiu źródła. -->
+        <h1>{{ sourceName }} {{ form.year }}, zadanie {{ taskNumber(form) }}</h1>
+        <p class="review__subtitle">
+          {{ topicName }} · id {{ task.id }}
+          <span class="panel__status" :data-status="task.review_status">
+            {{ STATUS_LABELS[task.review_status] }}
+          </span>
+        </p>
       </template>
     </header>
 
@@ -227,6 +234,21 @@ function remove() {
 </template>
 
 <style scoped>
+.review__header {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.review__subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
 .review {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
