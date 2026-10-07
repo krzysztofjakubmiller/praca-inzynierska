@@ -10,7 +10,6 @@ import {
   type TaskUpdate,
 } from '@/panel/api'
 import { ANSWER_FORMATS, STATUS_LABELS, taskNumber, useProblems } from '@/panel/format'
-import { choosePhoto, pagePhoto } from '@/panel/photo'
 import '@/assets/panel.css'
 
 const route = useRoute()
@@ -96,10 +95,6 @@ function remove() {
       next.id ? { name: 'panel-task', params: { id: next.id } } : { name: 'panel' },
     )
   })
-}
-
-function onPhoto(event: Event) {
-  choosePhoto((event.target as HTMLInputElement).files?.[0])
 }
 </script>
 
@@ -227,15 +222,6 @@ function onPhoto(event: Event) {
         </ol>
         <p v-if="form.answer">Odpowiedź: <MathText :text="form.answer" /></p>
       </section>
-
-      <section class="panel__card" aria-labelledby="photo-title">
-        <h2 id="photo-title">Zdjęcie strony</h2>
-        <img v-if="pagePhoto" :src="pagePhoto" alt="Zdjęcie strony zbioru" class="review__photo" />
-        <label>
-          {{ pagePhoto ? 'Zmień zdjęcie' : 'Wybierz zdjęcie' }}
-          <input type="file" accept="image/*" @change="onPhoto" />
-        </label>
-      </section>
     </div>
   </main>
 </template>
@@ -321,11 +307,5 @@ function onPhoto(event: Event) {
   gap: 0.4rem;
   list-style: none;
   padding: 0;
-}
-
-.review__photo {
-  width: 100%;
-  height: auto;
-  border-radius: 0.5rem;
 }
 </style>
