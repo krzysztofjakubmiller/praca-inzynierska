@@ -8,9 +8,8 @@ const stations = {
     description:
       'Logarytm odpowiada na pytanie, do jakiej potęgi podnieść podstawę, żeby dostać daną liczbę. Nauczysz się go liczyć i upraszczać wyrażenia z logarytmami.',
   },
-  'liczby-potegi': {
-    name: 'Liczby. Potęgi',
-    shortName: 'Liczby i potęgi',
+  potegi: {
+    name: 'Potęgi',
     difficulty: 0,
     description:
       'Działania na potęgach i pierwiastkach, zapis bardzo dużych i bardzo małych liczb oraz przybliżenia. Na tych rachunkach opiera się większość zadań z matury.',
@@ -152,7 +151,7 @@ const lines: Line<BasicStationId>[] = [
     id: 'liczbowa',
     name: 'Liczbowa',
     color: 1,
-    stations: ['logarytmy', 'liczby-potegi', 'algebra', 'dowody-algebra'],
+    stations: ['logarytmy', 'potegi', 'algebra', 'dowody-algebra'],
   },
   {
     id: 'funkcyjna',
@@ -176,13 +175,7 @@ const lines: Line<BasicStationId>[] = [
     id: 'statystyczna',
     name: 'Statystyczna',
     color: 3,
-    stations: [
-      'procenty',
-      'statystyka',
-      'liczby-potegi',
-      'kombinatoryka',
-      'rachunek-prawdopodobienstwa',
-    ],
+    stations: ['procenty', 'statystyka', 'potegi', 'kombinatoryka', 'rachunek-prawdopodobienstwa'],
   },
   {
     id: 'geometryczna',

@@ -13,7 +13,7 @@ describe('listGroups', () => {
     expect(groups).toEqual([
       ['Liczbowa', []],
       ['Funkcyjna', ['algebra']],
-      ['Statystyczna', ['liczby-potegi']],
+      ['Statystyczna', ['potegi']],
       ['Geometryczna', ['funkcja-liniowa']],
     ])
   })
@@ -25,7 +25,7 @@ describe('listOrder', () => {
     const names = listOrder(BASIC_MAP).map((id) => stations[id]!.name)
     expect(names).toEqual([
       'Logarytmy',
-      'Liczby. Potęgi',
+      'Potęgi',
       'Algebra',
       'Dowody (algebra)',
       'Równania. Nierówności',

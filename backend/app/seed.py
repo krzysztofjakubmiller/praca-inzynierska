@@ -25,7 +25,7 @@ SOURCE_KINDS = {
 TOPICS = {
     "matura-podstawowa": {
         "logarytmy": "Logarytmy",
-        "liczby-potegi": "Liczby. Potęgi",
+        "potegi": "Potęgi",
         "algebra": "Algebra",
         "dowody-algebra": "Dowody (algebra)",
         "rownania-nierownosci": "Równania. Nierówności",

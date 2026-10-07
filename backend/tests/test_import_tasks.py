@@ -150,10 +150,10 @@ def test_answer_must_match_choices(session, changes, problem):
 def test_unknown_exam_topic_and_source(session):
     assert rejected(session, task_file(exam="matura")) == ["nieznany egzamin matura"]
 
-    problems = rejected(session, task_file(task(source="glowny"), topic="potegi"))
+    problems = rejected(session, task_file(task(source="glowny"), topic="geometria-sferyczna"))
 
     assert problems == [
-        "nieznany temat potegi w egzaminie matura-podstawowa",
+        "nieznany temat geometria-sferyczna w egzaminie matura-podstawowa",
         "zadanie 1 (glowny 2024, nr 3): nieznane źródło, dostępne: maj, czerwiec, sierpien, probny",
     ]
 

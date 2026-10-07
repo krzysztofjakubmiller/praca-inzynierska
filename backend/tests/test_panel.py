@@ -166,13 +166,13 @@ def test_topic_change_rejects_unknown_topic_and_missing_task(client):
     [task_id] = import_tasks(client, 1)
 
     unknown = client.post(
-        "/api/panel/tasks/topic", json={"ids": [task_id], "topic": "potegi"}
+        "/api/panel/tasks/topic", json={"ids": [task_id], "topic": "geometria-sferyczna"}
     )
     missing = client.post(
         "/api/panel/tasks/topic", json={"ids": [task_id, 999], "topic": "algebra"}
     )
 
-    assert unknown.json()["detail"] == ["nieznany temat potegi"]
+    assert unknown.json()["detail"] == ["nieznany temat geometria-sferyczna"]
     assert missing.json()["detail"] == ["części zaznaczonych zadań nie ma w bazie"]
     assert client.get(f"/api/panel/tasks/{task_id}").json()["topic"] == "logarytmy"
 

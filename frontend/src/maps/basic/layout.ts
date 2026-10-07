@@ -6,7 +6,7 @@ export const BASIC_LAYOUT: MapLayout<BasicStationId> = {
     procenty: { x: 0, y: 0 },
     statystyka: { x: 0, y: 1 },
     logarytmy: { x: 2, y: 1 },
-    'liczby-potegi': { x: 1, y: 2 },
+    potegi: { x: 1, y: 2 },
     kombinatoryka: { x: 2, y: 3 },
     algebra: { x: 1, y: 5 },
     'rachunek-prawdopodobienstwa': { x: 2, y: 4 },

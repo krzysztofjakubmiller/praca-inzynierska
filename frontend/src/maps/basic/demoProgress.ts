@@ -35,7 +35,7 @@ export const BASIC_DEMO_PROGRESS: MapProgress<BasicStationId> = {
       recent: { attempts: 12, correct: 5 },
       lastActivity: daysAgo(3),
     },
-    'liczby-potegi': {
+    potegi: {
       total: 40,
       done: 40,
       due: 12,

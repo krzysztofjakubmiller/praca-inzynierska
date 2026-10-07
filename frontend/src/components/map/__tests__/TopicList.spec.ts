@@ -37,7 +37,7 @@ describe('TopicList', () => {
     expect(list.findAll('.topic-card')).toHaveLength(23)
     expect(list.findAll('.topic-list__pass').map((row) => row.text())).toEqual([
       'Algebra · przesiadka',
-      'Liczby. Potęgi · przesiadka',
+      'Potęgi · przesiadka',
       'Funkcja liniowa · przesiadka',
     ])
   })
