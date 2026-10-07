@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import MathText from '@/components/panel/MathText.vue'
 import { panelApi, type ExamOptions, type TaskSummary } from '@/panel/api'
 import { STATUS_LABELS, taskNumber, useProblems } from '@/panel/format'
-import { choosePhoto } from '@/panel/photo'
 import '@/assets/panel.css'
 
 const router = useRouter()
@@ -13,11 +12,15 @@ const { problems, run } = useProblems()
 const exams = ref<ExamOptions[]>([])
 const filters = ref({ exam: '', topic: '', status: 'do-sprawdzenia' })
 const tasks = ref<TaskSummary[]>([])
+const selected = ref<number[]>([])
 const importText = ref('')
 const notice = ref('')
 
 const topics = computed(
   () => exams.value.find((exam) => exam.code === filters.value.exam)?.topics ?? [],
+)
+const allSelected = computed(
+  () => tasks.value.length > 0 && selected.value.length === tasks.value.length,
 )
 
 onMounted(() =>
@@ -26,14 +29,14 @@ onMounted(() =>
   }),
 )
 
-watch(
-  filters,
-  () =>
-    run(async () => {
-      tasks.value = await panelApi.tasks(filters.value)
-    }),
-  { deep: true, immediate: true },
-)
+function loadTasks() {
+  selected.value = []
+  return run(async () => {
+    tasks.value = await panelApi.tasks(filters.value)
+  })
+}
+
+watch(filters, loadTasks, { deep: true, immediate: true })
 
 // Temat należy do egzaminu, więc po zmianie egzaminu dawny filtr tematu traci sens.
 watch(
@@ -43,11 +46,12 @@ watch(
   },
 )
 
-function onPhoto(event: Event) {
-  choosePhoto((event.target as HTMLInputElement).files?.[0])
+function toggleAll() {
+  selected.value = allSelected.value ? [] : tasks.value.map((task) => task.id)
 }
 
 function importTasks() {
+  notice.value = ''
   return run(async () => {
     const { ids } = await panelApi.importText(importText.value)
     importText.value = ''
@@ -55,7 +59,19 @@ function importTasks() {
   })
 }
 
+async function removeSelected() {
+  const count = selected.value.length
+  if (!window.confirm(`Usunąć zaznaczone zadania (${count}) z bazy?`)) return
+  notice.value = ''
+  await run(async () => {
+    for (const id of selected.value) await panelApi.remove(id)
+    notice.value = `Usunięto zadań: ${count}.`
+  })
+  await loadTasks()
+}
+
 function startReview() {
+  notice.value = ''
   return run(async () => {
     const { id } = await panelApi.next(0)
     if (id) await router.push({ name: 'panel-task', params: { id } })
@@ -76,10 +92,6 @@ function startReview() {
       <label>
         JSON od Gemini
         <textarea v-model="importText" rows="8" spellcheck="false" />
-      </label>
-      <label>
-        Zdjęcie strony (zostaje tylko w przeglądarce)
-        <input type="file" accept="image/*" @change="onPhoto" />
       </label>
       <div>
         <button type="button" class="button" :disabled="!importText.trim()" @click="importTasks">
@@ -131,8 +143,29 @@ function startReview() {
         </label>
       </div>
 
+      <div v-if="tasks.length" class="task-list__selection">
+        <label class="task-list__check">
+          <input type="checkbox" :checked="allSelected" @change="toggleAll" />
+          Zaznacz wszystkie
+        </label>
+        <button
+          type="button"
+          class="button button--quiet task-list__delete"
+          :disabled="!selected.length"
+          @click="removeSelected"
+        >
+          Usuń zaznaczone ({{ selected.length }})
+        </button>
+      </div>
+
       <ol v-if="tasks.length" class="task-list">
-        <li v-for="task in tasks" :key="task.id">
+        <li v-for="task in tasks" :key="task.id" class="task-list__item">
+          <input
+            v-model="selected"
+            type="checkbox"
+            :value="task.id"
+            :aria-label="`Zaznacz zadanie ${task.id}`"
+          />
           <RouterLink class="task-list__row" :to="{ name: 'panel-task', params: { id: task.id } }">
             <span class="task-list__meta">
               {{ task.source }} {{ task.year }}, nr {{ taskNumber(task) }} · {{ task.topic }}
@@ -150,7 +183,8 @@ function startReview() {
 </template>
 
 <style scoped>
-.task-list__toolbar {
+.task-list__toolbar,
+.task-list__selection {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -164,6 +198,22 @@ function startReview() {
   gap: 1rem;
 }
 
+.panel .task-list__check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.task-list__delete:not(:disabled) {
+  border-color: var(--panel-danger);
+  color: var(--panel-danger);
+}
+
+.task-list__delete:not(:disabled):hover {
+  background: var(--panel-danger);
+  color: #fff;
+}
+
 .task-list {
   display: grid;
   border-top: 1px solid var(--hairline);
@@ -171,12 +221,23 @@ function startReview() {
   padding: 0;
 }
 
+.task-list__item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.task-list__item input {
+  margin-top: 1.1rem;
+}
+
 .task-list__row {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 0.35rem 1rem;
   padding: 0.9rem 0.25rem;
-  border-bottom: 1px solid var(--hairline);
   color: inherit;
   text-decoration: none;
 }
