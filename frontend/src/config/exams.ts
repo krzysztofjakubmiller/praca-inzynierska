@@ -20,7 +20,7 @@ export const EXAMS: readonly Exam[] = [
     shortName: 'E8',
     solid: 'sphere',
     description:
-      'Przygotowanie do egzaminu ósmoklasisty bez wkuwania. Ćwiczysz typy zadań z egzaminu, a każda powtórka ma nowe liczby, więc uczysz się sposobu, a nie wyniku.',
+      'Ćwiczysz typy zadań z egzaminu ósmoklasisty. Na mapie tematów widzisz, co już umiesz, a w codziennych powtórkach wracasz do zadań, które sprawiały kłopot.',
     ticketDescription: 'Zadania z egzaminu ósmoklasisty z mapą tematów i codziennymi powtórkami.',
     prices: { monthly: 39, annual: 269 },
   },
@@ -30,7 +30,7 @@ export const EXAMS: readonly Exam[] = [
     shortName: 'Podstawa',
     solid: 'tetrahedron',
     description:
-      'Mapa tematów podpowie, od czego zacząć, a codzienne powtórki wrócą do każdego typu zadania, zanim zdążysz go zapomnieć.',
+      'Mapa tematów pokazuje, od czego zacząć. Do przerobionych zadań wracasz w codziennych powtórkach, zanim je zapomnisz.',
     ticketDescription:
       'Mapa tematów matury podstawowej, codzienne powtórki, arkusze i asystent przy zadaniach.',
     prices: { monthly: 49, annual: 309 },
@@ -41,7 +41,7 @@ export const EXAMS: readonly Exam[] = [
     shortName: 'Rozszerzona',
     solid: 'cube',
     description:
-      'Zadanie otwarte rozwiązujesz w zeszycie, a aplikacja przechodzi z tobą przez kolejne punkty schematu oceniania. Gdy utkniesz, podpowie zamiast podać gotowca.',
+      'Zadanie otwarte rozwiązujesz w zeszycie, a aplikacja przechodzi z tobą przez kolejne punkty schematu oceniania. Gdy utkniesz, dostajesz podpowiedź do następnego kroku.',
     ticketDescription:
       'Mapa tematów matury rozszerzonej, powtórki, arkusze i zadania otwarte sprawdzane punkt po punkcie.',
     prices: { monthly: 59, annual: 379 },

@@ -38,7 +38,7 @@ const STEPS = [
   },
   {
     title: 'Powtarzasz, zanim zapomnisz',
-    text: 'Codziennie dostajesz kilka zadań. Aplikacja sama wylicza, kiedy wrócić do każdego typu zadania, a liczby za każdym razem są nowe.',
+    text: 'Codziennie dostajesz kilka zadań. Aplikacja sama wylicza, kiedy wrócić do każdego typu zadania.',
   },
   {
     title: 'Widzisz postęp',
@@ -102,10 +102,10 @@ function setSlot(index: number, element: unknown) {
           <p class="start__audience">
             Matura z matematyki, podstawowa i rozszerzona, oraz egzamin ósmoklasisty.
           </p>
-          <p class="start__lead">Nie zapamiętujesz odpowiedzi, uczysz się metody.</p>
+          <p class="start__lead">Ćwiczysz typy zadań, które są na egzaminie.</p>
           <p class="start__text">
-            Każda powtórka to ten sam typ zadania z nowymi liczbami, a aplikacja sama pilnuje, kiedy
-            do niego wrócić.
+            Każda powtórka ma nowe liczby, więc odpowiedzi nie da się zapamiętać. Aplikacja sama
+            pilnuje, kiedy wrócić do danego zadania.
           </p>
           <a v-if="cheapest" class="button start__action" href="#bilety">
             Bilety już od {{ formatPrice(cheapest.price) }}
@@ -166,15 +166,15 @@ function setSlot(index: number, element: unknown) {
           <div class="about__note">
             <h3 class="about__note-title">Gdy utkniesz</h3>
             <p>
-              Asystent podpowiada kolejny krok, zamiast podawać gotowe rozwiązanie. Odpowiedzi
-              sprawdza program, a nie sztuczna inteligencja, więc wynik jest zawsze policzony.
+              Asystent podpowiada następny krok, ale nie rozwiązuje zadania za ciebie. Odpowiedź
+              sprawdza zwykły program, który przelicza wynik, więc ocena nie zależy od modelu AI.
             </p>
           </div>
           <div class="about__note">
             <h3 class="about__note-title">Dla rodzica</h3>
             <p>
-              Rodzic może zaglądać w postępy i prace domowe dziecka, bez możliwości zmian. Jeśli
-              chce, dostaje co tydzień krótkie podsumowanie mailem.
+              Rodzic widzi postępy i prace domowe dziecka, ale niczego w nich nie zmieni. Jeśli
+              chce, co tydzień dostaje mailem krótkie podsumowanie.
             </p>
           </div>
         </div>

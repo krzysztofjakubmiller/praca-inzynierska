@@ -13,7 +13,7 @@ function goBack() {
 <template>
   <main class="soon">
     <h1 class="soon__title">Wkrótce</h1>
-    <p class="soon__text">Ta część aplikacji jeszcze nie działa. Pracujemy nad tym.</p>
+    <p class="soon__text">Ta część aplikacji jeszcze nie działa.</p>
     <button type="button" class="button button--quiet" @click="goBack">Wróć</button>
   </main>
 </template>

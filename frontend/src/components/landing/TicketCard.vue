@@ -81,7 +81,7 @@ onBeforeUnmount(() => observer?.disconnect())
       </div>
       <div class="ticket__stub">
         <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
-          Zobacz kosztorys
+          Kup bilet
           <ArrowIcon />
         </RouterLink>
       </div>
