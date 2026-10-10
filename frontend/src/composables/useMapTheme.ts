@@ -4,8 +4,7 @@ export type MapTheme = 'light' | 'dark'
 
 const STORAGE_KEY = 'map-theme'
 
-// Wybór motywu trafi kiedyś na konto ucznia; do tego czasu zostaje w przeglądarce
-// i wystarczy podmienić te dwie funkcje.
+// Dopóki nie ma kont uczniów, wybór motywu zostaje w przeglądarce.
 export function loadMapTheme(): MapTheme {
   try {
     return localStorage.getItem(STORAGE_KEY) === 'dark' ? 'dark' : 'light'
@@ -14,7 +13,7 @@ export function loadMapTheme(): MapTheme {
   }
 }
 
-export function saveMapTheme(theme: MapTheme): void {
+function saveMapTheme(theme: MapTheme): void {
   try {
     localStorage.setItem(STORAGE_KEY, theme)
   } catch {

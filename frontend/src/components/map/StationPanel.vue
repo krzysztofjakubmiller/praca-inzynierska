@@ -12,7 +12,7 @@ import {
   topicState,
 } from '@/maps/progress'
 import type { MapProgress, TopicMap } from '@/maps/types'
-import { plural } from '@/utils/plural'
+import { TASK_FORMS, plural } from '@/utils/plural'
 import { shortCount } from '@/utils/shortCount'
 
 const props = defineProps<{
@@ -25,8 +25,6 @@ const emit = defineEmits<{
   close: []
   select: [id: string]
 }>()
-
-const TASKS: [string, string, string] = ['zadanie', 'zadania', 'zadań']
 
 const station = computed(() => props.map.graph.stations[props.stationId]!)
 const topic = computed(() => props.progress?.topics[props.stationId])
@@ -129,7 +127,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
         <dd>
           <strong>{{ due }}</strong>
           <span class="station-panel__waiting">
-            {{ plural(due, TASKS) }}
+            {{ plural(due, TASK_FORMS) }}
             <svg
               v-if="passengers"
               class="station-panel__passengers"

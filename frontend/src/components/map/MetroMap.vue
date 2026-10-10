@@ -7,7 +7,7 @@ import { listOrder } from '@/maps/order'
 import { DIFFICULTY_NAMES, progressShare } from '@/maps/progress'
 import { stationPath } from '@/maps/shapes'
 import type { MapProgress, TopicMap } from '@/maps/types'
-import { plural } from '@/utils/plural'
+import { TASK_FORMS, plural } from '@/utils/plural'
 
 const props = defineProps<{
   map: TopicMap
@@ -56,8 +56,6 @@ const drawing = computed<MapDrawing | undefined>(() => {
   })
 })
 
-const TASKS: [string, string, string] = ['zadanie', 'zadania', 'zadań']
-
 function describe(id: string): string {
   const station = props.map.graph.stations[id]!
   const topic = props.progress?.topics[id]
@@ -66,7 +64,7 @@ function describe(id: string): string {
     `temat ${DIFFICULTY_NAMES[station.difficulty]}`,
     `zrobione ${Math.round(progressShare(topic) * 100)}%`,
   ]
-  if (topic?.due) parts.push(`${topic.due} ${plural(topic.due, TASKS)} do powtórki`)
+  if (topic?.due) parts.push(`${topic.due} ${plural(topic.due, TASK_FORMS)} do powtórki`)
   if (props.progress?.lastStation === id) parts.push('ostatnio robiony')
   return parts.join(', ')
 }

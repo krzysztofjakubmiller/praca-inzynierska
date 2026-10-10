@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { nextStep, type DiagnosticSheets } from '@/maps/nextStep'
 import type { MapProgress, TopicMap } from '@/maps/types'
-import { plural } from '@/utils/plural'
+import { TASK_FORMS, plural } from '@/utils/plural'
 import { shortCount } from '@/utils/shortCount'
 
 const props = defineProps<{
@@ -10,8 +10,6 @@ const props = defineProps<{
   progress?: MapProgress<string>
   sheets: DiagnosticSheets
 }>()
-
-const TASKS: [string, string, string] = ['zadanie', 'zadania', 'zadań']
 
 const text = computed(() => {
   const step = nextStep(props.map, props.progress, props.sheets)
@@ -22,7 +20,7 @@ const text = computed(() => {
   if (step.kind === 'reviews') {
     return {
       label: `Powtórki · ${shortCount(step.count)}`,
-      spoken: `Powtórki, ${step.count} ${plural(step.count, TASKS)}`,
+      spoken: `Powtórki, ${step.count} ${plural(step.count, TASK_FORMS)}`,
     }
   }
   const station = props.map.graph.stations[step.stationId]!

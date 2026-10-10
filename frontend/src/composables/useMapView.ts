@@ -13,7 +13,7 @@ export function loadMapView(): MapView {
   }
 }
 
-export function saveMapView(view: MapView): void {
+function saveMapView(view: MapView): void {
   try {
     localStorage.setItem(STORAGE_KEY, view)
   } catch {

@@ -1,12 +1,7 @@
+import { daysAgo } from '@/utils/daysAgo'
 import type { DiagnosticSheets } from '../nextStep'
 import type { MapProgress } from '../types'
 import type { BasicStationId } from './graph'
-
-function daysAgo(days: number): Date {
-  const date = new Date()
-  date.setDate(date.getDate() - days)
-  return date
-}
 
 // Postęp wymyślonego ucznia, dopóki nie ma serwera. Liczby dobrane tak, żeby naraz było
 // widać każdy stan stacji: pusty, częściowy i pełny kontur na każdym kształcie i od 0 do 4

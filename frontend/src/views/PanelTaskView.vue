@@ -77,14 +77,16 @@ function save(status: ReviewStatus) {
   })
 }
 
+async function goToNext(id: number) {
+  const next = await panelApi.next(id)
+  await router.push(next.id ? { name: 'panel-task', params: { id: next.id } } : { name: 'panel' })
+}
+
 function approveAndNext() {
   return run(async () => {
     const id = task.value!.id
     await panelApi.save(id, toUpdate(form.value!, 'sprawdzone'))
-    const next = await panelApi.next(id)
-    await router.push(
-      next.id ? { name: 'panel-task', params: { id: next.id } } : { name: 'panel' },
-    )
+    await goToNext(id)
   })
 }
 
@@ -93,10 +95,7 @@ function remove() {
   return run(async () => {
     const id = task.value!.id
     await panelApi.remove(id)
-    const next = await panelApi.next(id)
-    await router.push(
-      next.id ? { name: 'panel-task', params: { id: next.id } } : { name: 'panel' },
-    )
+    await goToNext(id)
   })
 }
 </script>

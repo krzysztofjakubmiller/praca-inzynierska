@@ -8,3 +8,5 @@ export function plural(count: number, [one, few, many]: [string, string, string]
   const lastTwo = count % 100
   return lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 12 || lastTwo > 14) ? few : many
 }
+
+export const TASK_FORMS: [string, string, string] = ['zadanie', 'zadania', 'zadań']
