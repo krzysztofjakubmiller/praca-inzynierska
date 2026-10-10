@@ -48,6 +48,8 @@ databases:
   - name: matma-db
     region: frankfurt
     plan: 0.1c-256mb
+    # Domyślnie Render daje 15 GB, a dysku bazy nie da się później zmniejszyć, tylko powiększyć.
+    diskSizeGB: 1
     databaseName: matma
     user: matma
     postgresMajorVersion: "17"
