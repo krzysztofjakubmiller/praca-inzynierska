@@ -5,14 +5,12 @@ import { TICKET_NAMES, annualTicketValue, formatPrice } from '@/utils/tickets'
 import ArrowIcon from './ArrowIcon.vue'
 import StationMarker from './StationMarker.vue'
 
-/**
- * `order` to miejsce biletu na liście; linie rysują się po kolei.
- * `annualMonths` to liczba miesięcy, na które wystarcza bilet roczny.
- */
 const props = defineProps<{
   exam: Exam
   validUntil: string
+  /** Liczba miesięcy, na które wystarcza bilet roczny. */
   annualMonths: number
+  /** Miejsce biletu na liście; linie rysują się po kolei. */
   order: number
 }>()
 
@@ -23,9 +21,10 @@ const ticket = useTemplateRef<HTMLElement>('ticket')
 const stage = ref<'complete' | 'waiting' | 'arriving'>('complete')
 let observer: IntersectionObserver | undefined
 
-// Linię chowamy dopiero w skrypcie, więc bez JavaScriptu bilet jest kompletny.
+// Bilet zaczyna kompletny, a animację linii włącza dopiero skrypt, więc przy ograniczonym ruchu
+// w ogóle jej nie ma.
 onMounted(() => {
-  if (!('IntersectionObserver' in window) || !ticket.value) return
+  if (!ticket.value) return
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   stage.value = 'waiting'
   observer = new IntersectionObserver(
