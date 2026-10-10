@@ -56,6 +56,12 @@ def test_tasks_are_saved_for_review(session):
     assert saved[0].read_model == "gemini-2.5-pro"
 
 
+def test_open_task_has_empty_choices(session):
+    [task_id] = import_tasks(session, task_file(task(answer_format="otwarte", choices=None)))
+
+    assert session.scalar(select(Task.id).where(Task.choices.is_(None))) == task_id
+
+
 def test_manual_reading_has_no_ai_copy(session):
     import_tasks(session, task_file(read_method="recznie", read_model=None))
 

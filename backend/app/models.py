@@ -111,7 +111,8 @@ class Task(Base):
     has_figure: Mapped[bool] = mapped_column(default=False)
     answer_format: Mapped[str]
     # Etykieta z arkusza i jej treść, np. {"A": "$2$", "B": "$3$"}.
-    choices: Mapped[dict[str, str] | None] = mapped_column(JSONB)
+    # Bez none_as_null zadanie otwarte dostałoby w bazie JSON-owe null zamiast NULL.
+    choices: Mapped[dict[str, str] | None] = mapped_column(JSONB(none_as_null=True))
     answer: Mapped[str | None]
     max_points: Mapped[int] = mapped_column(SmallInteger)
 
