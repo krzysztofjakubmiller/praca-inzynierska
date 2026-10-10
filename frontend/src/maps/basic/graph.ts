@@ -6,13 +6,13 @@ const stations = {
     name: 'Logarytmy',
     difficulty: 1,
     description:
-      'Logarytm odpowiada na pytanie, do jakiej potęgi podnieść podstawę, żeby dostać daną liczbę. Nauczysz się go liczyć i upraszczać wyrażenia z logarytmami.',
+      'Logarytm odpowiada na pytanie, do jakiej potęgi podnieść podstawę, żeby dostać daną liczbę. Liczysz logarytmy i upraszczasz wyrażenia, w których występują.',
   },
   potegi: {
     name: 'Potęgi',
     difficulty: 0,
     description:
-      'Działania na potęgach i pierwiastkach, zapis bardzo dużych i bardzo małych liczb oraz przybliżenia. Na tych rachunkach opiera się większość zadań z matury.',
+      'Działania na potęgach i pierwiastkach, zapis bardzo dużych i bardzo małych liczb oraz przybliżenia.',
   },
   algebra: {
     name: 'Algebra',
@@ -24,14 +24,14 @@ const stations = {
     name: 'Dowody algebra',
     difficulty: 3,
     description:
-      'Zadania typu „wykaż, że”: udowadniasz nierówność albo podzielność liczb, krok po kroku przekształcając wyrażenia. Liczy się każdy krok rozumowania.',
+      'Zadania typu „wykaż, że”: udowadniasz nierówność albo podzielność liczb. Liczy się każdy krok rozumowania.',
   },
   'rownania-nierownosci': {
     name: 'Równania. Nierówności',
     shortName: 'Równania i nierówności',
     difficulty: 1,
     description:
-      'Rozwiązywanie równań i nierówności, od liniowych po proste wymierne. Nauczysz się sprawdzać, które liczby spełniają warunek, i zapisywać zbiór rozwiązań.',
+      'Równania i nierówności liniowe oraz proste równania wymierne. Sprawdzasz, które liczby spełniają warunek, i zapisujesz zbiór rozwiązań.',
   },
   wykresy: {
     name: 'Wykresy',
@@ -55,7 +55,7 @@ const stations = {
     name: 'Funkcja liniowa',
     difficulty: 0,
     description:
-      'Funkcja, której wykres jest prostą. Nauczysz się ją rysować, odczytywać współczynniki i wyznaczać wzór prostej przechodzącej przez dwa punkty.',
+      'Funkcja, której wykres jest prostą. Rysujesz ją, odczytujesz współczynniki i wyznaczasz wzór prostej przez dwa punkty.',
   },
   'uklad-rownan': {
     name: 'Układ równań',
@@ -73,7 +73,7 @@ const stations = {
     name: 'Funkcja kwadratowa',
     difficulty: 2,
     description:
-      'Parabola, delta, miejsca zerowe i wierzchołek. Nauczysz się przechodzić między postaciami wzoru i rozwiązywać nierówności kwadratowe.',
+      'Parabola, delta, miejsca zerowe i wierzchołek. Przechodzisz między postaciami wzoru i rozwiązujesz nierówności kwadratowe.',
   },
   optymalizacja: {
     name: 'Optymalizacja',
@@ -97,7 +97,7 @@ const stations = {
     name: 'Statystyka',
     difficulty: 0,
     description:
-      'Średnia, mediana, dominanta i odchylenie standardowe. Nauczysz się liczyć je z danych i odczytywać informacje z tabel i diagramów.',
+      'Średnia, mediana, dominanta i odchylenie standardowe. Liczysz je z danych i odczytujesz informacje z tabel i diagramów.',
   },
   kombinatoryka: {
     name: 'Kombinatoryka',
@@ -110,13 +110,13 @@ const stations = {
     shortName: 'Prawdopodobieństwo',
     difficulty: 2,
     description:
-      'Obliczasz szansę zdarzenia jako stosunek wyników sprzyjających do wszystkich możliwych. Pomaga w tym kombinatoryka i zdarzenie przeciwne.',
+      'Obliczasz szansę zdarzenia jako stosunek wyników sprzyjających do wszystkich możliwych. Przydają się tu kombinatoryka i zdarzenie przeciwne.',
   },
   'geometria-analityczna': {
     name: 'Geometria analityczna',
     difficulty: 1,
     description:
-      'Punkty i proste w układzie współrzędnych: odległość, środek odcinka, proste równoległe i prostopadłe. Rachunek zastępuje tu rysunek.',
+      'Punkty i proste w układzie współrzędnych: odległość, środek odcinka, proste równoległe i prostopadłe. Zamiast mierzyć na rysunku, liczysz ze współrzędnych.',
   },
   trygonometria: {
     name: 'Trygonometria',
