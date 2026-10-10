@@ -4,8 +4,11 @@ import { mount } from '@vue/test-utils'
 import ExamMenu from '@/components/exam/ExamMenu.vue'
 import router from '@/router'
 
-// Router przewija stronę po każdej zmianie adresu, a jsdom nie umie przewijać.
-beforeAll(() => vi.spyOn(window, 'scrollTo').mockImplementation(() => {}))
+beforeAll(() => {
+  localStorage.setItem('haslo-dostepu', 'sekret')
+  // Router przewija stronę po każdej zmianie adresu, a jsdom nie umie przewijać.
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+})
 
 async function render() {
   await router.push('/matura-podstawowa')

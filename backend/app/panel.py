@@ -7,13 +7,12 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.access import require_password
 from app.db import get_session
 from app.import_tasks import ImportRejected, TaskIn, import_tasks, parse_json, task_problems
 from app.models import Exam, SourceKind, Task, Topic
 
-# Panel właściciela nie ma logowania, więc działa tylko lokalnie. Przed wdrożeniem trzeba go
-# zamknąć hasłem albo logowaniem.
-router = APIRouter(prefix="/api/panel")
+router = APIRouter(prefix="/api/panel", dependencies=[Depends(require_password)])
 
 
 class TaskUpdate(TaskIn):

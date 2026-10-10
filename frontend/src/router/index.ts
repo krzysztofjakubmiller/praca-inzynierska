@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { savedPassword } from '@/access'
 import { PRODUCT_NAME } from '@/config/product'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
@@ -19,6 +20,12 @@ const router = createRouter({
       name: 'home',
       component: () => import('@/views/StartView.vue'),
       meta: { title: 'Strony' },
+    },
+    {
+      path: '/haslo',
+      name: 'access',
+      component: () => import('@/views/AccessView.vue'),
+      meta: { title: 'Wejście' },
     },
     {
       path: '/wizytowka',
@@ -73,6 +80,14 @@ const router = createRouter({
     }
     return { top: 0 }
   },
+})
+
+// Do czasu logowania każda strona jest za hasłem. Tu sprawdzamy tylko, czy jakieś zapamiętano;
+// czy jest dobre, rozstrzyga backend przy wejściu i przy każdym zapytaniu panelu.
+router.beforeEach((to) => {
+  if (to.name !== 'access' && !savedPassword()) {
+    return { name: 'access', query: { dalej: to.fullPath } }
+  }
 })
 
 router.afterEach((to) => {

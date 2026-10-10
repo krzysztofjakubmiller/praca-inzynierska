@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import router from '@/router'
 import { panelApi, Rejected } from '../api'
 
 function answer(status: number, body: unknown) {
@@ -7,6 +8,7 @@ function answer(status: number, body: unknown) {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  localStorage.clear()
 })
 
 describe('panelApi', () => {
@@ -37,6 +39,26 @@ describe('panelApi', () => {
     await expect(panelApi.options()).rejects.toMatchObject({
       problems: ['serwer nie odpowiada albo zgłosił błąd, czy backend jest uruchomiony?'],
     })
+  })
+
+  it('sends the saved password', async () => {
+    localStorage.setItem('haslo-dostepu', 'sekret')
+    answer(200, [])
+
+    await panelApi.options()
+
+    expect(fetch).toHaveBeenCalledWith('/api/panel/options', {
+      headers: { Authorization: 'Bearer sekret' },
+    })
+  })
+
+  it('forgets a rejected password and asks for it again', async () => {
+    localStorage.setItem('haslo-dostepu', 'stare')
+    answer(401, { detail: ['złe hasło'] })
+
+    await expect(panelApi.options()).rejects.toEqual(new Rejected(['złe hasło']))
+    expect(localStorage.getItem('haslo-dostepu')).toBeNull()
+    expect(router.currentRoute.value.name).toBe('access')
   })
 
   it('skips empty filters', async () => {

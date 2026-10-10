@@ -1,3 +1,6 @@
+import { API_URL, authorization, forgetPassword } from '@/access'
+import router from '@/router'
+
 export type ReviewStatus = 'do-sprawdzenia' | 'sprawdzone'
 export type AnswerFormat = 'wielokrotny-wybor' | 'prawda-falsz' | 'dobieranie' | 'otwarte'
 
@@ -62,11 +65,19 @@ export class Rejected extends Error {
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`/api/panel${path}`, {
+  const response = await fetch(`${API_URL}/api/panel${path}`, {
     ...init,
-    headers: init.body ? { 'Content-Type': 'application/json' } : undefined,
+    headers: {
+      ...authorization(),
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+    },
   }).catch(() => null)
   if (response?.status === 204) return undefined as T
+  if (response?.status === 401) {
+    // Hasło zmieniło się na serwerze, więc zapamiętane trzeba wpisać jeszcze raz.
+    forgetPassword()
+    await router.push({ name: 'access', query: { dalej: router.currentRoute.value.fullPath } })
+  }
 
   const body = await response?.json().catch(() => null)
   if (response?.ok) return body as T

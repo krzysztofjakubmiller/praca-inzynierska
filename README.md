@@ -1,12 +1,13 @@
-# Praca inżynierska
+# Matma po kolei
 
-Aplikacja internetowa wspomagająca przygotowanie do matury z matematyki.
+Aplikacja internetowa do przygotowania do matury z matematyki i egzaminu ósmoklasisty. Projekt powstaje jako praca inżynierska.
 
 ## Struktura
 
 - `frontend/` - Vue 3, TypeScript, Vite
 - `backend/` - FastAPI, SQLAlchemy, Alembic
 - `compose.yaml` - PostgreSQL do pracy lokalnej
+- `render.yaml` - konfiguracja wdrożenia na Renderze
 
 ## Wymagania
 
@@ -43,7 +44,21 @@ uvicorn app.main:app --reload
 
 API działa pod `http://localhost:8000`, dokumentacja pod `/docs`. Serwer deweloperski frontendu przekazuje zapytania `/api` do backendu.
 
-Panel właściciela (`/panel`) służy do importu zadań i ich sprawdzania. Nie ma logowania, więc działa tylko lokalnie.
+Do czasu logowania cała aplikacja jest za jednym hasłem ze zmiennej `ACCESS_PASSWORD` backendu, więc trzeba ją ustawić przed uruchomieniem serwera. Bez niej backend odrzuca każde hasło. Panel właściciela (`/panel`) służy do importu zadań i ich sprawdzania.
+
+## Wdrożenie
+
+Konfiguracja Rendera jest w `render.yaml`: strona statyczna z frontendem, backend i PostgreSQL we Frankfurcie. Przed każdym wdrożeniem backendu uruchamiają się migracje i dane startowe.
+
+Zmienne środowiskowe backendu:
+
+- `DATABASE_URL` - adres bazy, na Renderze podstawiany automatycznie
+- `ACCESS_PASSWORD` - hasło do aplikacji
+- `FRONTEND_ORIGINS` - adresy frontendu oddzielone przecinkami, dla których API przyjmuje zapytania z przeglądarki
+
+Zmienna frontendu przy buildzie:
+
+- `VITE_API_URL` - adres backendu; lokalnie pusta
 
 ## Komendy
 

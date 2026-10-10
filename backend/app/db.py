@@ -7,6 +7,9 @@ from sqlalchemy.orm import sessionmaker
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql+psycopg://matma:matma@localhost:5432/matma"
 )
+# Render podaje adres jako postgresql://..., a przy takim SQLAlchemy szuka sterownika psycopg2
+# zamiast zainstalowanego psycopg.
+DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(engine)

@@ -47,7 +47,8 @@ def session(engine):
 
 
 @pytest.fixture
-def client(session):
+def client(session, monkeypatch):
+    monkeypatch.setenv("ACCESS_PASSWORD", "haslo-testowe")
     app.dependency_overrides[get_session] = lambda: session
-    yield TestClient(app)
+    yield TestClient(app, headers={"Authorization": "Bearer haslo-testowe"})
     app.dependency_overrides.clear()

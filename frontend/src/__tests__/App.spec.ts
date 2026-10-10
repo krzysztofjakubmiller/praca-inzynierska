@@ -7,17 +7,18 @@ import { EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 
 beforeAll(() => {
+  localStorage.setItem('haslo-dostepu', 'sekret')
   // jsdom nie obsługuje przewijania, a router przewija po każdej zmianie strony.
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-  // jsdom nie ma też obserwatora rozmiaru ani zapytań o media, z których korzysta strona mapy.
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      unobserve() {}
-      disconnect() {}
-    },
-  )
+  // jsdom nie ma też obserwatorów rozmiaru i widoczności ani zapytań o media, z których
+  // korzystają strona mapy i bilety na wizytówce.
+  const observer = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  vi.stubGlobal('ResizeObserver', observer)
+  vi.stubGlobal('IntersectionObserver', observer)
   vi.stubGlobal('matchMedia', () => ({
     matches: false,
     addEventListener() {},
@@ -65,6 +66,15 @@ describe('App', () => {
     const wrapper = await renderAt('/matura-podstawowa')
     expect(wrapper.find('h1').text()).toBe('Matura podstawowa')
     expect(document.title).toBe(`Matura podstawowa · ${PRODUCT_NAME}`)
+  })
+
+  it('asks for the password before showing any page', async () => {
+    localStorage.removeItem('haslo-dostepu')
+    const wrapper = await renderAt('/wkrotce')
+    localStorage.setItem('haslo-dostepu', 'sekret')
+
+    expect(wrapper.find('h1').text()).toBe('Wejście')
+    expect(router.currentRoute.value.query.dalej).toBe('/wkrotce')
   })
 
   it('shows the not found page for an unknown path', async () => {
