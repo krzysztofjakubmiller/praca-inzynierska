@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { PRODUCT_NAME } from '@/config/product'
+import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
+import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
+import { EXTENDED_DEMO_PROGRESS, EXTENDED_DEMO_SHEETS } from '@/maps/extended/demoProgress'
 import LandingView from '@/views/LandingView.vue'
 
 declare module 'vue-router' {
@@ -43,8 +46,16 @@ const router = createRouter({
     {
       path: '/matura-podstawowa',
       name: 'basic-matura',
-      component: () => import('@/views/BasicMaturaView.vue'),
+      component: () => import('@/views/ExamView.vue'),
+      props: { map: BASIC_MAP, progress: BASIC_DEMO_PROGRESS, sheets: BASIC_DEMO_SHEETS },
       meta: { title: 'Matura podstawowa' },
+    },
+    {
+      path: '/matura-rozszerzona',
+      name: 'extended-matura',
+      component: () => import('@/views/ExamView.vue'),
+      props: { map: EXTENDED_MAP, progress: EXTENDED_DEMO_PROGRESS, sheets: EXTENDED_DEMO_SHEETS },
+      meta: { title: 'Matura rozszerzona' },
     },
     {
       path: '/:pathMatch(.*)*',

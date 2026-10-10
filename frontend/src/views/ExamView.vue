@@ -13,10 +13,17 @@ import { useMapTheme } from '@/composables/useMapTheme'
 import { useMapView } from '@/composables/useMapView'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { EXAMS } from '@/config/exams'
-import { BASIC_MAP } from '@/maps'
-import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
+import type { DiagnosticSheets } from '@/maps/nextStep'
+import type { MapProgress, TopicMap } from '@/maps/types'
 
-const exam = EXAMS.find((item) => item.id === BASIC_MAP.examId)!
+// Ta sama strona dla każdego egzaminu; mapę i postęp ucznia podaje router.
+const props = defineProps<{
+  map: TopicMap
+  progress: MapProgress<string>
+  sheets: DiagnosticSheets
+}>()
+
+const exam = computed(() => EXAMS.find((item) => item.id === props.map.examId)!)
 const { theme, setTheme } = useMapTheme()
 const { view, setView } = useMapView()
 
@@ -26,7 +33,7 @@ const beside = useMediaQuery('(min-width: 48rem) and (orientation: landscape)')
 const selected = ref<string>()
 const collapsed = ref(false)
 const legendOpen = ref(false)
-const map = useTemplateRef<InstanceType<typeof MetroMap>>('map')
+const metroMap = useTemplateRef<InstanceType<typeof MetroMap>>('metroMap')
 const list = useTemplateRef<InstanceType<typeof TopicList>>('list')
 const panel = useTemplateRef<InstanceType<typeof StationPanel>>('panel')
 const drawer = useTemplateRef<HTMLDialogElement>('drawer')
@@ -63,6 +70,16 @@ onMounted(() => {
 
 onBeforeUnmount(() => sheetObserver?.disconnect())
 
+// Przejście z menu na inny egzamin zostawia tę samą stronę, więc wybrana stacja z poprzedniej
+// mapy nie może przetrwać zmiany.
+watch(
+  () => props.map,
+  () => {
+    selected.value = undefined
+    legendOpen.value = false
+  },
+)
+
 function select(id: string | undefined) {
   selected.value = id
   if (id) collapsed.value = false
@@ -71,7 +88,7 @@ function select(id: string | undefined) {
 function close() {
   const id = selected.value
   selected.value = undefined
-  if (id) nextTick(() => (view.value === 'list' ? list.value : map.value)?.focusStation(id))
+  if (id) nextTick(() => (view.value === 'list' ? list.value : metroMap.value)?.focusStation(id))
 }
 
 async function collapse() {
@@ -154,9 +171,9 @@ function closeOutside(event: MouseEvent) {
         </button>
         <NextStepButton
           v-if="beside && !desktop"
-          :map="BASIC_MAP"
-          :progress="BASIC_DEMO_PROGRESS"
-          :sheets="BASIC_DEMO_SHEETS"
+          :map="map"
+          :progress="progress"
+          :sheets="sheets"
         />
         <button
           type="button"
@@ -193,13 +210,13 @@ function closeOutside(event: MouseEvent) {
         <StationPanel
           v-else-if="selected"
           ref="panel"
-          :map="BASIC_MAP"
-          :progress="BASIC_DEMO_PROGRESS"
+          :map="map"
+          :progress="progress"
           :station-id="selected"
           @close="close"
           @select="selected = $event"
         />
-        <MapLegend v-else-if="legendOpen" :map="BASIC_MAP" @close="closeLegend" />
+        <MapLegend v-else-if="legendOpen" :map="map" @close="closeLegend" />
         <div v-else class="exam-side__menu">
           <button
             ref="collapseButton"
@@ -213,9 +230,9 @@ function closeOutside(event: MouseEvent) {
           </button>
           <NextStepButton
             class="exam-side__next"
-            :map="BASIC_MAP"
-            :progress="BASIC_DEMO_PROGRESS"
-            :sheets="BASIC_DEMO_SHEETS"
+            :map="map"
+            :progress="progress"
+            :sheets="sheets"
           />
           <ExamMenu />
         </div>
@@ -225,8 +242,8 @@ function closeOutside(event: MouseEvent) {
           v-if="selected"
           ref="panel"
           class="exam-page__panel"
-          :map="BASIC_MAP"
-          :progress="BASIC_DEMO_PROGRESS"
+          :map="map"
+          :progress="progress"
           :station-id="selected"
           @close="close"
           @select="selected = $event"
@@ -235,28 +252,28 @@ function closeOutside(event: MouseEvent) {
       <main class="exam-page__map">
         <MetroMap
           v-if="view === 'map'"
-          ref="map"
-          :map="BASIC_MAP"
-          :progress="BASIC_DEMO_PROGRESS"
+          ref="metroMap"
+          :map="map"
+          :progress="progress"
           :selected="selected"
           :bottom-inset="bottomInset"
           @select="select"
         >
           <template v-if="legendOpen && !desktop" #before>
-            <MapLegend class="exam-page__legend" :map="BASIC_MAP" @close="closeLegend" />
+            <MapLegend class="exam-page__legend" :map="map" @close="closeLegend" />
           </template>
         </MetroMap>
         <TopicList
           v-else
           ref="list"
-          :map="BASIC_MAP"
-          :progress="BASIC_DEMO_PROGRESS"
+          :map="map"
+          :progress="progress"
           :selected="selected"
           :bottom-inset="bottomInset"
           @select="select"
         >
           <template v-if="legendOpen && !desktop" #before>
-            <MapLegend class="exam-page__legend" :map="BASIC_MAP" @close="closeLegend" />
+            <MapLegend class="exam-page__legend" :map="map" @close="closeLegend" />
           </template>
         </TopicList>
       </main>
@@ -265,9 +282,9 @@ function closeOutside(event: MouseEvent) {
     <NextStepButton
       v-if="floatingPill"
       class="exam-page__next"
-      :map="BASIC_MAP"
-      :progress="BASIC_DEMO_PROGRESS"
-      :sheets="BASIC_DEMO_SHEETS"
+      :map="map"
+      :progress="progress"
+      :sheets="sheets"
     />
 
     <dialog

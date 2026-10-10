@@ -21,7 +21,7 @@ const stations = {
       'Przekształcanie wyrażeń: wzory skróconego mnożenia, wyłączanie wspólnego czynnika przed nawias i upraszczanie. Przyda ci się przy równaniach i funkcjach.',
   },
   'dowody-algebra': {
-    name: 'Dowody (algebra)',
+    name: 'Dowody algebra',
     difficulty: 3,
     description:
       'Zadania typu „wykaż, że”: udowadniasz nierówność albo podzielność liczb, krok po kroku przekształcając wyrażenia. Liczy się każdy krok rozumowania.',
@@ -137,7 +137,7 @@ const stations = {
       'Graniastosłupy, ostrosłupy, walec, stożek i kula. Liczysz objętości, pola powierzchni i kąty w bryłach.',
   },
   'dowody-geometria': {
-    name: 'Dowody (geometria)',
+    name: 'Dowody geometria',
     difficulty: 3,
     description:
       'Zadania typu „wykaż, że” z geometrii: uzasadniasz własności figur, na przykład równość kątów albo podobieństwo trójkątów.',

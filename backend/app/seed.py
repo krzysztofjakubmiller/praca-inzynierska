@@ -21,13 +21,13 @@ SOURCE_KINDS = {
     "e8": {"maj": "Maj", "czerwiec": "Czerwiec", "probny": "Próbny"},
 }
 
-# Kody takie same jak klucze stacji w frontend/src/maps/basic/graph.ts.
+# Kody takie same jak klucze stacji w frontend/src/maps/basic/graph.ts i extended/graph.ts.
 TOPICS = {
     "matura-podstawowa": {
         "logarytmy": "Logarytmy",
         "potegi": "Potęgi",
         "algebra": "Algebra",
-        "dowody-algebra": "Dowody (algebra)",
+        "dowody-algebra": "Dowody algebra",
         "rownania-nierownosci": "Równania. Nierówności",
         "wykresy": "Wykresy",
         "wielomiany": "Wielomiany",
@@ -46,7 +46,25 @@ TOPICS = {
         "trygonometria": "Trygonometria",
         "planimetria": "Planimetria",
         "stereometria": "Stereometria",
-        "dowody-geometria": "Dowody (geometria)",
+        "dowody-geometria": "Dowody geometria",
+    },
+    "matura-rozszerzona": {
+        "trygonometria": "Trygonometria",
+        "wartosc-bezwzgledna": "Wartość bezwzględna",
+        "wzory-vieta": "Wzory Vieta",
+        "funkcja-wykladnicza": "Funkcja wykładnicza",
+        "ciagi": "Ciągi",
+        "nieskonczonosc-w-ciagach": "Nieskończoność w ciągach",
+        "granice": "Granice",
+        "pochodna": "Pochodna",
+        "optymalizacja": "Optymalizacja",
+        "logarytmy": "Logarytmy",
+        "dowody-algebra": "Dowody algebra",
+        "kombinatoryka": "Kombinatoryka",
+        "rachunek-prawdopodobienstwa": "Rachunek prawdopodobieństwa",
+        "geometria-analityczna": "Geometria analityczna",
+        "planimetria": "Planimetria",
+        "stereometria": "Stereometria",
     },
 }
 

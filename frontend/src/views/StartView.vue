@@ -5,6 +5,7 @@ import type { RouteLocationRaw } from 'vue-router'
 const PAGES: { label: string; to: RouteLocationRaw }[] = [
   { label: 'Wizytówka', to: { name: 'landing' } },
   { label: 'Matura podstawowa (mapa tematów)', to: { name: 'basic-matura' } },
+  { label: 'Matura rozszerzona (mapa tematów)', to: { name: 'extended-matura' } },
   { label: 'Panel właściciela', to: { name: 'panel' } },
   { label: 'Wkrótce', to: { name: 'coming-soon' } },
   { label: 'Strona 404', to: '/nie-ma-takiej-strony' },

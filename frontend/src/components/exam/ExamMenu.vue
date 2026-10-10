@@ -18,6 +18,7 @@ interface MenuItem {
 const SOON: RouteLocationRaw = { name: 'coming-soon' }
 const EXAM_PAGES: Partial<Record<Exam['id'], RouteLocationRaw>> = {
   'matura-podstawowa': { name: 'basic-matura' },
+  'matura-rozszerzona': { name: 'extended-matura' },
 }
 
 const soon = (label: string): MenuItem => ({ label, to: SOON })

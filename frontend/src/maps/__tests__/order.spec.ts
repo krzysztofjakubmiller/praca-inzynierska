@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { BASIC_MAP } from '@/maps'
+import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { lineStops, listGroups, listOrder } from '@/maps/order'
 import type { Station } from '@/maps/types'
 
@@ -27,7 +27,7 @@ describe('listOrder', () => {
       'Logarytmy',
       'Potęgi',
       'Algebra',
-      'Dowody (algebra)',
+      'Dowody algebra',
       'Równania. Nierówności',
       'Wykresy',
       'Wielomiany',
@@ -46,7 +46,32 @@ describe('listOrder', () => {
       'Trygonometria',
       'Planimetria',
       'Stereometria',
-      'Dowody (geometria)',
+      'Dowody geometria',
+    ])
+  })
+})
+
+describe('listOrder for the extended matura', () => {
+  it('follows the functions line into calculus, then the branches', () => {
+    const stations: Readonly<Record<string, Station>> = EXTENDED_MAP.graph.stations
+    const names = listOrder(EXTENDED_MAP).map((id) => stations[id]!.name)
+    expect(names).toEqual([
+      'Trygonometria',
+      'Wartość bezwzględna',
+      'Wzory Vieta',
+      'Funkcja wykładnicza',
+      'Ciągi',
+      'Nieskończoność w ciągach',
+      'Granice',
+      'Pochodna',
+      'Optymalizacja',
+      'Logarytmy',
+      'Dowody algebra',
+      'Kombinatoryka',
+      'Rachunek prawdopodobieństwa',
+      'Geometria analityczna',
+      'Planimetria',
+      'Stereometria',
     ])
   })
 })

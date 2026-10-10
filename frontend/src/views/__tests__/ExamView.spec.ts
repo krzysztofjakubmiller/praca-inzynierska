@@ -3,8 +3,13 @@ import { mount, type VueWrapper } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
 import { setMapView } from '@/composables/useMapView'
+import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
+import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
+import { EXTENDED_DEMO_PROGRESS, EXTENDED_DEMO_SHEETS } from '@/maps/extended/demoProgress'
+import type { DiagnosticSheets } from '@/maps/nextStep'
+import type { MapProgress, TopicMap } from '@/maps/types'
 import router from '@/router'
-import BasicMaturaView from '@/views/BasicMaturaView.vue'
+import ExamView from '@/views/ExamView.vue'
 
 // jsdom nie rysuje, więc mapę zastępuje atrapa, która zgłasza wybór stacji i pokazuje treść nad mapą.
 const MapStub = defineComponent({
@@ -46,14 +51,32 @@ afterEach(() => {
   localStorage.clear()
 })
 
-async function render(desktop: boolean) {
+interface ExamProps {
+  map: TopicMap
+  progress: MapProgress<string>
+  sheets: DiagnosticSheets
+}
+
+const BASIC: ExamProps = {
+  map: BASIC_MAP,
+  progress: BASIC_DEMO_PROGRESS,
+  sheets: BASIC_DEMO_SHEETS,
+}
+const EXTENDED: ExamProps = {
+  map: EXTENDED_MAP,
+  progress: EXTENDED_DEMO_PROGRESS,
+  sheets: EXTENDED_DEMO_SHEETS,
+}
+
+async function render(desktop: boolean, props = BASIC) {
   vi.stubGlobal('matchMedia', () => ({
     matches: desktop,
     addEventListener() {},
     removeEventListener() {},
   }))
   await router.push('/matura-podstawowa')
-  wrapper = mount(BasicMaturaView, {
+  wrapper = mount(ExamView, {
+    props,
     global: { plugins: [router], stubs: { MetroMap: MapStub } },
     attachTo: document.body,
   })
@@ -67,7 +90,7 @@ const legendButton = (page: VueWrapper) =>
 const pickStation = (page: VueWrapper, id: string) =>
   page.findComponent(MapStub).vm.$emit('select', id)
 
-describe('BasicMaturaView on a computer', () => {
+describe('ExamView on a computer', () => {
   it('keeps the menu in the left column', async () => {
     const page = await render(true)
     expect(side(page).find('nav').exists()).toBe(true)
@@ -113,7 +136,7 @@ describe('BasicMaturaView on a computer', () => {
   })
 })
 
-describe('BasicMaturaView list', () => {
+describe('ExamView list', () => {
   it('swaps the map for the list and opens topics from it', async () => {
     const page = await render(true)
     const views = page.find('[aria-label="Widok tematów"]').findAll('button')
@@ -128,7 +151,7 @@ describe('BasicMaturaView list', () => {
   })
 })
 
-describe('BasicMaturaView next step', () => {
+describe('ExamView next step', () => {
   it('starts the column with the next step on a computer', async () => {
     const page = await render(true)
     expect(side(page).find('.next-step').text()).toBe('Powtórki · 78')
@@ -142,7 +165,7 @@ describe('BasicMaturaView next step', () => {
   })
 })
 
-describe('BasicMaturaView on a phone', () => {
+describe('ExamView on a phone', () => {
   it('opens the legend above the map', async () => {
     const page = await render(false)
     const legend = legendButton(page)
@@ -160,5 +183,22 @@ describe('BasicMaturaView on a phone', () => {
     expect(drawer.attributes('open')).toBeDefined()
     await button(page, 'Zamknij menu').trigger('click')
     expect(drawer.attributes('open')).toBeUndefined()
+  })
+})
+
+describe('ExamView for the extended matura', () => {
+  it('shows its own exam, lines and topics', async () => {
+    const page = await render(true, EXTENDED)
+    expect(page.find('h1').text()).toBe('Matura rozszerzona')
+    await pickStation(page, 'pochodna')
+    expect(side(page).find('h2').text()).toBe('Pochodna')
+    expect(side(page).text()).toContain('Linia Analizy matematycznej')
+  })
+
+  it('drops the chosen topic when the menu switches to another exam', async () => {
+    const page = await render(true)
+    await pickStation(page, 'wielomiany')
+    await page.setProps(EXTENDED)
+    expect(side(page).find('nav').exists()).toBe(true)
   })
 })

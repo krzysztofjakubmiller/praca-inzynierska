@@ -15,7 +15,7 @@ def test_seed_runs_again_without_duplicates(session):
 
     assert count(session, Exam) == 3
     assert count(session, SourceKind) == 10
-    assert count(session, Topic) == 23
+    assert count(session, Topic) == 23 + 16
 
 
 def test_august_only_in_basic_matura(session):

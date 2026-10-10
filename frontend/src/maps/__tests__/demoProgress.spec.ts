@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest'
 
 import { BASIC_DEMO_PROGRESS } from '@/maps/basic/demoProgress'
+import { EXTENDED_DEMO_PROGRESS } from '@/maps/extended/demoProgress'
+import type { MapProgress } from '@/maps/types'
 
-describe('BASIC_DEMO_PROGRESS', () => {
+describe.each([
+  ['basic', BASIC_DEMO_PROGRESS],
+  ['extended', EXTENDED_DEMO_PROGRESS],
+] as [string, MapProgress<string>][])('the %s demo student', (_, progress) => {
   it('keeps every count within its whole', () => {
-    const problems = Object.entries(BASIC_DEMO_PROGRESS.topics)
+    const problems = Object.entries(progress.topics)
       .filter(
         ([, topic]) =>
           !topic ||
@@ -19,7 +24,7 @@ describe('BASIC_DEMO_PROGRESS', () => {
   })
 
   it('marks a started topic as the last one', () => {
-    const last = BASIC_DEMO_PROGRESS.lastStation
-    expect(last && BASIC_DEMO_PROGRESS.topics[last]?.done).toBeGreaterThan(0)
+    const last = progress.lastStation
+    expect(last && progress.topics[last]?.done).toBeGreaterThan(0)
   })
 })
