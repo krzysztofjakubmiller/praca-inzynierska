@@ -47,4 +47,37 @@ describe('routeLine', () => {
       { x: 50, y: 80 },
     ])
   })
+
+  it('goes straight first when the next segment would meet the straight part at a right angle', () => {
+    expect(
+      routeLine([
+        { x: 0, y: 0 },
+        { x: 50, y: 80 },
+        { x: 100, y: 80 },
+      ]),
+    ).toEqual([
+      { x: 0, y: 0 },
+      { x: 0, y: 30 },
+      { x: 50, y: 80 },
+      { x: 100, y: 80 },
+    ])
+  })
+
+  it('puts the straight part in the middle when both neighbours cross it', () => {
+    expect(
+      routeLine([
+        { x: -50, y: 0 },
+        { x: 0, y: 0 },
+        { x: 50, y: 80 },
+        { x: 100, y: 80 },
+      ]),
+    ).toEqual([
+      { x: -50, y: 0 },
+      { x: 0, y: 0 },
+      { x: 25, y: 25 },
+      { x: 25, y: 55 },
+      { x: 50, y: 80 },
+      { x: 100, y: 80 },
+    ])
+  })
 })

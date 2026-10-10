@@ -9,6 +9,22 @@ function overlapping(drawing: MapDrawing): string[] {
   return drawing.labels.filter((label) => label.overlaps).map((label) => label.id)
 }
 
+// Skręty ostrzejsze niż 45 stopni, jako „linia@punkt”.
+function sharpTurns(drawing: MapDrawing): string[] {
+  return drawing.lines.flatMap((line) =>
+    line.points.slice(1, -1).flatMap((point, index) => {
+      const before = line.points[index]!
+      const after = line.points[index + 2]!
+      const turn = Math.abs(
+        Math.atan2(after.y - point.y, after.x - point.x) -
+          Math.atan2(point.y - before.y, point.x - before.x),
+      )
+      const degrees = (Math.min(turn, 2 * Math.PI - turn) * 180) / Math.PI
+      return degrees > 45.5 ? [`${line.id}@${index + 1}`] : []
+    }),
+  )
+}
+
 describe.each(TOPIC_MAPS)('drawing the map of $examId', (map) => {
   it('stands upright on a 390 px phone with every label inside the screen', () => {
     const drawing = drawMap(map, { width: 358, height: 680, measure })
@@ -19,6 +35,11 @@ describe.each(TOPIC_MAPS)('drawing the map of $examId', (map) => {
       expect(box.x).toBeGreaterThanOrEqual(4)
       expect(box.x + box.width).toBeLessThanOrEqual(358 - 4)
     }
+  })
+
+  it('never turns a line sharper than 45 degrees, upright or sideways', () => {
+    expect(sharpTurns(drawMap(map, { width: 358, height: 680, measure }))).toEqual([])
+    expect(sharpTurns(drawMap(map, { width: 1100, height: 760, measure }))).toEqual([])
   })
 
   it('stands upright on a tablet held upright', () => {
