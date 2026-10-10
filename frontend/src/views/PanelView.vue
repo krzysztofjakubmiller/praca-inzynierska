@@ -225,7 +225,8 @@ function startReview() {
           />
           <RouterLink class="task-list__row" :to="{ name: 'panel-task', params: { id: task.id } }">
             <span class="task-list__meta">
-              {{ task.source }} {{ task.year }}, nr {{ taskNumber(task) }} · {{ task.topic }}
+              id {{ task.id }} · {{ task.source }} {{ task.year }}, nr {{ taskNumber(task) }} ·
+              {{ task.topic }}
             </span>
             <span class="panel__status" :data-status="task.review_status">
               {{ STATUS_LABELS[task.review_status] }}
@@ -318,13 +319,13 @@ function startReview() {
   font-weight: 650;
 }
 
+/* Bez tego plakietka rozciąga się na wysokość opisu, gdy ten zajmuje dwie linie. */
+.task-list__row .panel__status {
+  align-self: start;
+}
+
 .task-list__content {
   grid-column: 1 / -1;
-  display: -webkit-box;
-  overflow: hidden;
   color: var(--ink-soft);
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
 }
 </style>
