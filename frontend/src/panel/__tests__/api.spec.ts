@@ -41,24 +41,27 @@ describe('panelApi', () => {
     })
   })
 
-  it('sends the saved password', async () => {
+  it('sends the saved panel password', async () => {
     localStorage.setItem('haslo-dostepu', 'sekret')
+    localStorage.setItem('haslo-panelu', 'sekret-panelu')
     answer(200, [])
 
     await panelApi.options()
 
     expect(fetch).toHaveBeenCalledWith('/api/panel/options', {
-      headers: { Authorization: 'Bearer sekret' },
+      headers: { Authorization: 'Bearer sekret-panelu' },
     })
   })
 
-  it('forgets a rejected password and asks for it again', async () => {
-    localStorage.setItem('haslo-dostepu', 'stare')
-    answer(401, { detail: ['złe hasło'] })
+  it('forgets a rejected panel password and asks for it again', async () => {
+    localStorage.setItem('haslo-dostepu', 'sekret')
+    localStorage.setItem('haslo-panelu', 'stare')
+    answer(401, { detail: ['złe hasło panelu'] })
 
-    await expect(panelApi.options()).rejects.toEqual(new Rejected(['złe hasło']))
-    expect(localStorage.getItem('haslo-dostepu')).toBeNull()
-    expect(router.currentRoute.value.name).toBe('access')
+    await expect(panelApi.options()).rejects.toEqual(new Rejected(['złe hasło panelu']))
+    expect(localStorage.getItem('haslo-panelu')).toBeNull()
+    expect(localStorage.getItem('haslo-dostepu')).toBe('sekret')
+    expect(router.currentRoute.value.name).toBe('panel-access')
   })
 
   it('skips empty filters', async () => {

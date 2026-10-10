@@ -44,7 +44,7 @@ uvicorn app.main:app --reload
 
 API działa pod `http://localhost:8000`, dokumentacja pod `/docs`. Serwer deweloperski frontendu przekazuje zapytania `/api` do backendu.
 
-Do czasu logowania cała aplikacja jest za jednym hasłem ze zmiennej `ACCESS_PASSWORD` backendu, więc trzeba ją ustawić przed uruchomieniem serwera. Bez niej backend odrzuca każde hasło. Panel właściciela (`/panel`) służy do importu zadań i ich sprawdzania.
+Do czasu logowania aplikacja jest za hasłem ze zmiennej `ACCESS_PASSWORD` backendu, a panel właściciela (`/panel`, import i sprawdzanie zadań) za osobnym hasłem z `PANEL_PASSWORD`. Obie zmienne trzeba ustawić przed uruchomieniem serwera. Bez zmiennej backend odrzuca każde hasło.
 
 ## Wdrożenie
 
@@ -54,6 +54,7 @@ Zmienne środowiskowe backendu:
 
 - `DATABASE_URL` - adres bazy, na Renderze podstawiany automatycznie
 - `ACCESS_PASSWORD` - hasło do aplikacji
+- `PANEL_PASSWORD` - hasło do panelu właściciela
 - `FRONTEND_ORIGINS` - adresy frontendu oddzielone przecinkami, dla których API przyjmuje zapytania z przeglądarki
 
 Zmienna frontendu przy buildzie:

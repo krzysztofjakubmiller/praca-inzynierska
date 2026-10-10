@@ -49,6 +49,8 @@ def session(engine):
 @pytest.fixture
 def client(session, monkeypatch):
     monkeypatch.setenv("ACCESS_PASSWORD", "haslo-testowe")
+    monkeypatch.setenv("PANEL_PASSWORD", "haslo-panelu")
     app.dependency_overrides[get_session] = lambda: session
-    yield TestClient(app, headers={"Authorization": "Bearer haslo-testowe"})
+    # Większość testów dotyczy panelu, więc domyślnie klient wysyła hasło panelu.
+    yield TestClient(app, headers={"Authorization": "Bearer haslo-panelu"})
     app.dependency_overrides.clear()

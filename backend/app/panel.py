@@ -7,12 +7,12 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.access import require_password
+from app.access import require_panel_password
 from app.db import get_session
 from app.import_tasks import ImportRejected, TaskIn, import_tasks, parse_json, task_problems
 from app.models import Exam, SourceKind, Task, Topic
 
-router = APIRouter(prefix="/api/panel", dependencies=[Depends(require_password)])
+router = APIRouter(prefix="/api/panel", dependencies=[Depends(require_panel_password)])
 
 
 class TaskUpdate(TaskIn):
@@ -64,6 +64,12 @@ def task_details(session: Session, task: Task) -> dict:
         "read_model": task.read_model,
         "ai_content": task.ai_content,
     }
+
+
+# Hasło panelu sprawdza zależność routera, więc samo dojście tutaj znaczy, że jest dobre.
+@router.get("/access", status_code=204)
+def check_panel_access():
+    pass
 
 
 @router.get("/options")

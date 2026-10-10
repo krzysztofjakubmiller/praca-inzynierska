@@ -9,6 +9,7 @@ import LandingView from '@/views/LandingView.vue'
 declare module 'vue-router' {
   interface RouteMeta {
     title?: string
+    panel?: boolean
   }
 }
 
@@ -25,7 +26,15 @@ const router = createRouter({
       path: '/haslo',
       name: 'access',
       component: () => import('@/views/AccessView.vue'),
+      props: { kind: 'access' },
       meta: { title: 'Wejście' },
+    },
+    {
+      path: '/panel/haslo',
+      name: 'panel-access',
+      component: () => import('@/views/AccessView.vue'),
+      props: { kind: 'panel' },
+      meta: { title: 'Panel' },
     },
     {
       path: '/wizytowka',
@@ -36,13 +45,13 @@ const router = createRouter({
       path: '/panel',
       name: 'panel',
       component: () => import('@/views/PanelView.vue'),
-      meta: { title: 'Panel' },
+      meta: { title: 'Panel', panel: true },
     },
     {
       path: '/panel/zadanie/:id',
       name: 'panel-task',
       component: () => import('@/views/PanelTaskView.vue'),
-      meta: { title: 'Zadanie' },
+      meta: { title: 'Zadanie', panel: true },
     },
     {
       path: '/wkrotce',
@@ -82,11 +91,14 @@ const router = createRouter({
   },
 })
 
-// Do czasu logowania każda strona jest za hasłem. Tu sprawdzamy tylko, czy jakieś zapamiętano;
-// czy jest dobre, rozstrzyga backend przy wejściu i przy każdym zapytaniu panelu.
+// Do czasu logowania każda strona jest za hasłem, a panel za drugim. Tu sprawdzamy tylko, czy
+// jakieś zapamiętano; czy jest dobre, rozstrzyga backend przy wejściu i przy zapytaniach panelu.
 router.beforeEach((to) => {
-  if (to.name !== 'access' && !savedPassword()) {
+  if (to.name !== 'access' && !savedPassword('access')) {
     return { name: 'access', query: { dalej: to.fullPath } }
+  }
+  if (to.meta.panel && !savedPassword('panel')) {
+    return { name: 'panel-access', query: { dalej: to.fullPath } }
   }
 })
 

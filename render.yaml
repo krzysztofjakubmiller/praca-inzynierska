@@ -21,6 +21,8 @@ services:
           property: connectionString
       - key: ACCESS_PASSWORD
         sync: false
+      - key: PANEL_PASSWORD
+        sync: false
       - key: FRONTEND_ORIGINS
         value: https://matmapokolei.pl,https://matma-web.onrender.com
 

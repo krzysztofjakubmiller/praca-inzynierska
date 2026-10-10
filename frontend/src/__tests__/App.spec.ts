@@ -77,6 +77,14 @@ describe('App', () => {
     expect(router.currentRoute.value.query.dalej).toBe('/wkrotce')
   })
 
+  it('asks for the panel password before showing the panel', async () => {
+    const wrapper = await renderAt('/panel')
+
+    expect(wrapper.find('h1').text()).toBe('Panel właściciela')
+    expect(router.currentRoute.value.name).toBe('panel-access')
+    expect(router.currentRoute.value.query.dalej).toBe('/panel')
+  })
+
   it('shows the not found page for an unknown path', async () => {
     const wrapper = await renderAt('/nie-istnieje')
     expect(wrapper.find('h1').text()).toBe('Nie ma takiej strony')

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { tryPassword } from '@/access'
+import { tryPassword, type PasswordKind } from '@/access'
+
+const props = defineProps<{ kind: PasswordKind }>()
 
 const route = useRoute()
 const router = useRouter()
@@ -14,7 +16,7 @@ async function enter() {
   checking.value = true
   problem.value = ''
   try {
-    if (await tryPassword(password.value)) {
+    if (await tryPassword(props.kind, password.value)) {
       const next = route.query.dalej
       await router.replace(typeof next === 'string' && next.startsWith('/') ? next : '/')
       return
@@ -30,8 +32,14 @@ async function enter() {
 
 <template>
   <main class="access">
-    <h1>Wejście</h1>
-    <p>Strona jest w budowie, wejście tylko z hasłem.</p>
+    <template v-if="kind === 'panel'">
+      <h1>Panel właściciela</h1>
+      <p>Panel ma osobne hasło.</p>
+    </template>
+    <template v-else>
+      <h1>Wejście</h1>
+      <p>Strona jest w budowie, wejście tylko z hasłem.</p>
+    </template>
     <form class="access__form" @submit.prevent="enter">
       <label>
         Hasło

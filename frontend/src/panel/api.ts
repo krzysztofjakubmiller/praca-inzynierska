@@ -68,15 +68,18 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_URL}/api/panel${path}`, {
     ...init,
     headers: {
-      ...authorization(),
+      ...authorization('panel'),
       ...(init.body ? { 'Content-Type': 'application/json' } : {}),
     },
   }).catch(() => null)
   if (response?.status === 204) return undefined as T
   if (response?.status === 401) {
-    // Hasło zmieniło się na serwerze, więc zapamiętane trzeba wpisać jeszcze raz.
-    forgetPassword()
-    await router.push({ name: 'access', query: { dalej: router.currentRoute.value.fullPath } })
+    // Hasło panelu zmieniło się na serwerze, więc zapamiętane trzeba wpisać jeszcze raz.
+    forgetPassword('panel')
+    await router.push({
+      name: 'panel-access',
+      query: { dalej: router.currentRoute.value.fullPath },
+    })
   }
 
   const body = await response?.json().catch(() => null)
