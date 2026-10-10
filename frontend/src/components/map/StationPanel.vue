@@ -40,6 +40,9 @@ const percent = (value: number) => `${Math.round(value * 100)}%`
 const ofTasks = (count: number) => (count === 1 ? 'zadania' : 'zadań')
 const attempts = computed(() => topic.value?.recent.attempts ?? 0)
 const nameOf = (id: string) => props.map.graph.stations[id]?.name ?? id
+const longestWord = computed(() =>
+  Math.max(...station.value.name.split(' ').map((word) => word.length)),
+)
 
 // „dzisiaj”, „wczoraj”, „3 dni temu” liczone w dniach kalendarzowych, a nie w godzinach.
 const relative = new Intl.RelativeTimeFormat('pl', { numeric: 'auto' })
@@ -79,7 +82,13 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 <template>
   <section ref="root" class="station-panel" :aria-labelledby="titleId">
     <header class="station-panel__head">
-      <h2 :id="titleId" ref="title" class="station-panel__title" tabindex="-1">
+      <h2
+        :id="titleId"
+        ref="title"
+        class="station-panel__title"
+        :style="{ '--longest-word': longestWord }"
+        tabindex="-1"
+      >
         {{ station.name }}
       </h2>
       <button
@@ -211,6 +220,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 }
 
 .station-panel__head {
+  container-type: inline-size;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -218,13 +228,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 }
 
 .station-panel__title {
-  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
+  /*
+   * Najdłuższe słowo nazwy musi zmieścić się w jednym wierszu obok przycisku zamknięcia, bo
+   * przeglądarka nie dzieli polskich wyrazów i przeniosłaby np. z „Nieskończoność” samo „ć”.
+   * Średnia szerokość litery w tym kroju to najwyżej 0,53 wielkości pisma.
+   */
+  font-size: min(
+    clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem),
+    (100cqi - 3rem) / (var(--longest-word) * 0.53)
+  );
   font-weight: 750;
   font-stretch: 90%;
   letter-spacing: -0.02em;
   line-height: 1;
-  overflow-wrap: anywhere;
-  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 .station-panel__title:focus {
