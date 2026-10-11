@@ -7,6 +7,9 @@ const PAGES: { label: string; to: RouteLocationRaw }[] = [
   { label: 'Matura podstawowa (mapa tematów)', to: { name: 'basic-matura' } },
   { label: 'Matura rozszerzona (mapa tematów)', to: { name: 'extended-matura' } },
   { label: 'Panel właściciela', to: { name: 'panel' } },
+  { label: 'Logowanie', to: { name: 'login' } },
+  { label: 'Rejestracja', to: { name: 'register' } },
+  { label: 'Konto', to: { name: 'account' } },
   { label: 'Wkrótce', to: { name: 'coming-soon' } },
   { label: 'Strona 404', to: '/nie-ma-takiej-strony' },
 ]

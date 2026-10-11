@@ -39,6 +39,26 @@ const router = createRouter({
       meta: { title: 'Panel' },
     },
     {
+      path: '/logowanie',
+      name: 'login',
+      component: () => import('@/views/LoginView.vue'),
+      props: { mode: 'login' },
+      meta: { title: 'Logowanie' },
+    },
+    {
+      path: '/rejestracja',
+      name: 'register',
+      component: () => import('@/views/LoginView.vue'),
+      props: { mode: 'register' },
+      meta: { title: 'Rejestracja' },
+    },
+    {
+      path: '/konto',
+      name: 'account',
+      component: () => import('@/views/AccountView.vue'),
+      meta: { title: 'Konto' },
+    },
+    {
       path: '/wizytowka',
       name: 'landing',
       component: LandingView,

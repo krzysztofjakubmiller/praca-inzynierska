@@ -123,3 +123,23 @@ class Task(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
     reviewed_at: Mapped[datetime | None]
+
+
+class Account(Base):
+    __tablename__ = "account"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Zapisywany małymi literami, więc unikalność nie zależy od wielkości liter.
+    email: Mapped[str] = mapped_column(unique=True)
+    password_hash: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+class LoginSession(Base):
+    __tablename__ = "login_session"
+
+    # Skrót SHA-256 klucza z ciasteczka. Sam klucz zna tylko przeglądarka użytkownika.
+    token_hash: Mapped[str] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    expires_at: Mapped[datetime]

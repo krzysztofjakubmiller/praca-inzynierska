@@ -5,18 +5,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import panel
+from app import accounts, panel
 from app.access import require_password
 from app.db import get_session
 
 app = FastAPI()
 app.include_router(panel.router)
+app.include_router(accounts.router)
 
 # Na serwerze frontend i API mają różne adresy, więc przeglądarka przyjmie odpowiedzi API tylko
 # dla stron z tej listy. Lokalnie lista jest pusta, bo Vite przekazuje /api pod tym samym adresem.
+# allow_credentials pozwala przeglądarce wysyłać do API ciasteczko sesji.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[origin for origin in os.environ.get("FRONTEND_ORIGINS", "").split(",") if origin],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],
 )

@@ -52,5 +52,8 @@ def client(session, monkeypatch):
     monkeypatch.setenv("PANEL_PASSWORD", "haslo-panelu")
     app.dependency_overrides[get_session] = lambda: session
     # Większość testów dotyczy panelu, więc domyślnie klient wysyła hasło panelu.
-    yield TestClient(app, headers={"Authorization": "Bearer haslo-panelu"})
+    # Ciasteczko sesji ma flagę Secure, więc klient odsyła je tylko pod adresem https.
+    yield TestClient(
+        app, base_url="https://testserver", headers={"Authorization": "Bearer haslo-panelu"}
+    )
     app.dependency_overrides.clear()
