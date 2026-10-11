@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { NumberLineFigure } from '@/figures'
+import { numberLineRange, type NumberLineFigure } from '@/figures'
 
 const props = defineProps<{ figure: NumberLineFigure }>()
 
@@ -9,15 +9,16 @@ const UNIT = 30
 const LEFT = 12
 const AXIS_Y = 48
 const TOP = 16
-const HEIGHT = 80
+const HEIGHT = 84
 
-const x = (value: number) => LEFT + (value - props.figure.min) * UNIT
-const axisEnd = computed(() => x(props.figure.max) + UNIT)
+const range = computed(() => numberLineRange(props.figure))
+const x = (value: number) => LEFT + (value - range.value.min) * UNIT
+const axisEnd = computed(() => x(range.value.max) + UNIT)
 const width = computed(() => axisEnd.value + 8)
 
 const ticks = computed(() => {
   const values = []
-  for (let value = props.figure.min; value <= props.figure.max; value++) values.push(value)
+  for (let value = range.value.min; value <= range.value.max; value++) values.push(value)
   return values
 })
 
@@ -76,12 +77,12 @@ function label(value: number): string {
       v-for="value in figure.labels"
       :key="value"
       :x="x(value)"
-      :y="AXIS_Y + 24"
+      :y="AXIS_Y + 27"
       class="number-line__label"
     >
       {{ label(value) }}
     </text>
-    <text :x="axisEnd - 8" :y="AXIS_Y + 24" class="number-line__label number-line__variable">
+    <text :x="axisEnd - 8" :y="AXIS_Y + 27" class="number-line__label number-line__variable">
       x
     </text>
 
@@ -133,7 +134,7 @@ function label(value: number): string {
 .number-line__label {
   fill: currentColor;
   font-family: KaTeX_Main, 'Times New Roman', serif;
-  font-size: 17px;
+  font-size: 21px;
   text-anchor: middle;
 }
 
