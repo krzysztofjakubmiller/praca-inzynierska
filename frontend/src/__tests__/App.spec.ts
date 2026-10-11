@@ -77,6 +77,17 @@ describe('App', () => {
     expect(router.currentRoute.value.query.dalej).toBe('/wkrotce')
   })
 
+  it('shows the exam symbol as the tab icon on an exam page', async () => {
+    document.head.innerHTML = '<link rel="icon" href="/favicon.svg">'
+    const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!
+
+    await renderAt('/matura-rozszerzona')
+    expect(icon.getAttribute('href')).toBe('/favicon-matura-rozszerzona.svg')
+
+    await renderAt('/wkrotce')
+    expect(icon.getAttribute('href')).toBe('/favicon.svg')
+  })
+
   it('asks for the panel password before showing the panel', async () => {
     const wrapper = await renderAt('/panel')
 

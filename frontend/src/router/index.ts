@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { savedPassword } from '@/access'
+import type { Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
@@ -10,6 +11,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     title?: string
     panel?: boolean
+    exam?: Exam['id']
   }
 }
 
@@ -64,14 +66,14 @@ const router = createRouter({
       name: 'basic-matura',
       component: () => import('@/views/ExamView.vue'),
       props: { map: BASIC_MAP, progress: BASIC_DEMO_PROGRESS, sheets: BASIC_DEMO_SHEETS },
-      meta: { title: 'Matura podstawowa' },
+      meta: { title: 'Matura podstawowa', exam: 'matura-podstawowa' },
     },
     {
       path: '/matura-rozszerzona',
       name: 'extended-matura',
       component: () => import('@/views/ExamView.vue'),
       props: { map: EXTENDED_MAP, progress: EXTENDED_DEMO_PROGRESS, sheets: EXTENDED_DEMO_SHEETS },
-      meta: { title: 'Matura rozszerzona' },
+      meta: { title: 'Matura rozszerzona', exam: 'matura-rozszerzona' },
     },
     {
       path: '/:pathMatch(.*)*',
@@ -104,6 +106,9 @@ router.beforeEach((to) => {
 
 router.afterEach((to) => {
   document.title = to.meta.title ? `${to.meta.title} · ${PRODUCT_NAME}` : PRODUCT_NAME
+  // Na stronie egzaminu ikona karty to kształt jego stacji z mapy, wszędzie indziej litera M.
+  const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
+  if (icon) icon.href = to.meta.exam ? `/favicon-${to.meta.exam}.svg` : '/favicon.svg'
 })
 
 export default router
