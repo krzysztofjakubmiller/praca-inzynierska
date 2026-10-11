@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
+from app.figures import Figure, figure_problems, figures_json
 from app.models import Exam, SourceKind, Task, Topic
 
 
@@ -25,6 +26,8 @@ class TaskIn(BaseModel):
     has_figure: bool = False
     answer_format: Literal["wielokrotny-wybor", "prawda-falsz", "dobieranie", "otwarte"]
     choices: dict[str, str] | None = None
+    # Klucz "content" to rysunek pod treścią, etykieta wariantu to rysunek w tym wariancie.
+    figures: dict[str, Figure] | None = None
     answer: str | None = None
 
 
@@ -57,6 +60,10 @@ PYDANTIC_MESSAGES = {
     "too_short": "pusta lista",
     "model_type": "to nie jest obiekt {...}",
     "dict_type": "to nie jest obiekt {...}",
+    "int_from_float": "to nie jest liczba całkowita",
+    "list_type": "to nie jest lista",
+    "union_tag_invalid": "nieznany rodzaj rysunku",
+    "union_tag_not_found": "brak pola type",
 }
 
 
@@ -89,6 +96,14 @@ def task_problems(task: TaskIn) -> list[str]:
         problems += [f"wariant {label}: {problem}" for problem in text_problems(text)]
     if task.answer is not None:
         problems += [f"odpowiedź: {problem}" for problem in text_problems(task.answer)]
+
+    figures = task.figures or {}
+    if task.has_figure != bool(figures):
+        problems.append("has_figure ma być true wtedy i tylko wtedy, gdy są rysunki (figures)")
+    for place, figure in figures.items():
+        if place != "content" and place not in (task.choices or {}):
+            problems.append(f"rysunek {place}: nie ma takiego wariantu")
+        problems += [f"rysunek {place}: {problem}" for problem in figure_problems(figure)]
 
     closed = task.answer_format != "otwarte"
     if closed and not task.choices:
@@ -204,6 +219,7 @@ def import_tasks(session: Session, data) -> list[int]:
                 has_figure=task.has_figure,
                 answer_format=task.answer_format,
                 choices=task.choices,
+                figures=figures_json(task.figures),
                 answer=task.answer,
                 read_method=file.read_method,
                 read_model=file.read_model,

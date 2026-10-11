@@ -10,7 +10,7 @@ const router = useRouter()
 const { problems, run } = useProblems()
 
 const exams = ref<ExamOptions[]>([])
-const filters = ref({ exam: '', topic: '', status: 'do-sprawdzenia' })
+const filters = ref({ exam: '', topic: '', status: 'do-sprawdzenia', has_figure: '' })
 const tasks = ref<TaskSummary[]>([])
 const selected = ref<number[]>([])
 const importText = ref('')
@@ -169,6 +169,14 @@ function startReview() {
             <option v-for="(label, status) in STATUS_LABELS" :key="status" :value="status">
               {{ label }}
             </option>
+          </select>
+        </label>
+        <label>
+          Rysunek
+          <select v-model="filters.has_figure">
+            <option value="">wszystkie</option>
+            <option value="true">z rysunkiem</option>
+            <option value="false">bez rysunku</option>
           </select>
         </label>
       </div>

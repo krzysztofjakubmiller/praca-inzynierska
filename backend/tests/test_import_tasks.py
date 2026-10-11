@@ -153,6 +153,66 @@ def test_answer_must_match_choices(session, changes, problem):
     assert problem in problems[0]
 
 
+def number_line(**changes):
+    figure = {"type": "os-liczbowa", "min": -12, "max": 6, "labels": [0, 1, 3]}
+    figure.update(changes)
+    return figure
+
+
+def test_figures_are_saved_as_given(session):
+    figures = {
+        "A": number_line(intervals=[{"from": None, "to": 3, "to_closed": True}]),
+        "B": number_line(intervals=[{"from": 3, "from_closed": True}]),
+    }
+    import_tasks(session, task_file(task(has_figure=True, figures=figures)))
+
+    assert session.scalar(select(Task.figures)) == figures
+
+
+def test_unknown_figure_waits_for_its_group(session):
+    figures = {"content": {"type": "nieznany"}}
+    import_tasks(session, task_file(task(has_figure=True, figures=figures)))
+
+    assert session.scalar(select(Task.figures)) == figures
+
+
+@pytest.mark.parametrize(
+    "changes, problem",
+    [
+        ({"has_figure": True}, "has_figure ma być true"),
+        ({"figures": {"content": {"type": "nieznany"}}}, "has_figure ma być true"),
+        ({"has_figure": True, "figures": {"E": number_line()}}, "rysunek E: nie ma takiego"),
+        ({"has_figure": True, "figures": {"A": number_line(min=6)}}, "rysunek A: min musi być"),
+        ({"has_figure": True, "figures": {"A": number_line(labels=[7])}}, "rysunek A: podpis 7"),
+        (
+            {"has_figure": True, "figures": {"A": number_line(intervals=[{"from": 3, "to": -2}])}},
+            "rysunek A: przedział od 3 do -2: początek nie jest przed końcem",
+        ),
+    ],
+)
+def test_figures_must_fit_the_task(session, changes, problem):
+    problems = rejected(session, task_file(task(**changes)))
+
+    assert problem in problems[0]
+
+
+def test_figure_type_must_be_known(session):
+    problems = rejected(
+        session, task_file(task(has_figure=True, figures={"content": {"type": "trojkat"}}))
+    )
+
+    assert problems == ["zadanie 1, pole figures.content: nieznany rodzaj rysunku"]
+
+
+def test_number_line_takes_only_integers(session):
+    figures = {"content": number_line(labels=[0.5])}
+    problems = rejected(session, task_file(task(has_figure=True, figures=figures)))
+
+    assert problems == [
+        "zadanie 1, pole figures.content.os-liczbowa.labels.0: to nie jest liczba całkowita"
+    ]
+
+
 def test_unknown_exam_topic_and_source(session):
     assert rejected(session, task_file(exam="matura")) == ["nieznany egzamin matura"]
 

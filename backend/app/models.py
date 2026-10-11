@@ -95,6 +95,7 @@ class Task(Base):
             "review_status <> 'sprawdzone' or answer is not null",
             name="task_reviewed_has_answer",
         ),
+        CheckConstraint("has_figure = (figures is not null)", name="task_has_figure_matches"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -113,6 +114,8 @@ class Task(Base):
     # Etykieta z arkusza i jej treść, np. {"A": "$2$", "B": "$3$"}.
     # Bez none_as_null zadanie otwarte dostałoby w bazie JSON-owe null zamiast NULL.
     choices: Mapped[dict[str, str] | None] = mapped_column(JSONB(none_as_null=True))
+    # Format rysunków opisują klasy w figures.py.
+    figures: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     answer: Mapped[str | None]
     max_points: Mapped[int] = mapped_column(SmallInteger)
 

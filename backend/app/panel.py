@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.access import require_panel_password
 from app.db import get_session
+from app.figures import figures_json
 from app.import_tasks import ImportRejected, TaskIn, import_tasks, parse_json, task_problems
 from app.models import Exam, SourceKind, Task, Topic
 
@@ -58,6 +59,7 @@ def task_details(session: Session, task: Task) -> dict:
         "has_figure": task.has_figure,
         "answer_format": task.answer_format,
         "choices": task.choices,
+        "figures": task.figures,
         "answer": task.answer,
         "review_status": task.review_status,
         "read_method": task.read_method,
@@ -102,6 +104,7 @@ def list_tasks(
     exam: str | None = None,
     topic: str | None = None,
     status: str | None = None,
+    has_figure: bool | None = None,
     session: Session = Depends(get_session),
 ):
     query = (
@@ -117,6 +120,8 @@ def list_tasks(
         query = query.where(Topic.code == topic)
     if status:
         query = query.where(Task.review_status == status)
+    if has_figure is not None:
+        query = query.where(Task.has_figure == has_figure)
 
     return [
         {
@@ -172,6 +177,7 @@ def update_task(task_id: int, update: TaskUpdate, session: Session = Depends(get
     task.has_figure = update.has_figure
     task.answer_format = update.answer_format
     task.choices = update.choices
+    task.figures = figures_json(update.figures)
     task.answer = update.answer
     if update.review_status == "sprawdzone" and task.review_status != "sprawdzone":
         task.reviewed_at = datetime.now(UTC)

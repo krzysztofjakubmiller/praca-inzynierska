@@ -16,6 +16,7 @@ EDITABLE = [
     "has_figure",
     "answer_format",
     "choices",
+    "figures",
     "answer",
     "review_status",
 ]
@@ -86,6 +87,21 @@ def test_imported_tasks_are_listed_for_review(client):
     assert listed[0]["source"] == "Maj"
 
 
+def test_tasks_are_filtered_by_figure(client, session):
+    with_figure, without_figure = import_tasks(client, 1, 2)
+    task = session.get(Task, with_figure)
+    task.has_figure = True
+    task.figures = {"content": {"type": "nieznany"}}
+    session.flush()
+
+    def listed(has_figure):
+        tasks = client.get("/api/panel/tasks", params={"has_figure": has_figure}).json()
+        return [task["id"] for task in tasks]
+
+    assert listed("true") == [with_figure]
+    assert listed("false") == [without_figure]
+
+
 def test_import_problems_are_returned(client):
     response = client.post("/api/panel/import", json={"text": "{"})
 
@@ -129,6 +145,16 @@ def test_edit_uses_import_rules(client):
         "nieparzysta liczba znaków $",
         "sprawdzone zadanie musi mieć odpowiedź",
     ]
+
+
+def test_edit_saves_figures(client):
+    [task_id] = import_tasks(client, 1)
+    figures = {"content": {"type": "os-liczbowa", "min": -3, "max": 3, "labels": [0, 1]}}
+
+    response = edit(client, task_id, has_figure=True, figures=figures)
+
+    assert response.status_code == 200
+    assert response.json()["figures"] == figures
 
 
 def test_edit_cannot_create_duplicate(client):

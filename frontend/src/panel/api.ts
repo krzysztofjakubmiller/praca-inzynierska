@@ -1,4 +1,5 @@
 import { API_URL, authorization, forgetPassword } from '@/access'
+import type { Figures } from '@/figures'
 import router from '@/router'
 
 export type ReviewStatus = 'do-sprawdzenia' | 'sprawdzone'
@@ -39,6 +40,7 @@ export interface TaskUpdate {
   has_figure: boolean
   answer_format: AnswerFormat
   choices: Record<string, string> | null
+  figures: Figures | null
   answer: string | null
   review_status: ReviewStatus
 }
@@ -55,6 +57,8 @@ export interface TaskFilters {
   exam?: string
   topic?: string
   status?: string
+  /** 'true' albo 'false'; pusty tekst to wszystkie zadania. */
+  has_figure?: string
 }
 
 // Backend odrzuca błędne dane kodem 422 z listą problemów po polsku.

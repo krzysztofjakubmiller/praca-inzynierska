@@ -2,12 +2,15 @@
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MathText from '@/components/panel/MathText.vue'
+import TaskFigure from '@/components/figures/TaskFigure.vue'
+import type { Figures } from '@/figures'
 import {
   panelApi,
   type ExamOptions,
   type ReviewStatus,
   type TaskDetails,
   type TaskUpdate,
+  Rejected,
 } from '@/panel/api'
 import { ANSWER_FORMATS, STATUS_LABELS, taskNumber, useProblems } from '@/panel/format'
 import '@/assets/panel.css'
@@ -21,6 +24,7 @@ const task = ref<TaskDetails | null>(null)
 // Kopia zadania edytowana w formularzu; task zostaje taki, jaki jest w bazie.
 const form = ref<TaskDetails | null>(null)
 const choices = ref<{ label: string; text: string }[]>([])
+const figuresText = ref('')
 const saved = ref(false)
 
 const exam = computed(() => exams.value.find((exam) => exam.code === task.value?.exam))
@@ -32,10 +36,30 @@ const topicName = computed(
   () => exam.value?.topics.find((topic) => topic.code === form.value?.topic)?.name,
 )
 
+// Podgląd odświeża się przy każdej zmianie pola; błędny JSON zostawia komunikat zamiast rysunków.
+const parsedFigures = computed((): { figures: Figures | null; error: string | null } => {
+  if (!figuresText.value.trim()) return { figures: null, error: null }
+  try {
+    return { figures: JSON.parse(figuresText.value), error: null }
+  } catch {
+    return { figures: null, error: 'Rysunki: niepoprawny JSON' }
+  }
+})
+
+// Każdy rysunek w osobnym wierszu, żeby przy kilku osiach w wariantach dało się je porównać.
+function figuresToText(figures: Figures | null): string {
+  if (!figures) return ''
+  const lines = Object.entries(figures).map(
+    ([place, figure]) => `  ${JSON.stringify(place)}: ${JSON.stringify(figure)}`,
+  )
+  return `{\n${lines.join(',\n')}\n}`
+}
+
 function fill(details: TaskDetails) {
   task.value = details
   form.value = { ...details }
   choices.value = Object.entries(details.choices ?? {}).map(([label, text]) => ({ label, text }))
+  figuresText.value = figuresToText(details.figures)
 }
 
 watch(
@@ -50,6 +74,8 @@ watch(
 )
 
 function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
+  const { figures, error } = parsedFigures.value
+  if (error) throw new Rejected([error])
   return {
     topic: edited.topic,
     source: edited.source,
@@ -60,11 +86,12 @@ function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
     subnumber: edited.subnumber || null,
     max_points: edited.max_points,
     content: edited.content,
-    has_figure: edited.has_figure,
+    has_figure: figures !== null,
     answer_format: edited.answer_format,
     choices: closed.value
       ? Object.fromEntries(choices.value.map((choice) => [choice.label.trim(), choice.text]))
       : null,
+    figures,
     answer: edited.answer?.trim() || null,
     review_status: status,
   }
@@ -155,9 +182,14 @@ function remove() {
         </div>
 
         <label>Treść <textarea v-model="form.content" rows="9" spellcheck="false" /></label>
-        <label class="review__check">
-          <input v-model="form.has_figure" type="checkbox" />
-          Zadanie ma rysunek
+        <label>
+          Rysunki (JSON)
+          <textarea
+            v-model="figuresText"
+            rows="4"
+            spellcheck="false"
+            placeholder='{"content": {"type": "nieznany"}}'
+          />
         </label>
 
         <label>
@@ -213,17 +245,26 @@ function remove() {
         </details>
       </form>
 
-      <section class="panel__card" aria-labelledby="preview-title">
+      <section
+        class="panel__card"
+        aria-labelledby="preview-title"
+        :style="{ '--figure-color': `var(--exam-${task.exam})` }"
+      >
         <h2 id="preview-title">Podgląd</h2>
         <p class="review__meta">
           {{ sourceName }} {{ form.year }}, zadanie {{ taskNumber(form) }} ({{ form.max_points }}
           pkt)
         </p>
         <MathText :text="form.content" />
-        <p v-if="form.has_figure" class="review__figure">Rysunek (jeszcze niedostępny)</p>
+        <p v-if="parsedFigures.error" class="review__figure">{{ parsedFigures.error }}</p>
+        <TaskFigure v-if="parsedFigures.figures?.content" :figure="parsedFigures.figures.content" />
         <ol v-if="closed" class="review__preview-choices">
           <li v-for="(choice, index) in choices" :key="index">
             <strong>{{ choice.label }}.</strong> <MathText :text="choice.text" />
+            <TaskFigure
+              v-if="parsedFigures.figures?.[choice.label]"
+              :figure="parsedFigures.figures[choice.label]!"
+            />
           </li>
         </ol>
         <p v-if="form.answer">Odpowiedź: <MathText :text="form.answer" /></p>
@@ -259,12 +300,6 @@ function remove() {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(6rem, 1fr));
   gap: 0.75rem;
-}
-
-.panel .review__check {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .review__choices {
