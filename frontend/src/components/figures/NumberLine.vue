@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { numberLineRange, type NumberLineFigure } from '@/figures'
+import type { NumberLineFigure } from '@/figures'
 
 const props = defineProps<{ figure: NumberLineFigure }>()
 
@@ -11,14 +11,13 @@ const AXIS_Y = 48
 const TOP = 16
 const HEIGHT = 84
 
-const range = computed(() => numberLineRange(props.figure))
-const x = (value: number) => LEFT + (value - range.value.min) * UNIT
-const axisEnd = computed(() => x(range.value.max) + UNIT)
+const x = (value: number) => LEFT + (value - props.figure.min) * UNIT
+const axisEnd = computed(() => x(props.figure.max) + UNIT)
 const width = computed(() => axisEnd.value + 8)
 
 const ticks = computed(() => {
   const values = []
-  for (let value = range.value.min; value <= range.value.max; value++) values.push(value)
+  for (let value = props.figure.min; value <= props.figure.max; value++) values.push(value)
   return values
 })
 

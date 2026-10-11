@@ -25,29 +25,24 @@ export type Figure = NumberLineFigure | UnknownFigure
 /** Klucz content to rysunek pod treścią, etykieta wariantu to rysunek w tym wariancie. */
 export type Figures = Record<string, Figure>
 
-// Zapas kresek za skrajnym podpisem albo końcem przedziału. Bez niego przedział do brzegu osi
-// bywa krótszy niż odstęp między kreskami, bo Gemini liczy kreski z rysunku niedokładnie.
-const MARGIN = 2
+// Na arkuszach CKE oś wystaje o kilka kresek po obu stronach skrajnych liczb. Zakresu od Gemini
+// nie bierzemy, bo liczy kreski niedokładnie i oś wychodzi niesymetryczna.
+const MARGIN = 3
 
-export function numberLineRange(figure: NumberLineFigure): { min: number; max: number } {
+function numberLineValues(figure: NumberLineFigure): number[] {
   const ends = (figure.intervals ?? []).flatMap((interval) => [interval.from, interval.to])
-  const values = [...(figure.labels ?? []), ...ends].filter((value) => typeof value === 'number')
-  if (!values.length) return { min: figure.min, max: figure.max }
-  return {
-    min: Math.min(figure.min, Math.min(...values) - MARGIN),
-    max: Math.max(figure.max, Math.max(...values) + MARGIN),
-  }
+  return [...(figure.labels ?? []), ...ends].filter((value) => typeof value === 'number')
 }
 
 // Osie z jednego zadania (np. warianty A–D) dostają wspólny zakres, żeby leżały równo
 // jedna pod drugą i miały podpisy tej samej wielkości.
 export function withSharedRange(figures: Figures): Figures {
-  const ranges = Object.values(figures)
+  const values = Object.values(figures)
     .filter((figure) => figure.type === 'os-liczbowa')
-    .map(numberLineRange)
-  if (!ranges.length) return figures
-  const min = Math.min(...ranges.map((range) => range.min))
-  const max = Math.max(...ranges.map((range) => range.max))
+    .flatMap(numberLineValues)
+  if (!values.length) return figures
+  const min = Math.min(...values) - MARGIN
+  const max = Math.max(...values) + MARGIN
   return Object.fromEntries(
     Object.entries(figures).map(([place, figure]) => [
       place,
