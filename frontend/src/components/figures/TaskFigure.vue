@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { Figure } from '@/figures'
+import type { Figure, Range } from '@/figures'
 import NumberLine from './NumberLine.vue'
 
-defineProps<{ figure: Figure }>()
+defineProps<{ figure: Figure; range?: Range }>()
 </script>
 
 <template>
-  <NumberLine v-if="figure.type === 'os-liczbowa'" :figure="figure" />
+  <NumberLine v-if="figure.type === 'os-liczbowa'" :figure="figure" :range="range" />
   <p v-else class="task-figure__missing">Rysunek (jeszcze niedostępny)</p>
 </template>
 

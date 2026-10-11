@@ -16,9 +16,8 @@ class Interval(BaseModel):
 class NumberLine(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    # Zakres osi wynika z podpisów i końców przedziałów, dlatego nie ma go w formacie.
     type: Literal["os-liczbowa"]
-    min: int
-    max: int
     # Na razie tylko liczby całkowite, bo kreski są co 1; inna oś to rysunek "nieznany".
     labels: list[int] = []
     intervals: list[Interval] = []
@@ -37,20 +36,18 @@ Figure = Annotated[NumberLine | UnknownFigure, Field(discriminator="type")]
 def figure_problems(figure: Figure) -> list[str]:
     if not isinstance(figure, NumberLine):
         return []
-    if figure.min >= figure.max:
-        return ["min musi być mniejsze od max"]
 
-    def outside(value: int) -> bool:
-        return not figure.min <= value <= figure.max
-
-    problems = [f"podpis {label} poza osią" for label in figure.labels if outside(label)]
+    problems = []
+    numbers = list(figure.labels)
     for interval in figure.intervals:
         ends = [end for end in (interval.from_, interval.to) if end is not None]
-        problems += [f"koniec przedziału {end} poza osią" for end in ends if outside(end)]
+        numbers += ends
         if len(ends) == 2 and ends[0] >= ends[1]:
             problems.append(
                 f"przedział od {ends[0]} do {ends[1]}: początek nie jest przed końcem"
             )
+    if not numbers:
+        problems.append("oś bez podpisów i końców przedziałów")
     return problems
 
 

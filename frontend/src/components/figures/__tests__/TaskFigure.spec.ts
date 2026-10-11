@@ -8,10 +8,10 @@ function draw(figure: Figure) {
 }
 
 describe('TaskFigure', () => {
-  it('draws a tick for every integer of the number line and only the given labels', () => {
-    const wrapper = draw({ type: 'os-liczbowa', min: -12, max: 6, labels: [-9, 0, 1] })
+  it('draws ticks three beyond the outermost numbers and only the given labels', () => {
+    const wrapper = draw({ type: 'os-liczbowa', labels: [-9, 0, 1] })
 
-    expect(wrapper.findAll('.number-line__tick')).toHaveLength(19)
+    expect(wrapper.findAll('.number-line__tick')).toHaveLength(17)
     expect(wrapper.findAll('.number-line__label').map((label) => label.text())).toEqual([
       '−9',
       '0',
@@ -23,8 +23,6 @@ describe('TaskFigure', () => {
   it('draws a ray up to the edge with one closed end', () => {
     const wrapper = draw({
       type: 'os-liczbowa',
-      min: -12,
-      max: 6,
       intervals: [{ from: null, to: 3, to_closed: true }],
     })
 
@@ -37,14 +35,20 @@ describe('TaskFigure', () => {
   it('draws open ends as empty circles', () => {
     const wrapper = draw({
       type: 'os-liczbowa',
-      min: -3,
-      max: 3,
       intervals: [{ from: -2, to: 1 }],
     })
 
     const ends = wrapper.findAll('.number-line__end')
     expect(ends).toHaveLength(2)
     expect(ends.some((end) => end.classes().includes('number-line__end--closed'))).toBe(false)
+  })
+
+  it('uses the shared range of the task when given', () => {
+    const wrapper = mount(TaskFigure, {
+      props: { figure: { type: 'os-liczbowa', labels: [0] }, range: { min: -12, max: 6 } },
+    })
+
+    expect(wrapper.findAll('.number-line__tick')).toHaveLength(19)
   })
 
   it('marks a figure without a group as missing', () => {

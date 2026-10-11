@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { NumberLineFigure } from '@/figures'
+import { numberLineRange, type NumberLineFigure, type Range } from '@/figures'
 
-const props = defineProps<{ figure: NumberLineFigure }>()
+// Bez range oś dostaje zakres tylko ze swoich liczb.
+const props = defineProps<{ figure: NumberLineFigure; range?: Range }>()
 
 // Jednostki układu SVG; rysunek skaluje się do szerokości kontenera.
 const UNIT = 30
@@ -11,13 +12,14 @@ const AXIS_Y = 48
 const TOP = 16
 const HEIGHT = 84
 
-const x = (value: number) => LEFT + (value - props.figure.min) * UNIT
-const axisEnd = computed(() => x(props.figure.max) + UNIT)
+const range = computed(() => props.range ?? numberLineRange([props.figure]))
+const x = (value: number) => LEFT + (value - range.value.min) * UNIT
+const axisEnd = computed(() => x(range.value.max) + UNIT)
 const width = computed(() => axisEnd.value + 8)
 
 const ticks = computed(() => {
   const values = []
-  for (let value = props.figure.min; value <= props.figure.max; value++) values.push(value)
+  for (let value = range.value.min; value <= range.value.max; value++) values.push(value)
   return values
 })
 

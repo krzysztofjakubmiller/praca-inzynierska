@@ -154,7 +154,7 @@ def test_answer_must_match_choices(session, changes, problem):
 
 
 def number_line(**changes):
-    figure = {"type": "os-liczbowa", "min": -12, "max": 6, "labels": [0, 1, 3]}
+    figure = {"type": "os-liczbowa", "labels": [0, 1, 3]}
     figure.update(changes)
     return figure
 
@@ -182,8 +182,8 @@ def test_unknown_figure_waits_for_its_group(session):
         ({"has_figure": True}, "has_figure ma być true"),
         ({"figures": {"content": {"type": "nieznany"}}}, "has_figure ma być true"),
         ({"has_figure": True, "figures": {"E": number_line()}}, "rysunek E: nie ma takiego"),
-        ({"has_figure": True, "figures": {"A": number_line(min=6)}}, "rysunek A: min musi być"),
-        ({"has_figure": True, "figures": {"A": number_line(labels=[7])}}, "rysunek A: podpis 7"),
+        ({"has_figure": True, "figures": {"A": number_line(labels=[])}}, "rysunek A: oś bez"),
+        ({"has_figure": True, "figures": {"A": number_line(min=-12)}}, "nieznane pole"),
         (
             {"has_figure": True, "figures": {"A": number_line(intervals=[{"from": 3, "to": -2}])}},
             "rysunek A: przedział od 3 do -2: początek nie jest przed końcem",

@@ -149,7 +149,7 @@ def test_edit_uses_import_rules(client):
 
 def test_edit_saves_figures(client):
     [task_id] = import_tasks(client, 1)
-    figures = {"content": {"type": "os-liczbowa", "min": -3, "max": 3, "labels": [0, 1]}}
+    figures = {"content": {"type": "os-liczbowa", "labels": [0, 1]}}
 
     response = edit(client, task_id, has_figure=True, figures=figures)
 

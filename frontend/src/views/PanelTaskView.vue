@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MathText from '@/components/panel/MathText.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
-import { withSharedRange, type Figures } from '@/figures'
+import { numberLineRange, type Figures } from '@/figures'
 import {
   panelApi,
   type ExamOptions,
@@ -45,10 +45,7 @@ const parsedFigures = computed((): { figures: Figures | null; error: string | nu
     return { figures: null, error: 'Rysunki: niepoprawny JSON' }
   }
 })
-// Wspólny zakres osi tylko w podglądzie; do bazy idzie JSON taki, jak w polu.
-const shownFigures = computed(
-  () => parsedFigures.value.figures && withSharedRange(parsedFigures.value.figures),
-)
+const range = computed(() => numberLineRange(Object.values(parsedFigures.value.figures ?? {})))
 
 // Każdy rysunek w osobnym wierszu, żeby przy kilku osiach w wariantach dało się je porównać.
 function figuresToText(figures: Figures | null): string {
@@ -261,11 +258,19 @@ function remove() {
         </p>
         <MathText :text="form.content" />
         <p v-if="parsedFigures.error" class="review__figure">{{ parsedFigures.error }}</p>
-        <TaskFigure v-if="shownFigures?.content" :figure="shownFigures.content" />
+        <TaskFigure
+          v-if="parsedFigures.figures?.content"
+          :figure="parsedFigures.figures.content"
+          :range="range"
+        />
         <ol v-if="closed" class="review__preview-choices">
           <li v-for="(choice, index) in choices" :key="index">
             <strong>{{ choice.label }}.</strong> <MathText :text="choice.text" />
-            <TaskFigure v-if="shownFigures?.[choice.label]" :figure="shownFigures[choice.label]!" />
+            <TaskFigure
+              v-if="parsedFigures.figures?.[choice.label]"
+              :figure="parsedFigures.figures[choice.label]!"
+              :range="range"
+            />
           </li>
         </ol>
         <p v-if="form.answer">Odpowiedź: <MathText :text="form.answer" /></p>

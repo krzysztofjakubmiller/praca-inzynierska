@@ -1,24 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { withSharedRange, type NumberLineFigure } from '@/figures'
+import { numberLineRange } from '@/figures'
 
-function axis(changes: Partial<NumberLineFigure>): NumberLineFigure {
-  return { type: 'os-liczbowa', min: -11, max: 4, ...changes }
-}
-
-describe('withSharedRange', () => {
+describe('numberLineRange', () => {
   it('gives all number lines of a task one range, three ticks beyond the outermost numbers', () => {
-    const figures = withSharedRange({
-      A: axis({ labels: [0, 1, 3], intervals: [{ to: 3, to_closed: true }] }),
-      D: axis({ min: -10, max: 9, labels: [-9, 0, 1], intervals: [{ from: -9 }] }),
-      content: { type: 'nieznany' },
-    })
+    const range = numberLineRange([
+      { type: 'os-liczbowa', labels: [0, 1, 3], intervals: [{ to: 3, to_closed: true }] },
+      { type: 'os-liczbowa', labels: [-9, 0, 1], intervals: [{ from: -9 }] },
+      { type: 'nieznany' },
+    ])
 
-    expect(figures.A).toMatchObject({ min: -12, max: 6 })
-    expect(figures.D).toMatchObject({ min: -12, max: 6 })
-    expect(figures.content).toEqual({ type: 'nieznany' })
+    expect(range).toEqual({ min: -12, max: 6 })
   })
 
-  it('keeps the range of a number line without any numbers', () => {
-    expect(withSharedRange({ content: axis({}) }).content).toMatchObject({ min: -11, max: 4 })
+  it('centers a number line without numbers on zero', () => {
+    expect(numberLineRange([{ type: 'os-liczbowa' }])).toEqual({ min: -3, max: 3 })
   })
 })

@@ -10,8 +10,6 @@ export interface Interval {
 
 export interface NumberLineFigure {
   type: 'os-liczbowa'
-  min: number
-  max: number
   labels?: number[]
   intervals?: Interval[]
 }
@@ -34,19 +32,16 @@ function numberLineValues(figure: NumberLineFigure): number[] {
   return [...(figure.labels ?? []), ...ends].filter((value) => typeof value === 'number')
 }
 
-// Osie z jednego zadania (np. warianty A–D) dostają wspólny zakres, żeby leżały równo
+export interface Range {
+  min: number
+  max: number
+}
+
+// Osie z jednego zadania (np. warianty A–D) rysujemy we wspólnym zakresie, żeby leżały równo
 // jedna pod drugą i miały podpisy tej samej wielkości.
-export function withSharedRange(figures: Figures): Figures {
-  const values = Object.values(figures)
-    .filter((figure) => figure.type === 'os-liczbowa')
-    .flatMap(numberLineValues)
-  if (!values.length) return figures
-  const min = Math.min(...values) - MARGIN
-  const max = Math.max(...values) + MARGIN
-  return Object.fromEntries(
-    Object.entries(figures).map(([place, figure]) => [
-      place,
-      figure.type === 'os-liczbowa' ? { ...figure, min, max } : figure,
-    ]),
-  )
+export function numberLineRange(figures: Figure[]): Range {
+  const values = figures.filter((figure) => figure.type === 'os-liczbowa').flatMap(numberLineValues)
+  // Oś bez liczb odrzuca backend; zakres wokół zera tylko na czas poprawiania JSON-a w panelu.
+  if (!values.length) return { min: -MARGIN, max: MARGIN }
+  return { min: Math.min(...values) - MARGIN, max: Math.max(...values) + MARGIN }
 }
