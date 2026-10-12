@@ -95,11 +95,34 @@ onBeforeUnmount(() => observer?.disconnect())
   --notch: 0.7rem;
   --reach: min(42%, 11rem);
   --arrival: calc(var(--order) * 140ms);
-  /* Cień rysuje filtr, bo idzie po kształcie razem z wyciętymi wcięciami. */
-  filter: drop-shadow(0 1px 1px rgb(29 31 34 / 0.08)) drop-shadow(0 10px 14px rgb(29 31 34 / 0.1));
-  transition:
-    translate 0.3s ease,
-    filter 0.3s ease;
+  position: relative;
+  isolation: isolate;
+  transition: translate 0.3s ease;
+}
+
+/*
+ * Cień leży na osobnych warstwach pod biletem. Filtr drop-shadow przeliczał rozmycie całego
+ * biletu przy każdej klatce rysowania linii i przycinał przewijanie. box-shadow nie maluje się
+ * pod samym elementem, więc przez wcięcia nadal widać tło.
+ */
+.ticket::before,
+.ticket::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 1.25rem;
+  box-shadow:
+    0 1px 1px rgb(29 31 34 / 0.08),
+    0 10px 14px rgb(29 31 34 / 0.1);
+}
+
+.ticket::after {
+  box-shadow:
+    0 2px 2px rgb(29 31 34 / 0.1),
+    0 16px 20px rgb(29 31 34 / 0.14);
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
 /*
@@ -186,7 +209,10 @@ onBeforeUnmount(() => observer?.disconnect())
 .ticket:focus-within {
   --marker-fill: var(--exam);
   translate: 0 -3px;
-  filter: drop-shadow(0 2px 2px rgb(29 31 34 / 0.1)) drop-shadow(0 16px 20px rgb(29 31 34 / 0.14));
+}
+
+.ticket:focus-within::after {
+  opacity: 1;
 }
 
 .ticket:focus-within .ticket__track {
@@ -197,7 +223,10 @@ onBeforeUnmount(() => observer?.disconnect())
   .ticket:hover {
     --marker-fill: var(--exam);
     translate: 0 -3px;
-    filter: drop-shadow(0 2px 2px rgb(29 31 34 / 0.1)) drop-shadow(0 16px 20px rgb(29 31 34 / 0.14));
+  }
+
+  .ticket:hover::after {
+    opacity: 1;
   }
 
   .ticket:hover .ticket__track {
@@ -207,6 +236,7 @@ onBeforeUnmount(() => observer?.disconnect())
 
 @media (prefers-reduced-motion: reduce) {
   .ticket,
+  .ticket::after,
   .ticket__track {
     transition: none;
   }
