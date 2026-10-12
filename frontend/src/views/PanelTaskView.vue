@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MathText from '@/components/panel/MathText.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
-import { numberLineRange, type Figures } from '@/figures'
+import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {
   panelApi,
   type ExamOptions,
@@ -45,7 +45,9 @@ const parsedFigures = computed((): { figures: Figures | null; error: string | nu
     return { figures: null, error: 'Rysunki: niepoprawny JSON' }
   }
 })
-const range = computed(() => numberLineRange(Object.values(parsedFigures.value.figures ?? {})))
+const allFigures = computed(() => Object.values(parsedFigures.value.figures ?? {}))
+const range = computed(() => numberLineRange(allFigures.value))
+const span = computed(() => coordinatePlaneSpan(allFigures.value))
 
 // Każdy rysunek w osobnym wierszu, żeby przy kilku osiach w wariantach dało się je porównać.
 function figuresToText(figures: Figures | null): string {
@@ -187,7 +189,7 @@ function remove() {
           Rysunki (JSON)
           <textarea
             v-model="figuresText"
-            rows="4"
+            rows="10"
             spellcheck="false"
             placeholder='{"content": {"type": "nieznany"}}'
           />
@@ -262,6 +264,7 @@ function remove() {
           v-if="parsedFigures.figures?.content"
           :figure="parsedFigures.figures.content"
           :range="range"
+          :span="span"
         />
         <ol v-if="closed" class="review__preview-choices">
           <li v-for="(choice, index) in choices" :key="index">
@@ -270,6 +273,7 @@ function remove() {
               v-if="parsedFigures.figures?.[choice.label]"
               :figure="parsedFigures.figures[choice.label]!"
               :range="range"
+              :span="span"
             />
           </li>
         </ol>

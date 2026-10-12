@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
-from app.figures import Figure, figure_problems, figures_json
+from app.figures import Figure, figure_problems, figure_texts, figures_json
 from app.models import Exam, SourceKind, Task, Topic
 
 
@@ -57,10 +57,15 @@ PYDANTIC_MESSAGES = {
     "string_type": "to nie jest tekst",
     "greater_than_equal": "za mała wartość",
     "less_than_equal": "za duża wartość",
-    "too_short": "pusta lista",
+    "too_short": "za mało elementów",
     "model_type": "to nie jest obiekt {...}",
     "dict_type": "to nie jest obiekt {...}",
     "int_from_float": "to nie jest liczba całkowita",
+    "float_parsing": "to nie jest liczba",
+    "float_type": "to nie jest liczba",
+    "tuple_type": "to nie jest para [x, y]",
+    "too_long": "za dużo elementów",
+    "greater_than": "za mała wartość",
     "list_type": "to nie jest lista",
     "union_tag_invalid": "nieznany rodzaj rysunku",
     "union_tag_not_found": "brak pola type",
@@ -104,6 +109,8 @@ def task_problems(task: TaskIn) -> list[str]:
         if place != "content" and place not in (task.choices or {}):
             problems.append(f"rysunek {place}: nie ma takiego wariantu")
         problems += [f"rysunek {place}: {problem}" for problem in figure_problems(figure)]
+        for text in figure_texts(figure):
+            problems += [f"rysunek {place}: {problem}" for problem in text_problems(text)]
 
     closed = task.answer_format != "otwarte"
     if closed and not task.choices:
