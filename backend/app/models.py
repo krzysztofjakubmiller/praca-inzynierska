@@ -114,6 +114,8 @@ class Task(Base):
     # Etykieta z arkusza i jej treść, np. {"A": "$2$", "B": "$3$"}.
     # Bez none_as_null zadanie otwarte dostałoby w bazie JSON-owe null zamiast NULL.
     choices: Mapped[dict[str, str] | None] = mapped_column(JSONB(none_as_null=True))
+    # Przy dobieraniu tekst w środku tabeli, między wariantami z literami i z cyframi.
+    connector: Mapped[str | None]
     # Format rysunków opisują klasy w figures.py.
     figures: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     answer: Mapped[str | None]

@@ -40,6 +40,8 @@ export interface TaskUpdate {
   has_figure: boolean
   answer_format: AnswerFormat
   choices: Record<string, string> | null
+  /** Tekst w środku tabeli przy dobieraniu; przy innych formatach null. */
+  connector: string | null
   figures: Figures | null
   answer: string | null
   review_status: ReviewStatus

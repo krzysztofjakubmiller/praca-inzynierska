@@ -83,6 +83,7 @@ def test_all_answer_formats_are_accepted(session):
                 number=5,
                 answer_format="dobieranie",
                 choices={"A": "tak", "B": "nie", "1": "bo", "2": "ponieważ", "3": "gdyż"},
+                connector="i przecinają się w punkcie $P$",
                 answer="A2",
             ),
             task(number=6, subnumber=1, answer_format="otwarte", choices=None, answer="$x=3$"),
@@ -144,6 +145,15 @@ def test_single_backslash_from_json_is_caught(session, latex):
         (
             {"answer_format": "prawda-falsz", "choices": {"1": "a", "2": "b"}, "answer": "PFP"},
             "przy P/F po jednej literze",
+        ),
+        (
+            {"answer_format": "dobieranie", "choices": {"A": "a", "B": "b", "1": "c"}},
+            "potrzebny jest connector",
+        ),
+        ({"connector": "i jest"}, "connector jest tylko przy dobieraniu"),
+        (
+            {"answer_format": "dobieranie", "connector": "i jest", "answer": "A"},
+            "warianty z literami i z cyframi",
         ),
     ],
 )

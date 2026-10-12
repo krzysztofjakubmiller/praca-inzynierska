@@ -16,6 +16,7 @@ EDITABLE = [
     "has_figure",
     "answer_format",
     "choices",
+    "connector",
     "figures",
     "answer",
     "review_status",
@@ -155,6 +156,23 @@ def test_edit_saves_figures(client):
 
     assert response.status_code == 200
     assert response.json()["figures"] == figures
+
+
+def test_edit_saves_connector(client):
+    [task_id] = import_tasks(client, 1)
+    choices = {"A": "są prostopadłe", "B": "nie są prostopadłe", "1": "$(6, 4)$", "2": "$(-6, 4)$"}
+
+    response = edit(
+        client,
+        task_id,
+        answer_format="dobieranie",
+        choices=choices,
+        connector="i przecinają się w punkcie $P$ o współrzędnych",
+        answer="A1",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["connector"] == "i przecinają się w punkcie $P$ o współrzędnych"
 
 
 def test_edit_cannot_create_duplicate(client):

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import MatchingTable from '@/components/panel/MatchingTable.vue'
 import MathText from '@/components/panel/MathText.vue'
+import TrueFalseTable from '@/components/panel/TrueFalseTable.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
 import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {
@@ -29,6 +31,7 @@ const saved = ref(false)
 
 const exam = computed(() => exams.value.find((exam) => exam.code === task.value?.exam))
 const closed = computed(() => form.value?.answer_format !== 'otwarte')
+const matching = computed(() => form.value?.answer_format === 'dobieranie')
 const sourceName = computed(
   () => exam.value?.sources.find((source) => source.code === form.value?.source)?.name,
 )
@@ -94,6 +97,7 @@ function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
     choices: closed.value
       ? Object.fromEntries(choices.value.map((choice) => [choice.label.trim(), choice.text]))
       : null,
+    connector: matching.value ? edited.connector?.trim() || null : null,
     figures,
     answer: edited.answer?.trim() || null,
     review_status: status,
@@ -229,6 +233,15 @@ function remove() {
           </div>
         </fieldset>
 
+        <label v-if="matching">
+          Tekst w środku tabeli
+          <input
+            v-model="form.connector"
+            placeholder="np. i przecinają się w punkcie $P$ o współrzędnych"
+            spellcheck="false"
+          />
+        </label>
+
         <label>
           Odpowiedź
           <input v-model="form.answer" placeholder="np. B, PFP, A2, $x=3$" spellcheck="false" />
@@ -266,7 +279,9 @@ function remove() {
           :range="range"
           :span="span"
         />
-        <ol v-if="closed" class="review__preview-choices">
+        <MatchingTable v-if="matching" :choices="choices" :connector="form.connector ?? ''" />
+        <TrueFalseTable v-else-if="form.answer_format === 'prawda-falsz'" :choices="choices" />
+        <ol v-else-if="closed" class="review__preview-choices">
           <li v-for="(choice, index) in choices" :key="index">
             <strong>{{ choice.label }}.</strong> <MathText :text="choice.text" />
             <TaskFigure

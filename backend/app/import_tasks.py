@@ -26,6 +26,8 @@ class TaskIn(BaseModel):
     has_figure: bool = False
     answer_format: Literal["wielokrotny-wybor", "prawda-falsz", "dobieranie", "otwarte"]
     choices: dict[str, str] | None = None
+    # Przy dobieraniu tekst w środku tabeli, np. "i przecinają się w punkcie $P$ o współrzędnych".
+    connector: str | None = None
     # Klucz "content" to rysunek pod treścią, etykieta wariantu to rysunek w tym wariancie.
     figures: dict[str, Figure] | None = None
     answer: str | None = None
@@ -101,6 +103,8 @@ def task_problems(task: TaskIn) -> list[str]:
         problems += [f"wariant {label}: {problem}" for problem in text_problems(text)]
     if task.answer is not None:
         problems += [f"odpowiedź: {problem}" for problem in text_problems(task.answer)]
+    if task.connector is not None:
+        problems += [f"connector: {problem}" for problem in text_problems(task.connector)]
 
     figures = task.figures or {}
     if task.has_figure != bool(figures):
@@ -117,6 +121,18 @@ def task_problems(task: TaskIn) -> list[str]:
         problems.append("zadanie zamknięte bez wariantów")
     if not closed and task.choices:
         problems.append("zadanie otwarte nie może mieć wariantów")
+
+    # Tabela dobierania ma po lewej warianty z literami, a po prawej z cyframi.
+    matching = task.answer_format == "dobieranie"
+    if matching and not task.connector:
+        problems.append("przy dobieraniu potrzebny jest connector, tekst w środku tabeli")
+    if not matching and task.connector is not None:
+        problems.append("connector jest tylko przy dobieraniu")
+    if matching and task.choices:
+        letters = any(label.isalpha() for label in task.choices)
+        digits = any(label.isdigit() for label in task.choices)
+        if not letters or not digits:
+            problems.append("przy dobieraniu potrzebne są warianty z literami i z cyframi")
 
     # Etykiety mają jeden znak (A-F, 1-3), więc każdy znak odpowiedzi to jedna etykieta.
     if closed and task.choices and task.answer is not None:
@@ -226,6 +242,7 @@ def import_tasks(session: Session, data) -> list[int]:
                 has_figure=task.has_figure,
                 answer_format=task.answer_format,
                 choices=task.choices,
+                connector=task.connector,
                 figures=figures_json(task.figures),
                 answer=task.answer,
                 read_method=file.read_method,

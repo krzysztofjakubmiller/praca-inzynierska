@@ -59,6 +59,7 @@ def task_details(session: Session, task: Task) -> dict:
         "has_figure": task.has_figure,
         "answer_format": task.answer_format,
         "choices": task.choices,
+        "connector": task.connector,
         "figures": task.figures,
         "answer": task.answer,
         "review_status": task.review_status,
@@ -177,6 +178,7 @@ def update_task(task_id: int, update: TaskUpdate, session: Session = Depends(get
     task.has_figure = update.has_figure
     task.answer_format = update.answer_format
     task.choices = update.choices
+    task.connector = update.connector
     task.figures = figures_json(update.figures)
     task.answer = update.answer
     if update.review_status == "sprawdzone" and task.review_status != "sprawdzone":
