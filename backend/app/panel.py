@@ -247,6 +247,43 @@ def next_task(after: int = 0, session: Session = Depends(get_session)):
     return {"id": next_id}
 
 
+def exported_task(session: Session, task: Task) -> dict:
+    fields = {
+        "source": session.get(SourceKind, task.source_kind_id).code,
+        "year": task.year,
+        "month": task.month,
+        "number": task.number,
+        "subnumber": task.subnumber,
+        "max_points": task.max_points,
+        "content": task.content,
+        "has_figure": task.has_figure,
+        "answer_format": task.answer_format,
+        "choices": task.choices,
+        "connector": task.connector,
+        "figures": task.figures,
+        "answer": task.answer,
+    }
+    # Puste pola pomijane jak w plikach od Gemini, żeby plik dało się czytać.
+    return {key: value for key, value in fields.items() if value is not None}
+
+
+# Plik w formacie importu, więc zadania sprawdzone lokalnie można wczytać w bazie online.
+# Format ma jeden egzamin, temat i sposób odczytu na cały plik.
+@router.post("/export")
+def export_tasks(body: TaskIds, session: Session = Depends(get_session)):
+    tasks = sorted(load_tasks(session, body.ids), key=lambda task: task.id)
+    if len({(task.topic_id, task.read_method, task.read_model) for task in tasks}) > 1:
+        raise rejected(["zaznacz zadania z jednego tematu i z jednym sposobem odczytu"])
+    first = tasks[0]
+    return {
+        "exam": session.get(Exam, first.exam_id).code,
+        "topic": session.get(Topic, first.topic_id).code,
+        "read_method": first.read_method,
+        "read_model": first.read_model,
+        "tasks": [exported_task(session, task) for task in tasks],
+    }
+
+
 @router.post("/import")
 def import_text(body: ImportText, session: Session = Depends(get_session)):
     try:

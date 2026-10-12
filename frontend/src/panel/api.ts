@@ -121,5 +121,8 @@ export const panelApi = {
     request<{ changed: number }>('/tasks/topic', json('POST', { ids, topic })),
   reopen: (ids: number[]) => request<{ changed: number }>('/tasks/reopen', json('POST', { ids })),
   next: (after: number) => request<{ id: number | null }>(`/next?after=${after}`),
+  // Plik w formacie importu; tu potrzebne są tylko kody do nazwy pliku.
+  exportTasks: (ids: number[]) =>
+    request<{ exam: string; topic: string }>('/export', json('POST', { ids })),
   importText: (text: string) => request<{ ids: number[] }>('/import', json('POST', { text })),
 }

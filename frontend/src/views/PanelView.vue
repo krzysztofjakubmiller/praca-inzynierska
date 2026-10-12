@@ -100,6 +100,20 @@ function reopenSelected() {
   })
 }
 
+function exportSelected() {
+  notice.value = ''
+  return run(async () => {
+    const file = await panelApi.exportTasks(selected.value)
+    const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${file.exam}-${file.topic}.json`
+    link.click()
+    URL.revokeObjectURL(link.href)
+    notice.value = `Wyeksportowano zadań: ${selected.value.length}.`
+  })
+}
+
 function startReview() {
   notice.value = ''
   return run(async () => {
@@ -211,6 +225,14 @@ function startReview() {
             @click="reopenSelected"
           >
             Przywróć do sprawdzenia
+          </button>
+          <button
+            type="button"
+            class="button button--quiet"
+            :disabled="!selected.length"
+            @click="exportSelected"
+          >
+            Eksportuj zaznaczone ({{ selected.length }})
           </button>
           <button
             type="button"

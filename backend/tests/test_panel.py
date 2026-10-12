@@ -241,3 +241,27 @@ def test_next_task_skips_reviewed_and_wraps_around(client):
 
     assert client.get("/api/panel/next", params={"after": first}).json() == {"id": second}
     assert client.get("/api/panel/next", params={"after": third}).json() == {"id": second}
+
+
+def test_exported_tasks_can_be_imported_again(client):
+    ids = import_tasks(client, 2, 1)
+
+    exported = client.post("/api/panel/export", json={"ids": ids}).json()
+    for task_id in ids:
+        client.delete(f"/api/panel/tasks/{task_id}")
+    response = client.post("/api/panel/import", json={"text": json.dumps(exported)})
+
+    assert exported["topic"] == "logarytmy"
+    assert [task["number"] for task in exported["tasks"]] == [2, 1]
+    assert "subnumber" not in exported["tasks"][0]
+    assert response.status_code == 200
+
+
+def test_export_needs_tasks_from_one_topic(client):
+    first, second = import_tasks(client, 1, 2)
+    client.post("/api/panel/tasks/topic", json={"ids": [second], "topic": "algebra"})
+
+    response = client.post("/api/panel/export", json={"ids": [first, second]})
+
+    assert response.status_code == 422
+    assert "z jednego tematu" in response.json()["detail"][0]
