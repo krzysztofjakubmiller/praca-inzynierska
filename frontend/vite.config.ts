@@ -12,6 +12,8 @@ export default defineConfig({
   ],
   server: {
     proxy: { '/api': 'http://localhost:8000' },
+    // Bez tego nagłówka przycisk Google nie działa na http://localhost (dokumentacja Google).
+    headers: { 'Referrer-Policy': 'no-referrer-when-downgrade' },
   },
   resolve: {
     alias: {

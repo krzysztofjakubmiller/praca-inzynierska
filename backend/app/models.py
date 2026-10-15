@@ -136,7 +136,10 @@ class Account(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     # Zapisywany małymi literami, więc unikalność nie zależy od wielkości liter.
     email: Mapped[str] = mapped_column(unique=True)
-    password_hash: Mapped[str]
+    # Puste w koncie założonym przez Google.
+    password_hash: Mapped[str | None]
+    # Stały identyfikator konta Google (sub). Adres w koncie Google może się zmienić, ten nie.
+    google_id: Mapped[str | None] = mapped_column(unique=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

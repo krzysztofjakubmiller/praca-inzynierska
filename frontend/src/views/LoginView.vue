@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { logIn, register } from '@/account'
+import { logIn, logInWithGoogle, register } from '@/account'
+import GoogleButton from '@/components/account/GoogleButton.vue'
 
 const props = defineProps<{ mode: 'login' | 'register' }>()
 
@@ -22,12 +23,12 @@ watch(
   },
 )
 
-async function submitForm() {
+// Formularz i przycisk Google kończą się tak samo: przejściem na konto albo komunikatem.
+async function send(attempt: () => Promise<string | null>) {
   sending.value = true
   problem.value = ''
   try {
-    const send = props.mode === 'login' ? logIn : register
-    const message = await send(email.value, password.value)
+    const message = await attempt()
     if (message === null) {
       await router.replace({ name: 'account' })
       return
@@ -39,11 +40,22 @@ async function submitForm() {
     sending.value = false
   }
 }
+
+function submitForm() {
+  const submit = props.mode === 'login' ? logIn : register
+  return send(() => submit(email.value, password.value))
+}
+
+function submitGoogle(credential: string) {
+  return send(() => logInWithGoogle(credential))
+}
 </script>
 
 <template>
   <main class="login">
     <h1>{{ mode === 'login' ? 'Logowanie' : 'Rejestracja' }}</h1>
+    <GoogleButton @credential="submitGoogle" />
+    <p class="login__or">albo e-mailem</p>
     <form class="login__form" @submit.prevent="submitForm">
       <label>
         E-mail
@@ -129,7 +141,8 @@ async function submitForm() {
   min-width: 0;
 }
 
-.login__hint {
+.login__hint,
+.login__or {
   color: var(--ink-soft);
   font-weight: 400;
 }

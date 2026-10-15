@@ -1,11 +1,29 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import App from '@/App.vue'
 import router from '@/router'
 
 type Answers = Record<string, [status: number, body?: unknown]>
+type GoogleCallback = (response: { credential: string }) => void
 
 let wrapper: VueWrapper | undefined
+let googleCallback: GoogleCallback | undefined
+const renderGoogleButton = vi.fn<(parent: HTMLElement, options: Record<string, string>) => void>()
+
+// Atrapa skryptu Google: zapamiętuje funkcję, którą Google wywołałby po wyborze konta.
+beforeEach(() => {
+  renderGoogleButton.mockClear()
+  vi.stubGlobal('google', {
+    accounts: {
+      id: {
+        initialize: (options: { callback: GoogleCallback }) => {
+          googleCallback = options.callback
+        },
+        renderButton: renderGoogleButton,
+      },
+    },
+  })
+})
 
 function backend(answers: Answers) {
   vi.stubGlobal(
@@ -142,5 +160,80 @@ describe('account page', () => {
 
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
     expect(fetch).toHaveBeenCalledWith('/api/account/logout', expect.anything())
+  })
+})
+
+describe('Google button', () => {
+  it('is drawn by the Google script in Polish', async () => {
+    await renderAt('/logowanie')
+
+    expect(renderGoogleButton).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ text: 'continue_with', locale: 'pl' }),
+    )
+  })
+
+  // W rozmiarze medium Google nie podmienia przycisku na „Kontynuuj jako …” z imieniem.
+  it('is always the plain button without the user name', async () => {
+    await renderAt('/logowanie')
+
+    expect(renderGoogleButton).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ size: 'medium' }),
+    )
+  })
+
+  it.each([
+    [343, '343'],
+    [600, '400'],
+  ])('fills a %i px wide place up to 400 px (width %s)', async (place, width) => {
+    const clientWidth = vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(place)
+
+    await renderAt('/logowanie')
+    clientWidth.mockRestore()
+
+    expect(renderGoogleButton).toHaveBeenCalledWith(
+      expect.any(HTMLElement),
+      expect.objectContaining({ width }),
+    )
+  })
+
+  it('logs in with the token from Google', async () => {
+    backend({
+      '/api/account/google': [204],
+      '/api/account': [200, { email: 'ola@gmail.com' }],
+    })
+    const wrapper = await renderAt('/logowanie')
+
+    googleCallback!({ credential: 'dobry-token' })
+
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Zalogowano jako ola@gmail.com'))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/google',
+      expect.objectContaining({ body: JSON.stringify({ credential: 'dobry-token' }) }),
+    )
+  })
+
+  it('shows why the backend refused the Google account', async () => {
+    const refusal = 'Konto z tym adresem już istnieje. Zaloguj się hasłem.'
+    backend({ '/api/account/google': [409, { detail: [refusal] }] })
+    const wrapper = await renderAt('/rejestracja')
+
+    googleCallback!({ credential: 'dobry-token' })
+
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').text()).toBe(refusal))
+  })
+
+  it('keeps the email form when the Google script cannot load', async () => {
+    vi.stubGlobal('google', undefined)
+    const append = vi.spyOn(document.head, 'append').mockImplementation((script) => {
+      ;(script as HTMLScriptElement).onerror?.(new Event('error'))
+    })
+
+    const wrapper = await renderAt('/logowanie')
+    append.mockRestore()
+
+    expect(wrapper.text()).toContain('Nie udało się wczytać logowania przez Google.')
+    expect(wrapper.find('form').exists()).toBe(true)
   })
 })

@@ -15,8 +15,8 @@ function send(path: string, init: RequestInit = {}): Promise<Response> {
 }
 
 // null oznacza sukces, a tekst to komunikaty backendu do pokazania pod formularzem.
-async function submit(path: string, email: string, password: string): Promise<string | null> {
-  const response = await send(path, { method: 'POST', body: JSON.stringify({ email, password }) })
+async function submit(path: string, data: object): Promise<string | null> {
+  const response = await send(path, { method: 'POST', body: JSON.stringify(data) })
   if (response.ok) return null
   if (response.status >= 500) throw new Error(`backend odpowiedział kodem ${response.status}`)
   const body = await response.json()
@@ -24,11 +24,16 @@ async function submit(path: string, email: string, password: string): Promise<st
 }
 
 export function register(email: string, password: string) {
-  return submit('/register', email, password)
+  return submit('/register', { email, password })
 }
 
 export function logIn(email: string, password: string) {
-  return submit('/login', email, password)
+  return submit('/login', { email, password })
+}
+
+// credential to token, który przycisk Google przekazuje stronie po wyborze konta.
+export function logInWithGoogle(credential: string) {
+  return submit('/google', { credential })
 }
 
 export async function logOut() {

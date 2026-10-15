@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { loadAccount, logIn, logOut, register } from '@/account'
+import { loadAccount, logIn, logInWithGoogle, logOut, register } from '@/account'
 
 function answer(status: number, body?: unknown) {
   const text = body === undefined ? null : JSON.stringify(body)
@@ -82,5 +82,20 @@ describe('logOut', () => {
       '/api/account/logout',
       expect.objectContaining({ method: 'POST', credentials: 'include' }),
     )
+  })
+})
+
+describe('logInWithGoogle', () => {
+  it('sends the Google token with the session cookie and the access password', async () => {
+    localStorage.setItem('haslo-dostepu', 'sekret')
+    answer(204)
+
+    await expect(logInWithGoogle('token-od-google')).resolves.toBeNull()
+    expect(fetch).toHaveBeenCalledWith('/api/account/google', {
+      method: 'POST',
+      body: JSON.stringify({ credential: 'token-od-google' }),
+      credentials: 'include',
+      headers: { Authorization: 'Bearer sekret', 'Content-Type': 'application/json' },
+    })
   })
 })

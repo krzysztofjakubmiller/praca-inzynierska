@@ -1,7 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from sqlalchemy import select
+from google.oauth2 import id_token
+from sqlalchemy import func, select
 
 from app.accounts import token_hash
 from app.models import Account, LoginSession
@@ -234,3 +235,133 @@ def test_session_is_extended_at_most_once_a_day(client, session):
 
     assert session.get(LoginSession, token_hash("klucz")).expires_at == expires_at
     assert "set-cookie" not in response.headers
+
+
+GOOGLE_CLAIMS = {"sub": "google-123", "email": "ola@gmail.com", "email_verified": True}
+
+
+# Testy nie łączą się z Google: podmieniona funkcja przyjmuje tylko "dobry-token" i zwraca dane,
+# które test może zmienić przed logowaniem.
+@pytest.fixture
+def google(monkeypatch):
+    claims = dict(GOOGLE_CLAIMS)
+
+    def verify(credential, request, client_id):
+        if credential != "dobry-token":
+            raise ValueError("zły token")
+        return claims
+
+    monkeypatch.setattr(id_token, "verify_oauth2_token", verify)
+    return claims
+
+
+def google_log_in(client, credential="dobry-token"):
+    return client.post("/api/account/google", json={"credential": credential})
+
+
+def test_google_creates_account_without_password(client, session, google):
+    response = google_log_in(client)
+
+    assert response.status_code == 204
+    assert client.get("/api/account").json() == {"email": "ola@gmail.com"}
+    account = session.scalar(select(Account))
+    assert account.google_id == "google-123"
+    assert account.password_hash is None
+
+
+def test_google_stores_email_in_lowercase(client, google):
+    google["email"] = "Ola@Gmail.com"
+
+    google_log_in(client)
+
+    assert client.get("/api/account").json() == {"email": "ola@gmail.com"}
+
+
+def test_google_finds_returning_account_by_sub(client, session, google):
+    google_log_in(client)
+    google["email"] = "nowy-adres@gmail.com"
+    client.cookies.clear()
+
+    google_log_in(client)
+
+    assert session.scalar(select(func.count()).select_from(Account)) == 1
+    assert client.get("/api/account").json() == {"email": "ola@gmail.com"}
+
+
+def test_google_joins_gmail_account_created_with_password(client, session, google):
+    register(client, email="ola@gmail.com")
+    client.cookies.clear()
+
+    assert google_log_in(client).status_code == 204
+
+    account = session.scalar(select(Account))
+    assert session.scalar(select(func.count()).select_from(Account)) == 1
+    assert account.google_id == "google-123"
+    assert account.password_hash is not None
+
+
+def test_google_does_not_join_other_address_without_workspace(client, session, google):
+    register(client, email="ola@wp.pl")
+    client.cookies.clear()
+    google["email"] = "ola@wp.pl"
+
+    response = google_log_in(client)
+
+    assert response.status_code == 409
+    assert response.json() == {"detail": ["Konto z tym adresem już istnieje. Zaloguj się hasłem."]}
+    assert session.scalar(select(Account)).google_id is None
+
+
+def test_google_joins_workspace_address(client, session, google):
+    register(client, email="ola@szkola.edu.pl")
+    client.cookies.clear()
+    google.update(email="ola@szkola.edu.pl", hd="szkola.edu.pl")
+
+    assert google_log_in(client).status_code == 204
+    assert session.scalar(select(Account)).google_id == "google-123"
+
+
+def test_google_rejects_bad_token(client, google):
+    response = google_log_in(client, credential="podrobiony")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": ["Logowanie przez Google nie powiodło się."]}
+
+
+def test_google_rejects_unverified_email(client, google):
+    google["email_verified"] = False
+
+    response = google_log_in(client)
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": ["Google nie potwierdził tego adresu e-mail."]}
+
+
+def test_password_login_to_google_only_account_explains_why(client, google):
+    google_log_in(client)
+    client.cookies.clear()
+
+    response = log_in(client, email="ola@gmail.com")
+
+    assert response.status_code == 401
+    assert response.json() == {"detail": ["To konto loguje się przez Google."]}
+
+
+def test_new_login_replaces_previous_session_of_the_browser(client, session):
+    register(client)
+    old_key = client.cookies["session"]
+
+    log_in(client)
+
+    assert session.get(LoginSession, token_hash(old_key)) is None
+    assert session.scalar(select(func.count()).select_from(LoginSession)) == 1
+
+
+def test_login_on_another_device_keeps_the_first_session(client, session):
+    register(client)
+    first_key = client.cookies["session"]
+    client.cookies.clear()
+
+    log_in(client)
+
+    assert account_with_key(client, first_key).status_code == 200
