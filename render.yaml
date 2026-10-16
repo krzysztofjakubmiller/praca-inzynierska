@@ -25,6 +25,16 @@ services:
         sync: false
       - key: FRONTEND_ORIGINS
         value: https://matmapokolei.pl,https://matma-web.onrender.com
+      # Adres strony w linkach z maili (potwierdzenie adresu, ustawienie hasła).
+      - key: FRONTEND_URL
+        value: https://matmapokolei.pl
+      # Maile wysyła Brevo; klucz SMTP wpisuje się w panelu Rendera.
+      - key: SMTP_HOST
+        value: smtp-relay.brevo.com
+      - key: SMTP_USER
+        value: be61b4001@smtp-brevo.com
+      - key: SMTP_PASSWORD
+        sync: false
 
   - type: web
     name: matma-web
