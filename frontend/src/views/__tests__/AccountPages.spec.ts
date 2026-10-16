@@ -65,7 +65,7 @@ describe('login page', () => {
   it('logs in and shows the email on the account page', async () => {
     backend({
       '/api/account/login': [204],
-      '/api/account': [200, { email: 'ola@example.com' }],
+      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
     })
     const wrapper = await renderAt('/logowanie')
 
@@ -87,7 +87,7 @@ describe('login page', () => {
 
   it('shows and hides the password', async () => {
     const wrapper = await renderAt('/logowanie')
-    const toggle = wrapper.find('.login__toggle')
+    const toggle = wrapper.find('.password-field__toggle')
 
     expect(wrapper.find('#password').attributes('type')).toBe('password')
     await toggle.trigger('click')
@@ -121,21 +121,123 @@ describe('login page', () => {
     expect(wrapper.find('h1').text()).toBe('Rejestracja')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
+
+  it('links to setting a new password with the typed address', async () => {
+    const wrapper = await renderAt('/logowanie')
+
+    await wrapper.find('input[type="email"]').setValue('ola@example.com')
+
+    const link = wrapper.findAll('a').find((a) => a.text() === 'Nie pamiętam hasła')!
+    expect(link.attributes('href')).toBe('/nie-pamietam-hasla?adres=ola@example.com')
+  })
+
+  it('offers adding a password to an account created with Google', async () => {
+    const message =
+      'To konto logowało się dotąd przez Google. Zaloguj się przez Google albo dodaj hasło.'
+    backend({ '/api/account/login': [403, { detail: [message] }] })
+    const wrapper = await renderAt('/logowanie')
+
+    await fillAndSubmit(wrapper)
+
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').text()).toBe(message))
+    const link = wrapper.findAll('a').find((a) => a.text() === 'Dodaj hasło')!
+    expect(link.attributes('href')).toBe('/nie-pamietam-hasla?adres=ola@example.com')
+  })
 })
 
 describe('registration page', () => {
-  it('creates an account and opens the account page', async () => {
-    backend({
-      '/api/account/register': [201, { email: 'ola@example.com' }],
-      '/api/account': [200, { email: 'ola@example.com' }],
-    })
+  it('sends a link instead of logging in right away', async () => {
+    backend({ '/api/account/register': [202, { email: 'ola@example.com' }] })
     const wrapper = await renderAt('/rejestracja')
     expect(wrapper.text()).toContain('Co najmniej 12 znaków.')
 
     await fillAndSubmit(wrapper)
 
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain('Wysłaliśmy link na adres ola@example.com.'),
+    )
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(router.currentRoute.value.name).toBe('register')
+  })
+})
+
+describe('email confirmation page', () => {
+  it('creates the account from the link and opens the account page', async () => {
+    backend({
+      '/api/account/confirm': [204],
+      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
+    })
+
+    await renderAt('/potwierdz-adres?klucz=abc')
+
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('account'))
-    expect(fetch).toHaveBeenCalledWith('/api/account/register', expect.anything())
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/confirm',
+      expect.objectContaining({ body: JSON.stringify({ key: 'abc' }) }),
+    )
+  })
+
+  it('explains an expired link and points to registration', async () => {
+    const message = 'Link wygasł albo został już użyty. Zarejestruj się jeszcze raz.'
+    backend({ '/api/account/confirm': [400, { detail: [message] }] })
+
+    const wrapper = await renderAt('/potwierdz-adres?klucz=stary')
+
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').text()).toBe(message))
+    expect(wrapper.find('a[href="/rejestracja"]').exists()).toBe(true)
+  })
+})
+
+describe('password link page', () => {
+  it('sends a link to the address from the login page', async () => {
+    backend({ '/api/account/password-link': [204] })
+    const wrapper = await renderAt('/nie-pamietam-hasla?adres=ola%40example.com')
+    expect((wrapper.find('input[type="email"]').element as HTMLInputElement).value).toBe(
+      'ola@example.com',
+    )
+
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() =>
+      expect(wrapper.text()).toContain('Wysłaliśmy link na adres ola@example.com.'),
+    )
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/password-link',
+      expect.objectContaining({ body: JSON.stringify({ email: 'ola@example.com' }) }),
+    )
+  })
+})
+
+describe('new password page', () => {
+  it('sets the password from the link and opens the account page', async () => {
+    backend({
+      '/api/account/password': [204],
+      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
+    })
+    const wrapper = await renderAt('/nowe-haslo?klucz=abc')
+
+    await wrapper.find('#password').setValue('nowe-dlugie-haslo')
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('account'))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/password',
+      expect.objectContaining({
+        body: JSON.stringify({ key: 'abc', password: 'nowe-dlugie-haslo' }),
+      }),
+    )
+  })
+
+  it('explains an expired link and points to asking for a new one', async () => {
+    const message = 'Link wygasł albo został już użyty. Poproś o nowy.'
+    backend({ '/api/account/password': [400, { detail: [message] }] })
+    const wrapper = await renderAt('/nowe-haslo?klucz=stary')
+
+    await wrapper.find('#password').setValue('nowe-dlugie-haslo')
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').text()).toBe(message))
+    expect(wrapper.find('a[href="/nie-pamietam-hasla"]').exists()).toBe(true)
   })
 })
 
@@ -150,7 +252,7 @@ describe('account page', () => {
 
   it('logs out', async () => {
     backend({
-      '/api/account': [200, { email: 'ola@example.com' }],
+      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
       '/api/account/logout': [204],
     })
     const wrapper = await renderAt('/konto')
@@ -201,7 +303,7 @@ describe('Google button', () => {
   it('logs in with the token from Google', async () => {
     backend({
       '/api/account/google': [204],
-      '/api/account': [200, { email: 'ola@gmail.com' }],
+      '/api/account': [200, { email: 'ola@gmail.com', has_password: false }],
     })
     const wrapper = await renderAt('/logowanie')
 

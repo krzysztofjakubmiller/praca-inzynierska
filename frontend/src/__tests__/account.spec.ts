@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { loadAccount, logIn, logInWithGoogle, logOut, register } from '@/account'
+import {
+  changePassword,
+  confirmEmail,
+  loadAccount,
+  logIn,
+  logInWithGoogle,
+  logOut,
+  logOutEverywhere,
+  register,
+  requestPasswordLink,
+  setPassword,
+} from '@/account'
 
 function answer(status: number, body?: unknown) {
   const text = body === undefined ? null : JSON.stringify(body)
@@ -28,9 +39,19 @@ describe('register', () => {
   it('returns all problems reported by the backend', async () => {
     answer(422, { detail: ['Niepoprawny adres e-mail.', 'Hasło musi mieć co najmniej 12 znaków.'] })
 
-    await expect(register('ola', 'krotkie')).resolves.toBe(
-      'Niepoprawny adres e-mail. Hasło musi mieć co najmniej 12 znaków.',
-    )
+    await expect(register('ola', 'krotkie')).resolves.toEqual({
+      message: 'Niepoprawny adres e-mail. Hasło musi mieć co najmniej 12 znaków.',
+      status: 422,
+    })
+  })
+
+  it('passes on the message about a failed email', async () => {
+    answer(502, { detail: ['Nie udało się wysłać maila. Spróbuj za chwilę.'] })
+
+    await expect(register('ola@example.com', 'dlugie-haslo-123')).resolves.toEqual({
+      message: 'Nie udało się wysłać maila. Spróbuj za chwilę.',
+      status: 502,
+    })
   })
 
   it('fails when the backend has a problem', async () => {
@@ -46,7 +67,10 @@ describe('logIn', () => {
   it('returns the reason of a rejected login', async () => {
     answer(401, { detail: ['Złe hasło.'] })
 
-    await expect(logIn('ola@example.com', 'inne-haslo-123')).resolves.toBe('Złe hasło.')
+    await expect(logIn('ola@example.com', 'inne-haslo-123')).resolves.toEqual({
+      message: 'Złe hasło.',
+      status: 401,
+    })
     expect(fetch).toHaveBeenCalledWith(
       '/api/account/login',
       expect.objectContaining({ method: 'POST', credentials: 'include' }),
@@ -97,5 +121,42 @@ describe('logInWithGoogle', () => {
       credentials: 'include',
       headers: { Authorization: 'Bearer sekret', 'Content-Type': 'application/json' },
     })
+  })
+})
+
+describe('links from emails and account security', () => {
+  it.each([
+    ['confirmEmail', () => confirmEmail('klucz'), '/api/account/confirm', { key: 'klucz' }],
+    [
+      'requestPasswordLink',
+      () => requestPasswordLink('ola@example.com'),
+      '/api/account/password-link',
+      { email: 'ola@example.com' },
+    ],
+    [
+      'setPassword',
+      () => setPassword('klucz', 'nowe-dlugie-haslo'),
+      '/api/account/password',
+      { key: 'klucz', password: 'nowe-dlugie-haslo' },
+    ],
+    [
+      'changePassword without a current password',
+      () => changePassword(null, 'nowe-dlugie-haslo'),
+      '/api/account/change-password',
+      { current_password: null, new_password: 'nowe-dlugie-haslo' },
+    ],
+    ['logOutEverywhere', () => logOutEverywhere(), '/api/account/logout-everywhere', {}],
+  ])('%s posts to the backend', async (_name, call, path, data) => {
+    answer(204)
+
+    await expect(call()).resolves.toBeNull()
+    expect(fetch).toHaveBeenCalledWith(
+      path,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(data),
+        credentials: 'include',
+      }),
+    )
   })
 })

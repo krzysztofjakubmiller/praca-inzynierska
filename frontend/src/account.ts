@@ -2,6 +2,14 @@ import { API_URL, authorization } from '@/access'
 
 export interface Account {
   email: string
+  has_password: boolean
+}
+
+// Komunikat backendu do pokazania pod formularzem. Kod odpowiedzi pozwala stronie dobrać
+// przycisk, np. 403 przy logowaniu oznacza konto bez hasła.
+export interface Problem {
+  message: string
+  status: number
 }
 
 // Klucz sesji leży w ciasteczku HttpOnly, którego JavaScript nie widzi. credentials: 'include'
@@ -14,17 +22,25 @@ function send(path: string, init: RequestInit = {}): Promise<Response> {
   })
 }
 
-// null oznacza sukces, a tekst to komunikaty backendu do pokazania pod formularzem.
-async function submit(path: string, data: object): Promise<string | null> {
+// null oznacza sukces. Odpowiedź bez listy komunikatów to awaria serwera, a nie problem do
+// pokazania pod formularzem.
+async function submit(path: string, data: object): Promise<Problem | null> {
   const response = await send(path, { method: 'POST', body: JSON.stringify(data) })
   if (response.ok) return null
-  if (response.status >= 500) throw new Error(`backend odpowiedział kodem ${response.status}`)
-  const body = await response.json()
-  return body.detail.join(' ')
+  const body = await response.json().catch(() => null)
+  if (!Array.isArray(body?.detail)) {
+    throw new Error(`backend odpowiedział kodem ${response.status}`)
+  }
+  return { message: body.detail.join(' '), status: response.status }
 }
 
+// Rejestracja tylko wysyła mail z linkiem; konto powstaje po jego kliknięciu (confirmEmail).
 export function register(email: string, password: string) {
   return submit('/register', { email, password })
+}
+
+export function confirmEmail(key: string) {
+  return submit('/confirm', { key })
 }
 
 export function logIn(email: string, password: string) {
@@ -34,6 +50,23 @@ export function logIn(email: string, password: string) {
 // credential to token, który przycisk Google przekazuje stronie po wyborze konta.
 export function logInWithGoogle(credential: string) {
   return submit('/google', { credential })
+}
+
+export function requestPasswordLink(email: string) {
+  return submit('/password-link', { email })
+}
+
+export function setPassword(key: string, password: string) {
+  return submit('/password', { key, password })
+}
+
+// Konto założone przez Google nie ma obecnego hasła, więc current bywa null.
+export function changePassword(current: string | null, next: string) {
+  return submit('/change-password', { current_password: current, new_password: next })
+}
+
+export function logOutEverywhere() {
+  return submit('/logout-everywhere', {})
 }
 
 export async function logOut() {

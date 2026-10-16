@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { loadAccount, logOut, type Account } from '@/account'
+import AccountSecurity from '@/components/account/AccountSecurity.vue'
 
 const router = useRouter()
 
@@ -33,6 +34,7 @@ async function logOutAndGoToLogin() {
     <template v-if="account">
       <p>Zalogowano jako {{ account.email }}</p>
       <button class="button" type="button" @click="logOutAndGoToLogin">Wyloguj</button>
+      <AccountSecurity :has-password="account.has_password" />
     </template>
     <p v-if="problem" class="account__problem" role="alert">{{ problem }}</p>
   </main>

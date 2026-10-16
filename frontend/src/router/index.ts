@@ -59,6 +59,24 @@ const router = createRouter({
       meta: { title: 'Konto' },
     },
     {
+      path: '/potwierdz-adres',
+      name: 'confirm-email',
+      component: () => import('@/views/ConfirmEmailView.vue'),
+      meta: { title: 'Potwierdzenie adresu' },
+    },
+    {
+      path: '/nie-pamietam-hasla',
+      name: 'password-link',
+      component: () => import('@/views/PasswordLinkView.vue'),
+      meta: { title: 'Ustaw hasło' },
+    },
+    {
+      path: '/nowe-haslo',
+      name: 'new-password',
+      component: () => import('@/views/NewPasswordView.vue'),
+      meta: { title: 'Nowe hasło' },
+    },
+    {
       path: '/wizytowka',
       name: 'landing',
       component: LandingView,

@@ -151,3 +151,25 @@ class LoginSession(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     expires_at: Mapped[datetime]
+
+
+# Rejestracja hasłem czeka tu na kliknięcie linku z maila. Konto w account powstaje dopiero
+# potem, więc nikt nie założy konta na cudzy adres.
+class Registration(Base):
+    __tablename__ = "registration"
+
+    email: Mapped[str] = mapped_column(primary_key=True)
+    password_hash: Mapped[str]
+    token_hash: Mapped[str] = mapped_column(unique=True)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    expires_at: Mapped[datetime]
+
+
+# Link z maila do ustawienia hasła: zapomnianego albo nowego w koncie założonym przez Google.
+class PasswordLink(Base):
+    __tablename__ = "password_link"
+
+    token_hash: Mapped[str] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    expires_at: Mapped[datetime]
