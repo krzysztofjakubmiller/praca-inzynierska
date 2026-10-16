@@ -71,6 +71,12 @@ function submitForm() {
   )
 }
 
+// Link z maila mógł zostać otwarty na telefonie, który zalogował tylko siebie. Ta karta wciąż
+// pamięta adres i hasło z formularza, więc wystarczy nimi się zalogować.
+function logInAfterConfirming() {
+  return send(() => logIn(email.value, password.value), openAccount)
+}
+
 function submitGoogle(credential: string) {
   return send(() => logInWithGoogle(credential), openAccount)
 }
@@ -82,6 +88,11 @@ function submitGoogle(credential: string) {
     <template v-if="sentTo">
       <p role="status">Wysłaliśmy link na adres {{ sentTo }}. Kliknij go, żeby założyć konto.</p>
       <p class="auth__note">Link jest ważny 24 godziny. Jeśli maila nie ma, zajrzyj do spamu.</p>
+      <p>Jeśli link z maila otwarto na innym urządzeniu, zaloguj się tutaj:</p>
+      <button class="button" type="button" :disabled="sending" @click="logInAfterConfirming">
+        Adres potwierdzony, zaloguj mnie
+      </button>
+      <p v-if="problem" class="auth__problem" role="alert">{{ problem }}</p>
     </template>
     <template v-else>
       <GoogleButton @credential="submitGoogle" />

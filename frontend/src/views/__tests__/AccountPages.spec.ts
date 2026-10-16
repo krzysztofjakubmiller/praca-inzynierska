@@ -161,6 +161,46 @@ describe('registration page', () => {
     expect(wrapper.find('form').exists()).toBe(false)
     expect(router.currentRoute.value.name).toBe('register')
   })
+
+  // Link z maila można otworzyć na telefonie; komputer loguje się wtedy przyciskiem.
+  it('logs in after the address was confirmed on another device', async () => {
+    backend({
+      '/api/account/register': [202, { email: 'ola@example.com' }],
+      '/api/account/login': [204],
+      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
+    })
+    const wrapper = await renderAt('/rejestracja')
+    await fillAndSubmit(wrapper)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Wysłaliśmy link'))
+
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Adres potwierdzony, zaloguj mnie')!
+    await button.trigger('click')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('account'))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/login',
+      expect.objectContaining({
+        body: JSON.stringify({ email: 'ola@example.com', password: 'dlugie-haslo-123' }),
+      }),
+    )
+  })
+
+  it('says when the address is not confirmed yet', async () => {
+    const message = 'Potwierdź adres. Wysłaliśmy link na ten adres.'
+    backend({
+      '/api/account/register': [202, { email: 'ola@example.com' }],
+      '/api/account/login': [401, { detail: [message] }],
+    })
+    const wrapper = await renderAt('/rejestracja')
+    await fillAndSubmit(wrapper)
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Wysłaliśmy link'))
+
+    const button = wrapper.findAll('button').find((b) => b.text() === 'Adres potwierdzony, zaloguj mnie')!
+    await button.trigger('click')
+
+    await vi.waitFor(() => expect(wrapper.find('[role="alert"]').text()).toBe(message))
+    expect(router.currentRoute.value.name).toBe('register')
+  })
 })
 
 describe('email confirmation page', () => {
