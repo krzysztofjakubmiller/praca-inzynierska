@@ -39,6 +39,10 @@ class Credentials(BaseModel):
     password: str
 
 
+class NewAccount(Credentials):
+    accepted_terms: bool
+
+
 class GoogleCredential(BaseModel):
     credential: str
 
@@ -177,9 +181,11 @@ def current_account(
 
 
 @router.post("/register", status_code=202)
-def register(credentials: Credentials, session: Session = Depends(get_session)):
+def register(credentials: NewAccount, session: Session = Depends(get_session)):
     email = normalized(credentials.email)
     problems = credential_problems(email, credentials.password)
+    if not credentials.accepted_terms:
+        problems.append("Zaakceptuj regulamin i politykę prywatności.")
     if problems:
         raise HTTPException(status_code=422, detail=problems)
     if session.scalar(select(Account).where(Account.email == email)):
@@ -227,7 +233,13 @@ def confirm_email(
             status_code=400,
             detail=["Link wygasł albo został już użyty. Zarejestruj się jeszcze raz."],
         )
-    account = Account(email=registration.email, password_hash=registration.password_hash)
+    # Formularz rejestracji nie przejdzie bez zaznaczonej zgody, więc moment wysłania formularza
+    # jest momentem akceptacji regulaminu.
+    account = Account(
+        email=registration.email,
+        password_hash=registration.password_hash,
+        terms_accepted_at=registration.created_at,
+    )
     session.add(account)
     session.delete(registration)
     session.flush()
@@ -286,7 +298,8 @@ def log_in_with_google(
         email = normalized(claims["email"])
         account = session.scalar(select(Account).where(Account.email == email))
         if account is None:
-            account = Account(email=email)
+            # Pod przyciskiem Google jest zdanie, że kontynuując, akceptuje się regulamin.
+            account = Account(email=email, terms_accepted_at=datetime.now(UTC))
             session.add(account)
             # Google potwierdził adres, więc czekająca rejestracja hasłem nie jest już potrzebna.
             session.execute(delete(Registration).where(Registration.email == email))

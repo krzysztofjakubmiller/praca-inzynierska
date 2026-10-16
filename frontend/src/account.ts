@@ -35,8 +35,8 @@ async function submit(path: string, data: object): Promise<Problem | null> {
 }
 
 // Rejestracja tylko wysyła mail z linkiem; konto powstaje po jego kliknięciu (confirmEmail).
-export function register(email: string, password: string) {
-  return submit('/register', { email, password })
+export function register(email: string, password: string, acceptedTerms: boolean) {
+  return submit('/register', { email, password, accepted_terms: acceptedTerms })
 }
 
 export function confirmEmail(key: string) {

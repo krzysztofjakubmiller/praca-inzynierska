@@ -12,6 +12,7 @@ const router = useRouter()
 
 const email = ref('')
 const password = ref('')
+const acceptedTerms = ref(false)
 const sending = ref(false)
 const problem = ref('')
 const noPassword = ref(false)
@@ -63,7 +64,7 @@ function submitForm() {
     return send(() => logIn(email.value, password.value), openAccount)
   }
   return send(
-    () => register(email.value, password.value),
+    () => register(email.value, password.value, acceptedTerms.value),
     () => {
       sentTo.value = email.value.trim()
     },
@@ -84,6 +85,11 @@ function submitGoogle(credential: string) {
     </template>
     <template v-else>
       <GoogleButton @credential="submitGoogle" />
+      <p class="auth__note">
+        Kontynuując przez Google, akceptujesz
+        <RouterLink :to="{ name: 'terms' }" target="_blank">regulamin</RouterLink> i
+        <RouterLink :to="{ name: 'privacy' }" target="_blank">politykę prywatności</RouterLink>.
+      </p>
       <p class="auth__note">albo e-mailem</p>
       <form class="auth__form" @submit.prevent="submitForm">
         <label>
@@ -98,6 +104,15 @@ function submitGoogle(credential: string) {
         >
           <p v-if="mode === 'register'" class="auth__note">Co najmniej 12 znaków.</p>
         </PasswordField>
+        <!-- Linki otwierają się w nowej karcie, żeby nie zgubić wpisanych danych. -->
+        <label v-if="mode === 'register'" class="auth__consent">
+          <input v-model="acceptedTerms" type="checkbox" required />
+          <span>
+            Akceptuję
+            <RouterLink :to="{ name: 'terms' }" target="_blank">regulamin</RouterLink> i
+            <RouterLink :to="{ name: 'privacy' }" target="_blank">politykę prywatności</RouterLink>.
+          </span>
+        </label>
         <button class="button" type="submit" :disabled="sending">
           {{ mode === 'login' ? 'Zaloguj się' : 'Załóż konto' }}
         </button>

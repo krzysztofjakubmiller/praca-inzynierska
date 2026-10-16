@@ -1,0 +1,30 @@
+.legal {
+  display: grid;
+  gap: 1rem;
+  max-width: 42rem;
+  margin-inline: auto;
+  padding: var(--gutter);
+  line-height: 1.55;
+}
+
+.legal h1 {
+  font-size: 2rem;
+  font-weight: 800;
+}
+
+.legal h2 {
+  margin-top: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.legal ul {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.legal__date {
+  color: var(--ink-soft);
+}

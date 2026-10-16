@@ -25,12 +25,16 @@ afterEach(() => {
 describe('register', () => {
   it('sends the form with the session cookie and the access password', async () => {
     localStorage.setItem('haslo-dostepu', 'sekret')
-    answer(201, { email: 'ola@example.com' })
+    answer(202, { email: 'ola@example.com' })
 
-    await expect(register('ola@example.com', 'dlugie-haslo-123')).resolves.toBeNull()
+    await expect(register('ola@example.com', 'dlugie-haslo-123', true)).resolves.toBeNull()
     expect(fetch).toHaveBeenCalledWith('/api/account/register', {
       method: 'POST',
-      body: JSON.stringify({ email: 'ola@example.com', password: 'dlugie-haslo-123' }),
+      body: JSON.stringify({
+        email: 'ola@example.com',
+        password: 'dlugie-haslo-123',
+        accepted_terms: true,
+      }),
       credentials: 'include',
       headers: { Authorization: 'Bearer sekret', 'Content-Type': 'application/json' },
     })
@@ -39,7 +43,7 @@ describe('register', () => {
   it('returns all problems reported by the backend', async () => {
     answer(422, { detail: ['Niepoprawny adres e-mail.', 'Hasło musi mieć co najmniej 12 znaków.'] })
 
-    await expect(register('ola', 'krotkie')).resolves.toEqual({
+    await expect(register('ola', 'krotkie', true)).resolves.toEqual({
       message: 'Niepoprawny adres e-mail. Hasło musi mieć co najmniej 12 znaków.',
       status: 422,
     })
@@ -48,7 +52,7 @@ describe('register', () => {
   it('passes on the message about a failed email', async () => {
     answer(502, { detail: ['Nie udało się wysłać maila. Spróbuj za chwilę.'] })
 
-    await expect(register('ola@example.com', 'dlugie-haslo-123')).resolves.toEqual({
+    await expect(register('ola@example.com', 'dlugie-haslo-123', true)).resolves.toEqual({
       message: 'Nie udało się wysłać maila. Spróbuj za chwilę.',
       status: 502,
     })
@@ -57,7 +61,7 @@ describe('register', () => {
   it('fails when the backend has a problem', async () => {
     answer(500)
 
-    await expect(register('ola@example.com', 'dlugie-haslo-123')).rejects.toThrow(
+    await expect(register('ola@example.com', 'dlugie-haslo-123', true)).rejects.toThrow(
       'backend odpowiedział kodem 500',
     )
   })

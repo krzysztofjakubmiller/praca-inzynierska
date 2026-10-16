@@ -12,6 +12,7 @@ declare module 'vue-router' {
     title?: string
     panel?: boolean
     exam?: Exam['id']
+    public?: boolean
   }
 }
 
@@ -77,6 +78,18 @@ const router = createRouter({
       meta: { title: 'Nowe hasło' },
     },
     {
+      path: '/regulamin',
+      name: 'terms',
+      component: () => import('@/views/TermsView.vue'),
+      meta: { title: 'Regulamin', public: true },
+    },
+    {
+      path: '/polityka-prywatnosci',
+      name: 'privacy',
+      component: () => import('@/views/PrivacyView.vue'),
+      meta: { title: 'Polityka prywatności', public: true },
+    },
+    {
       path: '/wizytowka',
       name: 'landing',
       component: LandingView,
@@ -133,8 +146,9 @@ const router = createRouter({
 
 // Do czasu logowania każda strona jest za hasłem, a panel za drugim. Tu sprawdzamy tylko, czy
 // jakieś zapamiętano; czy jest dobre, rozstrzyga backend przy wejściu i przy zapytaniach panelu.
+// Regulamin i polityka prywatności są publiczne, bo czyta się je przed założeniem konta.
 router.beforeEach((to) => {
-  if (to.name !== 'access' && !savedPassword('access')) {
+  if (!to.meta.public && to.name !== 'access' && !savedPassword('access')) {
     return { name: 'access', query: { dalej: to.fullPath } }
   }
   if (to.meta.panel && !savedPassword('panel')) {

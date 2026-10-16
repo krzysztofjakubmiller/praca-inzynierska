@@ -58,6 +58,8 @@ async function renderAt(path: string) {
 async function fillAndSubmit(wrapper: VueWrapper) {
   await wrapper.find('input[type="email"]').setValue('ola@example.com')
   await wrapper.find('#password').setValue('dlugie-haslo-123')
+  const consent = wrapper.find('input[type="checkbox"]')
+  if (consent.exists()) await consent.setValue(true)
   await wrapper.find('form').trigger('submit')
 }
 
@@ -337,5 +339,47 @@ describe('Google button', () => {
 
     expect(wrapper.text()).toContain('Nie udało się wczytać logowania przez Google.')
     expect(wrapper.find('form').exists()).toBe(true)
+  })
+})
+
+describe('terms and privacy', () => {
+  it('asks for accepting the terms when registering with an email', async () => {
+    backend({ '/api/account/register': [202, { email: 'ola@example.com' }] })
+    const wrapper = await renderAt('/rejestracja')
+    const consent = wrapper.find('input[type="checkbox"]')
+    expect(consent.attributes('required')).toBeDefined()
+    expect(wrapper.find('form a[href="/regulamin"]').exists()).toBe(true)
+    expect(wrapper.find('form a[href="/polityka-prywatnosci"]').exists()).toBe(true)
+
+    await fillAndSubmit(wrapper)
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/register',
+      expect.objectContaining({
+        body: JSON.stringify({
+          email: 'ola@example.com',
+          password: 'dlugie-haslo-123',
+          accepted_terms: true,
+        }),
+      }),
+    )
+  })
+
+  it('tells that continuing with Google accepts the terms', async () => {
+    const wrapper = await renderAt('/logowanie')
+
+    expect(wrapper.text()).toContain('Kontynuując przez Google, akceptujesz regulamin')
+  })
+
+  it.each([
+    ['/regulamin', 'Regulamin'],
+    ['/polityka-prywatnosci', 'Polityka prywatności'],
+  ])('shows %s without the access password', async (path, title) => {
+    localStorage.removeItem('haslo-dostepu')
+    const wrapper = await renderAt(path)
+    localStorage.setItem('haslo-dostepu', 'sekret')
+
+    expect(router.currentRoute.value.path).toBe(path)
+    expect(wrapper.find('h1').text()).toBe(title)
   })
 })

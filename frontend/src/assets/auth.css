@@ -24,13 +24,27 @@
   font-weight: 600;
 }
 
-.auth__form input {
+.auth__form input:not([type='checkbox']) {
   padding: 0.55em 0.7em;
   border: 1px solid var(--ink-soft);
   border-radius: 0.5rem;
   background: var(--surface);
   color: var(--ink);
   font: inherit;
+}
+
+.auth__form > .auth__consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-weight: 400;
+}
+
+.auth__consent input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.2rem;
+  flex: none;
 }
 
 .auth__form .button:disabled {

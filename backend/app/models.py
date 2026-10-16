@@ -140,6 +140,8 @@ class Account(Base):
     password_hash: Mapped[str | None]
     # Stały identyfikator konta Google (sub). Adres w koncie Google może się zmienić, ten nie.
     google_id: Mapped[str | None] = mapped_column(unique=True)
+    # Puste w kontach założonych, zanim aplikacja miała regulamin.
+    terms_accepted_at: Mapped[datetime | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 

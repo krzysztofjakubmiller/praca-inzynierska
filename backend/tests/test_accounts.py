@@ -34,8 +34,11 @@ def link_key(mailbox):
     return re.search(r"klucz=([\w-]+)", mailbox[-1][2]).group(1)
 
 
-def register(client, email="ola@example.com", password=PASSWORD):
-    return client.post("/api/account/register", json={"email": email, "password": password})
+def register(client, email="ola@example.com", password=PASSWORD, accepted_terms=True):
+    return client.post(
+        "/api/account/register",
+        json={"email": email, "password": password, "accepted_terms": accepted_terms},
+    )
 
 
 def confirm(client, key):
@@ -661,3 +664,24 @@ def test_logout_everywhere_ends_sessions_on_all_devices(client, session, mailbox
     assert "max-age=0" in response.headers["set-cookie"].lower()
     assert account_with_key(client, first_key).status_code == 401
     assert session.scalar(select(func.count()).select_from(LoginSession)) == 0
+
+
+def test_register_requires_accepting_the_terms(client, session, mailbox):
+    response = register(client, accepted_terms=False)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": ["Zaakceptuj regulamin i politykę prywatności."]}
+    assert mailbox == []
+
+
+def test_account_remembers_when_the_terms_were_accepted(client, session, mailbox):
+    create_account(client, mailbox)
+
+    accepted_at = session.scalar(select(Account)).terms_accepted_at
+    assert datetime.now(UTC) - accepted_at < timedelta(minutes=1)
+
+
+def test_google_account_remembers_when_the_terms_were_accepted(client, session, google):
+    google_log_in(client)
+
+    assert session.scalar(select(Account)).terms_accepted_at is not None
