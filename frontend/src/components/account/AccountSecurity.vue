@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { changePassword, logOutEverywhere } from '@/account'
+import { changePassword, deleteAccount, logOutEverywhere } from '@/account'
 import PasswordField from '@/components/account/PasswordField.vue'
 import '@/assets/auth.css'
 
@@ -16,6 +16,10 @@ const next = ref('')
 const sending = ref(false)
 const problem = ref('')
 const saved = ref(false)
+// Formularz usuwania pojawia się dopiero po kliknięciu „Usuń konto”, żeby nie kusił na co dzień.
+const deleting = ref(false)
+const deleteEmail = ref('')
+const deleteProblem = ref('')
 
 async function savePassword() {
   sending.value = true
@@ -50,6 +54,20 @@ async function logOutAllDevices() {
     problem.value = 'Serwer nie odpowiada. Spróbuj za chwilę.'
   }
 }
+
+async function removeAccount() {
+  deleteProblem.value = ''
+  try {
+    const result = await deleteAccount(deleteEmail.value)
+    if (result) {
+      deleteProblem.value = result.message
+      return
+    }
+    await router.replace({ name: 'login' })
+  } catch {
+    deleteProblem.value = 'Serwer nie odpowiada. Spróbuj za chwilę.'
+  }
+}
 </script>
 
 <template>
@@ -77,6 +95,24 @@ async function logOutAllDevices() {
     <button class="button button--quiet" type="button" @click="logOutAllDevices">
       Wyloguj ze wszystkich urządzeń
     </button>
+    <h3>Usunięcie konta</h3>
+    <button
+      v-if="!deleting"
+      class="button button--quiet"
+      type="button"
+      @click="deleting = true"
+    >
+      Usuń konto
+    </button>
+    <form v-else class="auth__form security__delete" @submit.prevent="removeAccount">
+      <p>Usunięcia nie da się cofnąć. Znikną konto i wszystkie jego dane.</p>
+      <label>
+        Wpisz adres konta, żeby potwierdzić
+        <input id="delete-email" v-model="deleteEmail" type="email" autocomplete="off" required />
+      </label>
+      <button class="button" type="submit">Usuń konto na zawsze</button>
+      <p v-if="deleteProblem" class="auth__problem" role="alert">{{ deleteProblem }}</p>
+    </form>
   </section>
 </template>
 

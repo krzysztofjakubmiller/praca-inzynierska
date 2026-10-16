@@ -685,3 +685,34 @@ def test_google_account_remembers_when_the_terms_were_accepted(client, session, 
     google_log_in(client)
 
     assert session.scalar(select(Account)).terms_accepted_at is not None
+
+
+def delete_account(client, email="ola@example.com"):
+    return client.post("/api/account/delete", json={"email": email})
+
+
+def test_delete_account_removes_it_with_sessions_and_links(client, session, mailbox):
+    create_account(client, mailbox)
+    request_password_link(client)
+
+    response = delete_account(client, email=" OLA@example.com ")
+
+    assert response.status_code == 204
+    assert "max-age=0" in response.headers["set-cookie"].lower()
+    assert session.scalar(select(func.count()).select_from(Account)) == 0
+    assert session.scalar(select(func.count()).select_from(LoginSession)) == 0
+    assert session.scalar(select(func.count()).select_from(PasswordLink)) == 0
+
+
+def test_delete_account_needs_the_own_address_typed(client, session, mailbox):
+    create_account(client, mailbox)
+
+    response = delete_account(client, email="inny@example.com")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": ["Wpisz adres swojego konta, żeby potwierdzić."]}
+    assert session.scalar(select(Account)) is not None
+
+
+def test_delete_account_needs_login(client):
+    assert delete_account(client).status_code == 401

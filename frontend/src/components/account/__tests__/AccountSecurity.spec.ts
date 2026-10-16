@@ -99,3 +99,39 @@ describe('AccountSecurity', () => {
     await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
   })
 })
+
+describe('deleting the account', () => {
+  async function openDeleting() {
+    const wrapper = render(true)
+    const start = wrapper.findAll('button').find((b) => b.text() === 'Usuń konto')!
+    await start.trigger('click')
+    return wrapper
+  }
+
+  it('deletes the account after typing its address and goes to the login page', async () => {
+    answer(204)
+    await router.push('/konto')
+    const wrapper = await openDeleting()
+
+    await wrapper.find('#delete-email').setValue('ola@example.com')
+    await wrapper.find('form.security__delete').trigger('submit')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/account/delete',
+      expect.objectContaining({ body: JSON.stringify({ email: 'ola@example.com' }) }),
+    )
+  })
+
+  it('explains a wrong address', async () => {
+    const message = 'Wpisz adres swojego konta, żeby potwierdzić.'
+    answer(422, { detail: [message] })
+    const wrapper = await openDeleting()
+
+    await wrapper.find('#delete-email').setValue('inny@example.com')
+    await wrapper.find('form.security__delete').trigger('submit')
+    await flushPromises()
+
+    expect(wrapper.find('[role="alert"]').text()).toBe(message)
+  })
+})

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   changePassword,
   confirmEmail,
+  deleteAccount,
   loadAccount,
   logIn,
   logInWithGoogle,
@@ -150,6 +151,12 @@ describe('links from emails and account security', () => {
       { current_password: null, new_password: 'nowe-dlugie-haslo' },
     ],
     ['logOutEverywhere', () => logOutEverywhere(), '/api/account/logout-everywhere', {}],
+    [
+      'deleteAccount',
+      () => deleteAccount('ola@example.com'),
+      '/api/account/delete',
+      { email: 'ola@example.com' },
+    ],
   ])('%s posts to the backend', async (_name, call, path, data) => {
     answer(204)
 

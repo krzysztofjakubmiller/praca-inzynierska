@@ -401,6 +401,24 @@ def log_out_everywhere(
     response.delete_cookie(COOKIE, httponly=True, secure=True, samesite="lax")
 
 
+@router.post("/delete", status_code=204)
+def delete_account(
+    address: EmailAddress,
+    response: Response,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    # Wpisanie własnego adresu chroni przed usunięciem konta jednym przypadkowym kliknięciem.
+    if normalized(address.email) != account.email:
+        raise HTTPException(
+            status_code=422, detail=["Wpisz adres swojego konta, żeby potwierdzić."]
+        )
+    # Sesje i linki do hasła znikają razem z kontem (klucze obce z ondelete="CASCADE").
+    session.delete(account)
+    session.commit()
+    response.delete_cookie(COOKIE, httponly=True, secure=True, samesite="lax")
+
+
 @router.get("")
 def account_details(account: Account = Depends(current_account)):
     return {"email": account.email, "has_password": account.password_hash is not None}

@@ -69,6 +69,11 @@ export function logOutEverywhere() {
   return submit('/logout-everywhere', {})
 }
 
+// Usunięcie wymaga wpisania adresu konta jako potwierdzenia.
+export function deleteAccount(email: string) {
+  return submit('/delete', { email })
+}
+
 export async function logOut() {
   await send('/logout', { method: 'POST' })
 }
