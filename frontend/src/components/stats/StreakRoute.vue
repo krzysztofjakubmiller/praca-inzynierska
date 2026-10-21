@@ -51,7 +51,7 @@ const summary = computed(
 <template>
   <svg
     class="chart"
-    :viewBox="`0 0 ${width} ${16 + 3 * ROW + 40}`"
+    :viewBox="`0 0 ${width} ${16 + 3 * ROW + 16}`"
     role="img"
     :aria-label="summary"
   >
@@ -73,10 +73,6 @@ const summary = computed(
         {{ plural(stop.tasks, 'zadanie', 'zadania', 'zadań') }}
       </title>
     </g>
-    <text class="chart__strong" x="0" :y="16 + 3 * ROW + 34">
-      Seria: {{ streak }} {{ plural(streak, 'dzień', 'dni', 'dni') }}
-    </text>
-    <text :x="width" :y="16 + 3 * ROW + 34" text-anchor="end">najdłuższa: {{ longest }}</text>
   </svg>
 </template>
 

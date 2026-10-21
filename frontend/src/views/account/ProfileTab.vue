@@ -49,7 +49,12 @@ async function logOutAndGoToLogin() {
     <h1 v-else class="profile-tab__title">Profil</h1>
 
     <div v-if="stats" class="profile-tab__charts">
-      <StatCard v-slot="{ width }" class="profile-tab__wide" title="Ostatnie 7 dni">
+      <StatCard
+        v-slot="{ width }"
+        class="profile-tab__wide"
+        title="Ostatnie 4 tygodnie"
+        note="Dni nauki z rzędu łączy linia. Liczby pod spodem dotyczą ostatnich 7 dni."
+      >
         <WeekNumbers
           :days="stats.days"
           :recent-score="stats.recentScore"

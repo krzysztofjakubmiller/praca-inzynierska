@@ -58,20 +58,11 @@ const percent = (topic: WeakTopic) => Math.round(topic.score * 100)
   font-weight: 400;
 }
 
-/* Tor do 100% z kreską w połowie: poniżej niej temat liczy się jako słaby. */
 .weak__bar {
   position: relative;
   height: 0.5rem;
   border-radius: 999px;
   background: var(--track);
-}
-
-.weak__bar::before {
-  position: absolute;
-  inset: -0.25rem auto -0.25rem 50%;
-  width: 1px;
-  background: var(--map-outline);
-  content: '';
 }
 
 .weak__fill {

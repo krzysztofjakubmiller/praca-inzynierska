@@ -8,7 +8,6 @@ import ReviewsAhead from '@/components/stats/ReviewsAhead.vue'
 import RouteToExam from '@/components/stats/RouteToExam.vue'
 import SheetResults from '@/components/stats/SheetResults.vue'
 import StatCard from '@/components/stats/StatCard.vue'
-import StreakRoute from '@/components/stats/StreakRoute.vue'
 import TopicStates from '@/components/stats/TopicStates.vue'
 import WeakTopics from '@/components/stats/WeakTopics.vue'
 import WeekNumbers from '@/components/stats/WeekNumbers.vue'
@@ -35,7 +34,8 @@ const lastSheet = computed(() => {
         <StatCard
           v-slot="{ width }"
           class="progress-charts__wide"
-          title="Ostatnie 7 dni"
+          title="Ostatnie 4 tygodnie"
+          note="Dni nauki z rzędu łączy linia. Liczby pod spodem dotyczą ostatnich 7 dni."
           :level="3"
         >
           <WeekNumbers
@@ -55,15 +55,6 @@ const lastSheet = computed(() => {
         </StatCard>
         <StatCard
           v-slot="{ width }"
-          title="Seria"
-          note="Ostatnie 4 tygodnie wężykiem. Dni nauki z rzędu łączy linia."
-          :level="3"
-        >
-          <StreakRoute :days="stats.days" :today="stats.today" :width="width" />
-        </StatCard>
-        <StatCard
-          v-slot="{ width }"
-          class="progress-charts__wide"
           title="Zadania dzień po dniu"
           note="Ostatnie 30 dni. Szare kropki to dni bez nauki."
           :level="3"

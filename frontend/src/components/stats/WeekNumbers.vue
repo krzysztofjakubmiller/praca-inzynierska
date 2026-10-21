@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { currentStreak, longestStreak, plural, shiftDay } from '@/stats/stats'
+import StreakRoute from '@/components/stats/StreakRoute.vue'
+import { currentStreak, longestStreak, plural } from '@/stats/stats'
 
 const props = defineProps<{
   /** Zadania w kolejnych dniach, ostatni element to dziś. */
@@ -11,31 +12,9 @@ const props = defineProps<{
   width: number
 }>()
 
-const WEEKDAYS = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'sb']
-const SIDE = 12
-
-// Tydzień jako odcinek trasy, tak samo jak seria: dzień nauki to stacja, dni z rzędu łączy linia.
-const stops = computed(() => {
-  const step = (props.width - 2 * SIDE) / 6
-  return props.days.slice(-7).map((tasks, index) => {
-    const day = shiftDay(props.today, index - 6)
-    return {
-      day,
-      tasks,
-      x: SIDE + index * step,
-      label: index === 6 ? 'dziś' : WEEKDAYS[new Date(`${day}T12:00`).getDay()]!,
-    }
-  })
-})
-const rides = computed(() =>
-  stops.value.slice(1).flatMap((stop, index) => {
-    const before = stops.value[index]!
-    return stop.tasks > 0 && before.tasks > 0 ? [{ from: before.x, to: stop.x }] : []
-  }),
-)
-
-const activeDays = computed(() => stops.value.filter((stop) => stop.tasks > 0).length)
-const tasks = computed(() => stops.value.reduce((sum, stop) => sum + stop.tasks, 0))
+const week = computed(() => props.days.slice(-7))
+const activeDays = computed(() => week.value.filter((count) => count > 0).length)
+const tasks = computed(() => week.value.reduce((sum, count) => sum + count, 0))
 const change = computed(() => tasks.value - props.days.slice(-14, -7).reduce((a, b) => a + b, 0))
 const streak = computed(() => currentStreak(props.days))
 const longest = computed(() => longestStreak(props.days))
@@ -49,31 +28,7 @@ const changeText = computed(() => {
 
 <template>
   <div class="week">
-    <svg class="chart" :viewBox="`0 0 ${width} 52`" aria-hidden="true">
-      <line class="chart__track" :x1="SIDE" :x2="width - SIDE" y1="16" y2="16" stroke-width="3" />
-      <line
-        v-for="ride in rides"
-        :key="ride.from"
-        class="week__ride"
-        :x1="ride.from"
-        :x2="ride.to"
-        y1="16"
-        y2="16"
-      />
-      <g v-for="(stop, index) in stops" :key="stop.day">
-        <circle v-if="stop.tasks > 0" class="chart__station" :cx="stop.x" cy="16" r="6.5" />
-        <circle v-else class="chart__empty-day" :cx="stop.x" cy="16" r="3" />
-        <circle v-if="index === 6" class="chart__today" :cx="stop.x" cy="16" r="11" />
-        <text
-          :class="{ chart__strong: index === 6 }"
-          :x="stop.x"
-          y="48"
-          :text-anchor="index === 0 ? 'start' : index === 6 ? 'end' : 'middle'"
-        >
-          {{ stop.label }}
-        </text>
-      </g>
-    </svg>
+    <StreakRoute :days="days" :today="today" :width="width" />
 
     <dl class="week__figures">
       <div>
@@ -102,12 +57,6 @@ const changeText = computed(() => {
 <style scoped>
 .week {
   container-type: inline-size;
-}
-
-.week__ride {
-  stroke: var(--line-3);
-  stroke-width: 7;
-  stroke-linecap: round;
 }
 
 /* Liczby jak w rozkładzie jazdy: kreska nad każdą, bez osobnych kafelków w karcie. */

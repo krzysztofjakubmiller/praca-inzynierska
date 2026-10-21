@@ -159,6 +159,7 @@ const summary = computed(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
   gap: 1rem 1.25rem;
   margin-top: 1.25rem;
   padding-top: 1.25rem;
