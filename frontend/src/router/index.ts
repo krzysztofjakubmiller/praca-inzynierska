@@ -55,9 +55,35 @@ const router = createRouter({
     },
     {
       path: '/konto',
-      name: 'account',
       component: () => import('@/views/AccountView.vue'),
-      meta: { title: 'Konto' },
+      children: [
+        {
+          path: '',
+          name: 'account',
+          component: () => import('@/views/account/ProfileTab.vue'),
+          meta: { title: 'Profil' },
+        },
+        {
+          path: 'postep/:exam(matura-podstawowa|matura-rozszerzona)',
+          name: 'account-progress',
+          component: () => import('@/views/account/ProgressTab.vue'),
+          props: true,
+          meta: { title: 'Postęp' },
+        },
+        {
+          path: 'ustawienia',
+          name: 'account-settings',
+          component: () => import('@/views/account/SettingsTab.vue'),
+          meta: { title: 'Ustawienia' },
+        },
+      ],
+    },
+    {
+      path: '/demo/postep/:exam(matura-podstawowa|matura-rozszerzona)',
+      name: 'demo-progress',
+      component: () => import('@/views/DemoProgressView.vue'),
+      props: true,
+      meta: { title: 'Przykładowy postęp' },
     },
     {
       path: '/potwierdz-adres',

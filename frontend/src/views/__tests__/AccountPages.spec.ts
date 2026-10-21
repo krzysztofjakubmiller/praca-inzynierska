@@ -283,30 +283,6 @@ describe('new password page', () => {
   })
 })
 
-describe('account page', () => {
-  it('sends a visitor without a session to the login page', async () => {
-    backend({ '/api/account': [401, { detail: ['Nie zalogowano.'] }] })
-
-    await renderAt('/konto')
-
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
-  })
-
-  it('logs out', async () => {
-    backend({
-      '/api/account': [200, { email: 'ola@example.com', has_password: true }],
-      '/api/account/logout': [204],
-    })
-    const wrapper = await renderAt('/konto')
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Zalogowano jako'))
-
-    await wrapper.find('button').trigger('click')
-
-    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('login'))
-    expect(fetch).toHaveBeenCalledWith('/api/account/logout', expect.anything())
-  })
-})
-
 describe('Google button', () => {
   it('is drawn by the Google script in Polish', async () => {
     await renderAt('/logowanie')

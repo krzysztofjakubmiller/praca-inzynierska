@@ -5,13 +5,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import accounts, panel
+from app import accounts, panel, profile
 from app.access import require_password
 from app.db import get_session
 
 app = FastAPI()
 app.include_router(panel.router)
 app.include_router(accounts.router)
+app.include_router(profile.router)
 
 # Na serwerze frontend i API mają różne adresy, więc przeglądarka przyjmie odpowiedzi API tylko
 # dla stron z tej listy. Lokalnie lista jest pusta, bo Vite przekazuje /api pod tym samym adresem.

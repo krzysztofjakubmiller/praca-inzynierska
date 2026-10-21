@@ -1,0 +1,89 @@
+/* Wspólny wygląd wykresów postępu: te same znaki co na mapie (linie, stacje, koralowe kółko). */
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  font-family: var(--font-sans);
+}
+
+.chart text {
+  fill: var(--ink-soft);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .chart__strong {
+  fill: var(--ink);
+  font-weight: 650;
+}
+
+.chart .chart__value {
+  fill: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.chart__grid {
+  stroke: var(--hairline);
+  stroke-width: 1;
+}
+
+.chart__track {
+  fill: none;
+  stroke: var(--track);
+  stroke-linecap: round;
+}
+
+.chart__ink-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart__station {
+  fill: var(--surface);
+  stroke: var(--ink);
+  stroke-width: 2.4;
+  stroke-linejoin: round;
+}
+
+.chart__station--planned {
+  stroke: var(--map-outline);
+  stroke-dasharray: 3 3;
+}
+
+.chart__empty-day {
+  fill: var(--map-outline);
+}
+
+.chart__today {
+  fill: none;
+  stroke: var(--map-last);
+  stroke-width: 2.4;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  list-style: none;
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.chart-legend__swatch {
+  flex: none;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 0.2rem;
+}

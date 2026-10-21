@@ -94,7 +94,7 @@ async function enter() {
 }
 
 .access__problem {
-  color: #b42318;
+  color: var(--danger);
   font-weight: 600;
 }
 </style>

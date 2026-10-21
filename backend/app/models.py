@@ -191,3 +191,29 @@ class Attempt(Base):
     kind: Mapped[str]
     key: Mapped[str]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+# Ustawienia ucznia w osobnej tabeli, żeby nie mieszać ich z danymi logowania. Wiersz powstaje
+# przy pierwszym zapisie, a do tego czasu API zwraca wartości domyślne.
+class Profile(Base):
+    __tablename__ = "profile"
+    __table_args__ = (
+        CheckConstraint("level in ('podstawowa', 'rozszerzona')", name="profile_level_valid"),
+        CheckConstraint("target_percent between 1 and 100", name="profile_target_percent_valid"),
+        CheckConstraint("theme in ('light', 'dark')", name="profile_theme_valid"),
+        CheckConstraint("dark_shade in ('grey', 'black')", name="profile_dark_shade_valid"),
+        CheckConstraint(
+            "daily_reviews in ('malo', 'srednio', 'duzo')", name="profile_daily_reviews_valid"
+        ),
+    )
+
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("account.id", ondelete="CASCADE"), primary_key=True
+    )
+    level: Mapped[str]
+    exam_year: Mapped[int] = mapped_column(SmallInteger)
+    target_percent: Mapped[int | None] = mapped_column(SmallInteger)
+    theme: Mapped[str]
+    dark_shade: Mapped[str]
+    # Ile powtórek może przyjść jednego dnia: mało, średnio albo dużo. Liczby ustala frontend.
+    daily_reviews: Mapped[str]

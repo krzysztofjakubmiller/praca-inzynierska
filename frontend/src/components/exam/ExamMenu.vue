@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useId } from 'vue'
-import type { RouteLocationRaw } from 'vue-router'
+import { computed, useId } from 'vue'
+import { useRoute, type RouteLocationRaw } from 'vue-router'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import { EXAMS, type Exam } from '@/config/exams'
 
@@ -23,25 +23,44 @@ const EXAM_PAGES: Partial<Record<Exam['id'], RouteLocationRaw>> = {
 
 const soon = (label: string): MenuItem => ({ label, to: SOON })
 
-const GROUPS: { title: string; items: MenuItem[] }[] = [
+const route = useRoute()
+
+// Menu stoi na stronie egzaminu, więc postęp otwiera się dla tego samego egzaminu.
+const groups = computed<{ title: string; items: MenuItem[] }[]>(() => [
   { title: 'Dziś', items: ['Powtórki', 'Praca domowa', 'Kontynuuj'].map(soon) },
   { title: 'Ćwiczenia', items: ['Tryb losowy', 'Moje zestawy'].map(soon) },
   { title: 'Arkusze', items: ['Arkusz diagnostyczny', 'Arkusz równoległy'].map(soon) },
-  { title: 'Postęp', items: ['Prognoza wyniku'].map(soon) },
+  {
+    title: 'Postęp',
+    items: [
+      {
+        label: 'Wykresy i prognoza',
+        to: { name: 'account-progress', params: { exam: route.meta.exam ?? 'matura-podstawowa' } },
+      },
+    ],
+  },
   { title: 'Materiały', items: ['Moje materiały'].map(soon) },
   {
     title: 'Egzaminy',
     items: EXAMS.map((exam) => ({ label: exam.name, to: EXAM_PAGES[exam.id] ?? SOON, exam })),
   },
-  { title: 'Konto', items: ['Profil', 'Bilet', 'Ustawienia', 'Wyloguj'].map(soon) },
-]
+  {
+    title: 'Konto',
+    items: [
+      { label: 'Profil', to: { name: 'account' } },
+      soon('Bilet'),
+      { label: 'Ustawienia', to: { name: 'account-settings' } },
+      soon('Wyloguj'),
+    ],
+  },
+])
 
 const id = useId()
 </script>
 
 <template>
   <nav class="exam-menu" aria-label="Menu">
-    <div v-for="(group, index) in GROUPS" :key="group.title" class="exam-menu__group">
+    <div v-for="(group, index) in groups" :key="group.title" class="exam-menu__group">
       <h2 :id="`${id}-${index}`" class="exam-menu__title">{{ group.title }}</h2>
       <ul class="exam-menu__list" :aria-labelledby="`${id}-${index}`">
         <li v-for="item in group.items" :key="item.label">

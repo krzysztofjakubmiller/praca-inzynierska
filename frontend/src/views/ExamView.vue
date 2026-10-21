@@ -9,12 +9,12 @@ import MetroMap from '@/components/map/MetroMap.vue'
 import PassengerSymbol from '@/components/map/PassengerSymbol.vue'
 import StationPanel from '@/components/map/StationPanel.vue'
 import TopicList from '@/components/map/TopicList.vue'
-import { useMapTheme } from '@/composables/useMapTheme'
 import { useMapView } from '@/composables/useMapView'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { EXAMS } from '@/config/exams'
 import type { DiagnosticSheets } from '@/maps/nextStep'
 import type { MapProgress, TopicMap } from '@/maps/types'
+import { setTheme, theme } from '@/theme'
 
 // Ta sama strona dla każdego egzaminu; mapę i postęp ucznia podaje router.
 const props = defineProps<{
@@ -24,7 +24,6 @@ const props = defineProps<{
 }>()
 
 const exam = computed(() => EXAMS.find((item) => item.id === props.map.examId)!)
-const { theme, setTheme } = useMapTheme()
 const { view, setView } = useMapView()
 
 const desktop = useMediaQuery('(min-width: 64rem) and (orientation: landscape)')
@@ -187,7 +186,7 @@ function closeOutside(event: MouseEvent) {
       </div>
       <RouterLink
         class="icon-button exam-page__profile"
-        :to="{ name: 'coming-soon' }"
+        :to="{ name: 'account' }"
         aria-label="Profil"
       >
         <AppIcon name="profile" />

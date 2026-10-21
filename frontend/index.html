@@ -6,6 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#f2f3f0">
     <title></title>
+    <script>
+      // Ciemny motyw przed pierwszym malowaniem, żeby strona nie mignęła na jasno. Wizytówka
+      // i panel zostają jasne; resztę ustawia potem App.vue.
+      try {
+        if (
+          localStorage.getItem('motyw') === 'dark' &&
+          !/^\/(wizytowka|panel)(\/|$)/.test(location.pathname)
+        ) {
+          document.documentElement.dataset.theme = 'dark'
+          document.documentElement.dataset.shade =
+            localStorage.getItem('odcien-motywu') === 'black' ? 'black' : 'grey'
+        }
+      } catch {}
+    </script>
   </head>
   <body>
     <div id="app"></div>
