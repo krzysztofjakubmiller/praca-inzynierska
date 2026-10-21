@@ -6,17 +6,17 @@ from datetime import UTC, datetime, timedelta
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Response
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request, Response
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from pydantic import BaseModel
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app import mail
 from app.access import require_password
 from app.db import get_session
-from app.models import Account, LoginSession, PasswordLink, Registration
+from app.models import Account, Attempt, LoginSession, PasswordLink, Registration
 
 # Dopóki aplikacja nie wystartuje, konta też są za hasłem dostępu.
 router = APIRouter(prefix="/api/account", dependencies=[Depends(require_password)])
@@ -32,6 +32,13 @@ SESSION_LENGTH = timedelta(days=14)
 COOKIE = "session"
 REGISTRATION_LENGTH = timedelta(hours=24)
 PASSWORD_LINK_LENGTH = timedelta(hours=1)
+
+# Limity prób: nieudane logowania na 15 minut, wysłane maile na godzinę. Pierwsza liczba dotyczy
+# jednego adresu e-mail, druga jednego adresu IP.
+LOGIN_WINDOW = timedelta(minutes=15)
+LOGIN_LIMITS = (10, 30)
+MAIL_WINDOW = timedelta(hours=1)
+MAIL_LIMITS = (3, 10)
 
 
 class Credentials(BaseModel):
@@ -121,6 +128,48 @@ def send_or_fail(to: str, subject: str, text: str):
         )
 
 
+# Render podaje adres użytkownika jako pierwszy w X-Forwarded-For. Nagłówek da się podrobić,
+# dlatego główną ochroną są limity na adres e-mail, a limit na IP jest dodatkowy.
+def client_ip(request: Request) -> str:
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host
+
+
+def check_limits(session: Session, kind: str, window: timedelta, email: str, ip: str, limits):
+    since = datetime.now(UTC) - window
+    for key, limit in zip((email, ip), limits):
+        count = session.scalar(
+            select(func.count())
+            .select_from(Attempt)
+            .where(Attempt.kind == kind, Attempt.key == key, Attempt.created_at > since)
+        )
+        if count >= limit:
+            raise HTTPException(
+                status_code=429, detail=["Za dużo prób. Spróbuj ponownie za kilka minut."]
+            )
+
+
+# Zapis od razu z commitem, bo po nieudanym logowaniu zapytanie kończy się błędem.
+def record_attempt(session: Session, kind: str, email: str, ip: str):
+    session.execute(delete(Attempt).where(Attempt.created_at <= datetime.now(UTC) - MAIL_WINDOW))
+    session.add_all([Attempt(kind=kind, key=email), Attempt(kind=kind, key=ip)])
+    session.commit()
+
+
+def send_limited_email(session: Session, request: Request, to: str, subject: str, text: str):
+    ip = client_ip(request)
+    check_limits(session, "mail", MAIL_WINDOW, to, ip, MAIL_LIMITS)
+    send_or_fail(to, subject, text)
+    record_attempt(session, "mail", to, ip)
+
+
+def failed_login(session: Session, email: str, ip: str, status: int, message: str):
+    record_attempt(session, "logowanie", email, ip)
+    return HTTPException(status_code=status, detail=[message])
+
+
 # W bazie leży tylko skrót klucza, więc wyciek bazy albo kopii nie pozwala podszyć się pod
 # użytkownika.
 def token_hash(token: str) -> str:
@@ -181,7 +230,9 @@ def current_account(
 
 
 @router.post("/register", status_code=202)
-def register(credentials: NewAccount, session: Session = Depends(get_session)):
+def register(
+    credentials: NewAccount, request: Request, session: Session = Depends(get_session)
+):
     email = normalized(credentials.email)
     problems = credential_problems(email, credentials.password)
     if not credentials.accepted_terms:
@@ -191,7 +242,9 @@ def register(credentials: NewAccount, session: Session = Depends(get_session)):
     if session.scalar(select(Account).where(Account.email == email)):
         raise HTTPException(status_code=409, detail=["Konto z tym adresem już istnieje."])
     key = secrets.token_urlsafe(32)
-    send_or_fail(
+    send_limited_email(
+        session,
+        request,
         email,
         "Potwierdź adres e-mail",
         "Dzień dobry,\n\n"
@@ -250,29 +303,32 @@ def confirm_email(
 @router.post("/login", status_code=204)
 def log_in(
     credentials: Credentials,
+    request: Request,
     response: Response,
     token: str | None = Cookie(default=None, alias=COOKIE),
     session: Session = Depends(get_session),
 ):
     email = normalized(credentials.email)
+    ip = client_ip(request)
+    check_limits(session, "logowanie", LOGIN_WINDOW, email, ip, LOGIN_LIMITS)
     account = session.scalar(select(Account).where(Account.email == email))
     if account is None and session.get(Registration, email):
-        raise HTTPException(
-            status_code=401, detail=["Potwierdź adres. Wysłaliśmy link na ten adres."]
+        raise failed_login(
+            session, email, ip, 401, "Potwierdź adres. Wysłaliśmy link na ten adres."
         )
     if account is None:
-        raise HTTPException(status_code=401, detail=["Nie ma konta z tym adresem."])
+        raise failed_login(session, email, ip, 401, "Nie ma konta z tym adresem.")
     # 403, a nie 401, żeby strona logowania wiedziała, że ma pokazać przycisk „Dodaj hasło”.
     if account.password_hash is None:
-        raise HTTPException(
-            status_code=403,
-            detail=[
-                "To konto logowało się dotąd przez Google. "
-                "Zaloguj się przez Google albo dodaj hasło."
-            ],
+        raise failed_login(
+            session,
+            email,
+            ip,
+            403,
+            "To konto logowało się dotąd przez Google. Zaloguj się przez Google albo dodaj hasło.",
         )
     if not password_matches(credentials.password, account.password_hash):
-        raise HTTPException(status_code=401, detail=["Złe hasło."])
+        raise failed_login(session, email, ip, 401, "Złe hasło.")
     start_session(session, response, account.id, token)
     session.commit()
 
@@ -314,12 +370,16 @@ def log_in_with_google(
 
 
 @router.post("/password-link", status_code=204)
-def send_password_link(address: EmailAddress, session: Session = Depends(get_session)):
+def send_password_link(
+    address: EmailAddress, request: Request, session: Session = Depends(get_session)
+):
     account = session.scalar(select(Account).where(Account.email == normalized(address.email)))
     if account is None:
         raise HTTPException(status_code=404, detail=["Nie ma konta z tym adresem."])
     key = secrets.token_urlsafe(32)
-    send_or_fail(
+    send_limited_email(
+        session,
+        request,
         account.email,
         "Ustaw hasło",
         "Dzień dobry,\n\n"

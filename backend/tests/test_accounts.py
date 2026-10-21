@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 
 from app import mail
 from app.accounts import token_hash
-from app.models import Account, LoginSession, PasswordLink, Registration
+from app.models import Account, Attempt, LoginSession, PasswordLink, Registration
 
 PASSWORD = "dlugie-haslo-123"
 
@@ -716,3 +716,114 @@ def test_delete_account_needs_the_own_address_typed(client, session, mailbox):
 
 def test_delete_account_needs_login(client):
     assert delete_account(client).status_code == 401
+
+
+TOO_MANY = {"detail": ["Za dużo prób. Spróbuj ponownie za kilka minut."]}
+
+
+def from_ip(ip):
+    return {"X-Forwarded-For": f"{ip}, 10.0.0.1"}
+
+
+def test_login_stops_after_ten_failures_for_one_address(client, mailbox):
+    create_account(client, mailbox)
+    client.cookies.clear()
+    for _ in range(10):
+        assert log_in(client, password="zgadywane-haslo").status_code == 401
+
+    response = log_in(client)
+
+    assert response.status_code == 429
+    assert response.json() == TOO_MANY
+
+
+def test_failures_for_one_address_do_not_block_another(client, mailbox):
+    create_account(client, mailbox, email="ala@example.com")
+    client.cookies.clear()
+    for _ in range(10):
+        log_in(client, email="ola@example.com")
+
+    assert log_in(client, email="ala@example.com").status_code == 204
+
+
+def test_login_stops_after_thirty_failures_from_one_ip(client):
+    for number in range(30):
+        client.post(
+            "/api/account/login",
+            json={"email": f"nikt{number}@example.com", "password": PASSWORD},
+            headers=from_ip("1.2.3.4"),
+        )
+
+    blocked = client.post(
+        "/api/account/login",
+        json={"email": "ktos@example.com", "password": PASSWORD},
+        headers=from_ip("1.2.3.4"),
+    )
+    other_ip = client.post(
+        "/api/account/login",
+        json={"email": "ktos@example.com", "password": PASSWORD},
+        headers=from_ip("5.6.7.8"),
+    )
+
+    assert blocked.status_code == 429
+    assert other_ip.status_code == 401
+
+
+def test_failures_older_than_fifteen_minutes_do_not_count(client, session, mailbox):
+    create_account(client, mailbox)
+    client.cookies.clear()
+    old = datetime.now(UTC) - timedelta(minutes=16)
+    session.add_all(
+        Attempt(kind="logowanie", key="ola@example.com", created_at=old) for _ in range(10)
+    )
+    session.flush()
+
+    assert log_in(client).status_code == 204
+
+
+def test_successful_logins_do_not_count(client, mailbox):
+    create_account(client, mailbox)
+    for _ in range(11):
+        client.cookies.clear()
+        assert log_in(client).status_code == 204
+
+
+def test_at_most_three_emails_an_hour_to_one_address(client, mailbox):
+    create_account(client, mailbox)
+    request_password_link(client)
+    request_password_link(client)
+
+    response = request_password_link(client)
+
+    assert response.status_code == 429
+    assert response.json() == TOO_MANY
+    assert len(mailbox) == 3
+
+
+def test_at_most_ten_emails_an_hour_from_one_ip(client, mailbox):
+    for number in range(10):
+        client.post(
+            "/api/account/register",
+            json={"email": f"uczen{number}@example.com", "password": PASSWORD, "accepted_terms": True},
+            headers=from_ip("1.2.3.4"),
+        )
+
+    response = client.post(
+        "/api/account/register",
+        json={"email": "uczen10@example.com", "password": PASSWORD, "accepted_terms": True},
+        headers=from_ip("1.2.3.4"),
+    )
+
+    assert response.status_code == 429
+    assert len(mailbox) == 10
+
+
+def test_attempts_older_than_an_hour_are_removed(client, session):
+    session.add(
+        Attempt(kind="mail", key="stary@example.com", created_at=datetime.now(UTC) - timedelta(hours=2))
+    )
+    session.flush()
+
+    log_in(client, email="nikt@example.com")
+
+    assert session.scalar(select(Attempt).where(Attempt.key == "stary@example.com")) is None

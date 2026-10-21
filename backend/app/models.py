@@ -5,6 +5,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     ForeignKeyConstraint,
+    Index,
     SmallInteger,
     Text,
     UniqueConstraint,
@@ -175,3 +176,18 @@ class PasswordLink(Base):
     account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     expires_at: Mapped[datetime]
+
+
+# Nieudane logowania i wysłane maile, liczone do limitów prób. Każde zdarzenie ma dwa wiersze:
+# z adresem e-mail i z adresem IP.
+class Attempt(Base):
+    __tablename__ = "attempt"
+    __table_args__ = (
+        CheckConstraint("kind in ('logowanie', 'mail')", name="attempt_kind_valid"),
+        Index("attempt_lookup", "kind", "key", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    kind: Mapped[str]
+    key: Mapped[str]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
