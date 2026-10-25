@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { Figure, PlaneSpan, Range } from '@/figures'
+import BarChart from './BarChart.vue'
 import CoordinatePlane from './CoordinatePlane.vue'
 import NumberLine from './NumberLine.vue'
+import PieChart from './PieChart.vue'
 import PlaneFigure from './PlaneFigure.vue'
 import SolidFigure from './SolidFigure.vue'
+import TableFigure from './TableFigure.vue'
 
 // range i span to wspólna skala wszystkich osi i układów jednego zadania.
 defineProps<{ figure: Figure; range?: Range; span?: PlaneSpan }>()
@@ -18,6 +21,9 @@ defineProps<{ figure: Figure; range?: Range; span?: PlaneSpan }>()
   />
   <PlaneFigure v-else-if="figure.type === 'figura'" :figure="figure" />
   <SolidFigure v-else-if="figure.type === 'bryla'" :figure="figure" />
+  <BarChart v-else-if="figure.type === 'diagram-slupkowy'" :figure="figure" />
+  <PieChart v-else-if="figure.type === 'diagram-kolowy'" :figure="figure" />
+  <TableFigure v-else-if="figure.type === 'tabela'" :figure="figure" />
   <p v-else class="task-figure__missing">Rysunek (jeszcze niedostępny)</p>
 </template>
 

@@ -200,6 +200,73 @@ describe('TaskFigure', () => {
     expect(wrapper.find('.katex').exists()).toBe(true)
   })
 
+  it('draws circles with a dashed back half, dots and shaded double arcs', () => {
+    const wrapper = draw({
+      type: 'figura',
+      points: { S: [0, 0], A: [3, 0], B: [0, 3] },
+      circles: [{ center: 'S', radius: 3, radius_y: 1, back_dashed: true, fill: true }],
+      dots: ['S'],
+      angles: [{ vertex: 'S', from: 'A', to: 'B', fill: true, arcs: 2 }],
+    })
+
+    const halves = wrapper.findAll('path.plane-figure__line')
+    expect(halves.map((half) => half.classes().includes('plane-figure__line--dashed'))).toEqual([
+      true,
+      false,
+    ])
+    expect(wrapper.find('ellipse.plane-figure__fill').exists()).toBe(true)
+    expect(wrapper.findAll('.plane-figure__dot')).toHaveLength(1)
+    expect(wrapper.findAll('.plane-figure__angle')).toHaveLength(2)
+  })
+
+  it('draws one bar per category in every panel of a bar chart', () => {
+    const wrapper = draw({
+      type: 'diagram-slupkowy',
+      categories: ['1', '2', '3'],
+      charts: [
+        { title: 'klasa IV A', values: [1, 6, 3] },
+        { title: 'klasa IV B', values: [2, 4, 5] },
+      ],
+      show_values: true,
+    })
+
+    expect(wrapper.findAll('svg.bar-chart__panel')).toHaveLength(2)
+    expect(wrapper.findAll('.bar-chart__bar')).toHaveLength(6)
+    expect(wrapper.text()).toContain('klasa IV B')
+  })
+
+  it('draws a pie slice for every value with its legend', () => {
+    const wrapper = draw({
+      type: 'diagram-kolowy',
+      slices: [
+        { value: 42, label: '42%', legend: 'jeden gol' },
+        { value: 58, label: '58%', legend: 'dwa gole' },
+      ],
+    })
+
+    expect(wrapper.findAll('.pie-chart__slice')).toHaveLength(2)
+    expect(wrapper.findAll('.pie-chart__legend li').map((item) => item.text())).toEqual([
+      'jeden gol',
+      'dwa gole',
+    ])
+  })
+
+  it('draws a table with a header cell spanning several columns', () => {
+    const wrapper = draw({
+      type: 'tabela',
+      rows: [
+        [{ text: 'Kartkówki', colspan: 3 }, 'Projekty'],
+        ['$4$', '$4$', '$3$', '$2$'],
+      ],
+      header_rows: 1,
+    })
+
+    const header = wrapper.findAll('th')
+    expect(header.map((cell) => cell.attributes('colspan'))).toEqual(['3', '1'])
+    expect(wrapper.findAll('td')).toHaveLength(4)
+    expect(wrapper.find('td .katex').exists()).toBe(true)
+  })
+
   it('draws a cuboid with the three edges at D dashed', () => {
     const wrapper = draw({
       type: 'bryla',
@@ -210,9 +277,37 @@ describe('TaskFigure', () => {
       names: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],
     })
 
-    expect(wrapper.findAll('.solid-figure__edge')).toHaveLength(12)
-    expect(wrapper.findAll('.solid-figure__edge--hidden')).toHaveLength(3)
+    expect(wrapper.findAll('path.plane-figure__line')).toHaveLength(12)
+    expect(wrapper.findAll('.plane-figure__line--dashed')).toHaveLength(3)
     expect(wrapper.findAll('.figure-label')).toHaveLength(8)
+  })
+
+  it('hides the back edges of a pyramid and draws its marks', () => {
+    const wrapper = draw({
+      type: 'bryla',
+      solid: 'ostroslup',
+      n: 4,
+      a: 6,
+      h: 4,
+      names: ['A', 'B', 'C', 'D', 'S'],
+      points: { O: { midpoint: ['A', 'C'] }, M: { midpoint: ['B', 'C'] } },
+      segments: [{ from: 'S', to: 'M' }],
+      polygons: [{ points: ['S', 'O', 'M'], fill: true }],
+      angles: [{ vertex: 'O', from: 'M', to: 'S', right: true }],
+    })
+
+    // 8 krawędzi i odcinek SM; zasłonięte są dwie tylne krawędzie podstawy i krawędź SD.
+    expect(wrapper.findAll('path.plane-figure__line')).toHaveLength(10)
+    expect(wrapper.findAll('.plane-figure__line--dashed')).toHaveLength(3)
+    expect(wrapper.find('.plane-figure__fill').exists()).toBe(true)
+    expect(wrapper.findAll('.plane-figure__dot')).toHaveLength(1)
+  })
+
+  it('draws a cylinder with the back half of its lower base dashed', () => {
+    const wrapper = draw({ type: 'bryla', solid: 'walec', r: 2, h: 3 })
+
+    expect(wrapper.findAll('path.plane-figure__line')).toHaveLength(6)
+    expect(wrapper.findAll('.plane-figure__line--dashed')).toHaveLength(1)
   })
 
   it('marks a figure without a group as missing', () => {

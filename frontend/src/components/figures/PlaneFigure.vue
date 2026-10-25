@@ -18,6 +18,14 @@ const bounds = computed(() => {
     ...Object.values(props.figure.points),
     ...(props.figure.dimensions ?? []).flatMap((dimension) => [dimension.from, dimension.to]),
     ...(props.figure.texts ?? []).map((text) => text.at),
+    ...(props.figure.circles ?? []).flatMap((circle): Point[] => {
+      const [x, y] = props.figure.points[circle.center]!
+      const ry = circle.radius_y ?? circle.radius
+      return [
+        [x - circle.radius, y - ry],
+        [x + circle.radius, y + ry],
+      ]
+    }),
   ]
   const xs = points.map((point) => point[0])
   const ys = points.map((point) => point[1])
@@ -59,10 +67,35 @@ function neighbors(name: string): Point[] {
   return names.map(at)
 }
 
+// Okrąg rysowany jako dwie połówki, żeby u walca i stożka tylną połowę podstawy dało się
+// narysować przerywaną.
+const circles = computed(() =>
+  (props.figure.circles ?? []).map((circle) => {
+    const [cx, cy] = at(circle.center)
+    const rx = circle.radius * scale.value
+    const ry = (circle.radius_y ?? circle.radius) * scale.value
+    const half = (sweep: number) => `M${cx - rx} ${cy} A${rx} ${ry} 0 0 ${sweep} ${cx + rx} ${cy}`
+    return { cx, cy, rx, ry, back: half(1), front: half(0), circle }
+  }),
+)
+
 // Łuk kąta po krótszej stronie, w rozmiarze niezależnym od skali rysunku.
 const ANGLE_RADIUS = 22
+const FILLED_RADIUS = 28
+const SECOND_ARC = 4
 const LABEL_INSIDE = 26
-const LETTER_HALF_WIDTH = 10
+// Przy bardzo wąskim kącie napis nie mieści się między ramionami, a łuk nie może rosnąć bez
+// końca, więc napis wtedy lekko na nie wchodzi, jak w arkuszach.
+const LABEL_FARTHEST = 62
+const CHARACTER_WIDTH = 8
+
+// Przybliżona połowa szerokości napisu: polecenie LaTeX-a, np. \circ, liczy się jak jeden znak,
+// a $, ^ i nawiasy klamrowe nie zajmują miejsca.
+function halfWidth(text: string): number {
+  const visible = text.replace(/\\[a-zA-Z]+/g, 'x').replace(/[${}^_]/g, '')
+  return (Math.max(1, visible.length) * CHARACTER_WIDTH) / 2
+}
+
 const angles = computed(() =>
   (props.figure.angles ?? []).map((angle) => {
     const [vx, vy] = at(angle.vertex)
@@ -83,10 +116,17 @@ const angles = computed(() =>
     // Litera stoi wewnątrz łuku, więc przy wąskim kącie łuk musi być większy, żeby litera
     // zmieściła się między ramionami.
     const halfAngle = Math.acos(Math.min(1, length / 2))
-    const labelDistance = Math.max(LABEL_INSIDE, LETTER_HALF_WIDTH / Math.sin(halfAngle || 1))
-    const r = angle.label ? labelDistance + 14 : ANGLE_RADIUS
+    const half = angle.label ? halfWidth(angle.label) : 0
+    const labelDistance = Math.min(
+      LABEL_FARTHEST,
+      Math.max(LABEL_INSIDE, half / Math.sin(halfAngle || 1)),
+    )
+    const r = angle.label ? labelDistance + 14 : angle.fill ? FILLED_RADIUS : ANGLE_RADIUS
+    const arc = (radius: number) =>
+      `M${vx + a[0] * radius} ${vy + a[1] * radius} A${radius} ${radius} 0 0 ${sweep} ${vx + b[0] * radius} ${vy + b[1] * radius}`
     return {
-      path: `M${vx + a[0] * r} ${vy + a[1] * r} A${r} ${r} 0 0 ${sweep} ${vx + b[0] * r} ${vy + b[1] * r}`,
+      arcs: angle.arcs === 2 ? [arc(r), arc(r + SECOND_ARC)] : [arc(r)],
+      sector: angle.fill ? `M${vx} ${vy} L${arc(r).slice(1)} Z` : null,
       dot: angle.right ? along(r / 2) : null,
       label: angle.label ? { text: angle.label, at: along(labelDistance) } : null,
     }
@@ -119,6 +159,27 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
       </marker>
     </defs>
 
+    <template v-for="(item, index) in circles" :key="`c${index}`">
+      <ellipse
+        v-if="item.circle.fill"
+        :cx="item.cx"
+        :cy="item.cy"
+        :rx="item.rx"
+        :ry="item.ry"
+        class="plane-figure__fill plane-figure__line--none"
+      />
+      <path
+        :d="item.back"
+        class="plane-figure__line"
+        :class="{ 'plane-figure__line--dashed': item.circle.dashed || item.circle.back_dashed }"
+      />
+      <path
+        :d="item.front"
+        class="plane-figure__line"
+        :class="{ 'plane-figure__line--dashed': item.circle.dashed }"
+      />
+    </template>
+
     <path
       v-for="(polygon, index) in figure.polygons"
       :key="`p${index}`"
@@ -149,7 +210,12 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
     />
 
     <template v-for="(angle, index) in angles" :key="`a${index}`">
-      <path :d="angle.path" class="plane-figure__angle" />
+      <path
+        v-if="angle.sector"
+        :d="angle.sector"
+        class="plane-figure__fill plane-figure__line--none"
+      />
+      <path v-for="arc in angle.arcs" :key="arc" :d="arc" class="plane-figure__angle" />
       <circle
         v-if="angle.dot"
         :cx="angle.dot[0]"
@@ -172,6 +238,14 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
       :key="`dl${index}`"
       :at="besideSegment(screen(dimension.from), screen(dimension.to), center, LABEL_DISTANCE)"
       :text="dimension.label"
+    />
+    <circle
+      v-for="name in figure.dots"
+      :key="`k${name}`"
+      :cx="at(name)[0]"
+      :cy="at(name)[1]"
+      r="2.5"
+      class="plane-figure__dot"
     />
     <FigureLabel
       v-for="name in figure.names"
@@ -224,6 +298,12 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
 .plane-figure__fill--zolty {
   fill: #e0b23a;
   fill-opacity: 0.3;
+}
+
+/* Zakrywa wypełnienie pod spodem, więc wnętrze figury wygląda jak puste tło. */
+.plane-figure__fill--tlo {
+  fill: var(--surface);
+  fill-opacity: 1;
 }
 
 .plane-figure__dimension {

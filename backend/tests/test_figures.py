@@ -94,9 +94,55 @@ def test_solid_needs_eight_names_for_its_vertices():
     }
 
     assert problems(data) == [
-        "prostopadłościan ma 8 wierzchołków, a nazw jest inaczej",
-        "krawędź AH: nie ma takich wierzchołków",
+        "bryła ma 8 wierzchołków w names, a nazw jest 6",
+        "AH nie jest krawędzią bryły; podpisz go w segments",
     ]
+
+
+def test_solid_needs_its_parameters():
+    assert problems({"type": "bryla", "solid": "ostroslup", "n": 4, "a": 6}) == [
+        "brakuje parametru h"
+    ]
+
+
+def test_pyramid_with_extra_points_and_marks():
+    data = {
+        "type": "bryla",
+        "solid": "ostroslup",
+        "n": 4,
+        "a": 6,
+        "h": 4,
+        "names": ["A", "B", "C", "D", "S"],
+        "points": {"O": {"midpoint": ["A", "C"]}, "M": {"midpoint": ["B", "C"]}},
+        "segments": [{"from": "S", "to": "O", "dashed": True}, {"from": "S", "to": "M", "label": "$6$"}],
+        "polygons": [{"points": ["S", "O", "M"], "fill": True}],
+        "angles": [{"vertex": "O", "from": "M", "to": "S", "right": True}],
+        "edge_labels": [{"from": "A", "to": "B", "label": "$6$"}],
+    }
+
+    assert figures_json({"content": FIGURE.validate_python(data)}) == {"content": data}
+    assert problems(data) == []
+
+    data["edge_labels"] = [{"from": "A", "to": "C", "label": "$x$"}]
+    data["points"]["P"] = {"base": 270}
+    assert problems(data) == [
+        "punkt P: base i top są tylko dla walca, stożka i kuli",
+        "AC nie jest krawędzią bryły; podpisz go w segments",
+    ]
+
+
+def test_cylinder_points_lie_on_its_bases():
+    data = {
+        "type": "bryla",
+        "solid": "walec",
+        "r": 2,
+        "h": 3,
+        "points": {"A": {"base": 200}, "D": {"top": 200}, "B": {"base": 340}},
+        "polygons": [{"points": ["A", "B", "D"], "fill": True}],
+        "angles": [{"vertex": "B", "from": "A", "to": "D", "label": "$30^\\circ$"}],
+    }
+
+    assert problems(data) == []
 
 
 def test_plane_figure_takes_only_known_fill_colors():
@@ -111,3 +157,57 @@ def test_plane_figure_takes_only_known_fill_colors():
     data["polygons"][0]["fill"] = "czerwony"
     with pytest.raises(ValueError):
         problems(data)
+
+
+def test_plane_figure_circles_and_dots_refer_to_its_points():
+    data = {
+        "type": "figura",
+        "points": {"S": [0, 0], "A": [3, 0], "B": [0, 3]},
+        "circles": [{"center": "S", "radius": 3}, {"center": "T", "radius": 1, "radius_y": 0.4}],
+        "dots": ["S", "P"],
+        "angles": [{"vertex": "S", "from": "A", "to": "B", "fill": True, "arcs": 2}],
+    }
+
+    assert problems(data) == ["nie ma punktu P", "nie ma punktu T"]
+
+
+def test_bar_chart_needs_one_value_per_category():
+    data = {
+        "type": "diagram-slupkowy",
+        "categories": ["1", "2", "3"],
+        "charts": [{"title": "klasa IV A", "values": [1, 6, 3]}, {"values": [2, 9]}],
+        "y_max": 8,
+    }
+
+    assert problems(data) == [
+        "diagram: liczba słupków inna niż liczba kategorii",
+        "diagram: słupek wyższy niż y_max",
+    ]
+
+
+def test_pie_chart_keeps_its_json():
+    data = {
+        "type": "diagram-kolowy",
+        "slices": [{"value": 42, "label": "42%", "legend": "mecze bez goli"}, {"value": 58}],
+    }
+
+    assert figures_json({"content": FIGURE.validate_python(data)}) == {"content": data}
+    assert problems(data) == []
+
+
+def test_table_rows_must_have_the_same_width():
+    data = {
+        "type": "tabela",
+        "rows": [
+            [{"text": "Kartkówki", "colspan": 3}, "Projekty"],
+            ["$4$", "$4$", "$3$", "$2$"],
+            ["$5$"],
+        ],
+        "header_rows": 1,
+    }
+
+    assert problems(data) == ["wiersze tabeli mają różną liczbę kolumn: 4, 4, 1"]
+
+    data["rows"].pop()
+    assert figures_json({"content": FIGURE.validate_python(data)}) == {"content": data}
+    assert problems(data) == []

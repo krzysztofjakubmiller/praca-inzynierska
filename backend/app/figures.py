@@ -90,8 +90,9 @@ class Segment(Strict):
 
 class Polygon(Strict):
     points: list[str]
-    # true to kolor egzaminu; nazwane kolory są na tła, np. woda i plaża.
-    fill: bool | Literal["niebieski", "zolty"] = False
+    # true to kolor egzaminu; nazwane kolory są na tła, np. woda i plaża. "tlo" zakrywa to, co
+    # pod spodem, np. wnętrze sześciokąta wpisanego w zacieniowane koło.
+    fill: bool | Literal["niebieski", "zolty", "tlo"] = False
     dashed: bool = False
     # Bez obrysu wielokąt jest samym kolorowym tłem.
     outline: bool = True
@@ -112,6 +113,21 @@ class PlaneAngle(Strict):
     label: str | None = None
     # Kąt prosty: łuk z kropką, jak w arkuszach CKE.
     right: bool = False
+    # Zacieniowany wycinek pod łukiem.
+    fill: bool = False
+    # Dwa łuki oznaczają kąty równe, np. przy dwusiecznej.
+    arcs: Literal[1, 2] = 1
+
+
+class Circle(Strict):
+    # Okrąg o środku w nazwanym punkcie; radius_y zamienia go w elipsę, np. podstawę walca.
+    center: str
+    radius: Number = Field(gt=0)
+    radius_y: Number | None = Field(default=None, gt=0)
+    dashed: bool = False
+    # Górna połowa elipsy przerywana: niewidoczna tylna krawędź podstawy walca lub stożka.
+    back_dashed: bool = False
+    fill: bool = False
 
 
 class PlaneFigure(Strict):
@@ -123,6 +139,9 @@ class PlaneFigure(Strict):
     segments: list[Segment] = []
     dimensions: list[Dimension] = []
     angles: list[PlaneAngle] = []
+    circles: list[Circle] = []
+    # Punkty zaznaczone kropką, np. środek okręgu.
+    dots: list[str] = []
     texts: list[Text] = []
 
 
@@ -132,16 +151,82 @@ class EdgeLabel(Strict):
     label: str
 
 
+class SolidPoint(Strict):
+    # Dodatkowy punkt bryły: środek podanych punktów albo punkt na okręgu podstawy walca,
+    # stożka lub kuli pod kątem w stopniach (0 w prawo, 270 z przodu).
+    midpoint: list[str] | None = Field(default=None, min_length=2)
+    base: Number | None = None
+    top: Number | None = None
+
+
 class Solid(Strict):
+    # Bryła opisana parametrami; frontend liczy z nich rzut ukośny jak w arkuszach CKE.
     type: Literal["bryla"]
-    solid: Literal["prostopadloscian"]
-    # a to krawędź AB z przodu, b to głębokość AD, h to wysokość AE.
-    a: Number = Field(gt=0)
-    b: Number = Field(gt=0)
-    h: Number = Field(gt=0)
-    # Wierzchołki po kolei: podstawa A, B, C, D, potem nad nimi E, F, G, H.
+    solid: Literal["prostopadloscian", "graniastoslup", "ostroslup", "walec", "stozek", "kula"]
+    # Prostopadłościan: a to krawędź AB z przodu, b to głębokość AD, h to wysokość AE.
+    # Graniastosłup i ostrosłup prawidłowy: n kątów podstawy, a krawędź podstawy, h wysokość.
+    # Walec, stożek, kula: r promień, h wysokość.
+    n: int | None = Field(default=None, ge=3)
+    a: Number | None = Field(default=None, gt=0)
+    b: Number | None = Field(default=None, gt=0)
+    h: Number | None = Field(default=None, gt=0)
+    r: Number | None = Field(default=None, gt=0)
+    # Nazwy wierzchołków w kolejności opisanej przy solid_vertex_count. Nazwa z małej litery to
+    # punkt pomocniczy bez podpisu, jak w figurach płaskich.
     names: list[str] = []
+    points: dict[str, SolidPoint] = {}
     edge_labels: list[EdgeLabel] = []
+    segments: list[Segment] = []
+    polygons: list[Polygon] = []
+    angles: list[PlaneAngle] = []
+    dots: list[str] = []
+
+
+class BarChartPanel(Strict):
+    title: str | None = None
+    values: list[Number] = Field(min_length=1)
+
+
+class BarChart(Strict):
+    # Kilka paneli ze wspólnymi kategoriami i osią stoi obok siebie, np. wyniki dwóch klas.
+    type: Literal["diagram-slupkowy"]
+    categories: list[str] = Field(min_length=1)
+    charts: list[BarChartPanel] = Field(min_length=1)
+    x_label: str | None = None
+    y_label: str | None = None
+    # Bez y_max i y_step oś dobiera się do największej wartości.
+    y_max: Number | None = Field(default=None, gt=0)
+    y_step: Number | None = Field(default=None, gt=0)
+    # Liczby nad słupkami, gdy są na rysunku w arkuszu.
+    show_values: bool = False
+
+
+class PieSlice(Strict):
+    value: Number = Field(gt=0)
+    # Napis na wycinku, np. "42%", i opis w legendzie.
+    label: str | None = None
+    legend: str | None = None
+
+
+class PieChart(Strict):
+    # Wycinki od góry zgodnie z ruchem wskazówek zegara, w kolejności z listy.
+    type: Literal["diagram-kolowy"]
+    slices: list[PieSlice] = Field(min_length=2)
+
+
+class TableCell(Strict):
+    text: str
+    # Komórka zajmująca kilka kolumn, np. nagłówek "Kartkówki" nad trzema ocenami.
+    colspan: int = Field(default=1, ge=1)
+
+
+class Table(Strict):
+    # Tabela rysowana w HTML, bo KaTeX nie umie scalać komórek (\multicolumn).
+    type: Literal["tabela"]
+    # Komórka to sam tekst albo obiekt z colspan; tekst jak treść zadania, wzory w $...$.
+    rows: list[list[str | TableCell]] = Field(min_length=1)
+    # Pierwsze wiersze pogrubione jako nagłówek.
+    header_rows: int = Field(default=0, ge=0)
 
 
 # Rysunek, dla którego nie ma jeszcze grupy; czeka w bazie na uzupełnienie.
@@ -150,7 +235,7 @@ class UnknownFigure(Strict):
 
 
 Figure = Annotated[
-    NumberLine | CoordinatePlane | PlaneFigure | Solid | UnknownFigure,
+    NumberLine | CoordinatePlane | PlaneFigure | Solid | BarChart | PieChart | Table | UnknownFigure,
     Field(discriminator="type"),
 ]
 
@@ -164,6 +249,10 @@ def figure_problems(figure: Figure) -> list[str]:
         return plane_figure_problems(figure)
     if isinstance(figure, Solid):
         return solid_problems(figure)
+    if isinstance(figure, BarChart):
+        return bar_chart_problems(figure)
+    if isinstance(figure, Table):
+        return table_problems(figure)
     return []
 
 
@@ -225,6 +314,8 @@ def plane_figure_problems(figure: PlaneFigure) -> list[str]:
         used.update((segment.from_, segment.to))
     for angle in figure.angles:
         used.update((angle.vertex, angle.from_, angle.to))
+    used.update(circle.center for circle in figure.circles)
+    used.update(figure.dots)
     problems = [f"nie ma punktu {name}" for name in sorted(used - figure.points.keys())]
     problems += [
         f"wielokąt {''.join(polygon.points)} ma mniej niż 3 punkty"
@@ -234,13 +325,106 @@ def plane_figure_problems(figure: PlaneFigure) -> list[str]:
     return problems
 
 
-def solid_problems(figure: Solid) -> list[str]:
+def bar_chart_problems(figure: BarChart) -> list[str]:
     problems = []
-    if figure.names and len(figure.names) != 8:
-        problems.append("prostopadłościan ma 8 wierzchołków, a nazw jest inaczej")
+    for panel in figure.charts:
+        name = f"diagram {panel.title}" if panel.title else "diagram"
+        if len(panel.values) != len(figure.categories):
+            problems.append(f"{name}: liczba słupków inna niż liczba kategorii")
+        if any(value < 0 for value in panel.values):
+            problems.append(f"{name}: ujemna wartość słupka")
+        if figure.y_max is not None and max(panel.values) > figure.y_max:
+            problems.append(f"{name}: słupek wyższy niż y_max")
+    return problems
+
+
+def cell_span(cell: str | TableCell) -> int:
+    return cell.colspan if isinstance(cell, TableCell) else 1
+
+
+def table_problems(figure: Table) -> list[str]:
+    widths = [sum(cell_span(cell) for cell in row) for row in figure.rows]
+    problems = []
+    if len(set(widths)) > 1:
+        problems.append(f"wiersze tabeli mają różną liczbę kolumn: {', '.join(map(str, widths))}")
+    if figure.header_rows > len(figure.rows):
+        problems.append("więcej wierszy nagłówka niż wierszy tabeli")
+    return problems
+
+
+SOLID_PARAMETERS = {
+    "prostopadloscian": ("a", "b", "h"),
+    "graniastoslup": ("n", "a", "h"),
+    "ostroslup": ("n", "a", "h"),
+    "walec": ("r", "h"),
+    "stozek": ("r", "h"),
+    "kula": ("r",),
+}
+ROUND_SOLIDS = {"walec", "stozek", "kula"}
+
+
+# Kolejność wierzchołków w names: podstawa od lewego przedniego przeciwnie do ruchu wskazówek
+# zegara (patrząc z góry), potem wierzchołki nad nimi albo wierzchołek ostrosłupa. Walec: środek
+# dolnej i górnej podstawy; stożek: środek podstawy i wierzchołek; kula: środek.
+def solid_vertex_count(figure: Solid) -> int:
+    if figure.solid == "prostopadloscian":
+        return 8
+    if figure.solid == "graniastoslup":
+        return 2 * (figure.n or 0)
+    if figure.solid == "ostroslup":
+        return (figure.n or 0) + 1
+    return {"walec": 2, "stozek": 2, "kula": 1}[figure.solid]
+
+
+def solid_edges(figure: Solid) -> set[frozenset[int]]:
+    if figure.solid in ROUND_SOLIDS:
+        return set()
+    n = 4 if figure.solid == "prostopadloscian" else figure.n or 0
+    edges = {frozenset((i, (i + 1) % n)) for i in range(n)}
+    if figure.solid == "ostroslup":
+        return edges | {frozenset((i, n)) for i in range(n)}
+    return edges | {frozenset((n + i, n + (i + 1) % n)) for i in range(n)} | {
+        frozenset((i, n + i)) for i in range(n)
+    }
+
+
+def solid_problems(figure: Solid) -> list[str]:
+    problems = [
+        f"brakuje parametru {name}"
+        for name in SOLID_PARAMETERS[figure.solid]
+        if getattr(figure, name) is None
+    ]
+    if problems:
+        return problems
+    count = solid_vertex_count(figure)
+    if figure.names and len(figure.names) != count:
+        problems.append(f"bryła ma {count} wierzchołków w names, a nazw jest {len(figure.names)}")
+
+    known = {name for name in figure.names if name} | set(figure.points)
+    used = set(figure.dots)
+    for name, point in figure.points.items():
+        given = [point.midpoint is not None, point.base is not None, point.top is not None]
+        if sum(given) != 1:
+            problems.append(f"punkt {name}: podaj dokładnie jedno z midpoint, base, top")
+        if (point.base is not None or point.top is not None) and figure.solid not in ROUND_SOLIDS:
+            problems.append(f"punkt {name}: base i top są tylko dla walca, stożka i kuli")
+        if point.top is not None and figure.solid != "walec":
+            problems.append(f"punkt {name}: top jest tylko dla walca")
+        used.update(point.midpoint or [])
+    for segment in figure.segments:
+        used.update((segment.from_, segment.to))
+    for polygon in figure.polygons:
+        used.update(polygon.points)
+    for angle in figure.angles:
+        used.update((angle.vertex, angle.from_, angle.to))
+    problems += [f"nie ma punktu {name}" for name in sorted(used - known)]
+
+    index = {name: i for i, name in enumerate(figure.names) if name}
+    edges = solid_edges(figure)
     for edge in figure.edge_labels:
-        if not {edge.from_, edge.to} <= set(figure.names):
-            problems.append(f"krawędź {edge.from_}{edge.to}: nie ma takich wierzchołków")
+        pair = {index.get(edge.from_), index.get(edge.to)}
+        if None in pair or frozenset(pair) not in edges:
+            problems.append(f"{edge.from_}{edge.to} nie jest krawędzią bryły; podpisz go w segments")
     return problems
 
 
@@ -253,6 +437,10 @@ def figure_texts(figure: Figure) -> list[str]:
         texts += [angle.label for angle in figure.angles if angle.label]
     if isinstance(figure, Solid):
         texts += [edge.label for edge in figure.edge_labels]
+        texts += [segment.label for segment in figure.segments if segment.label]
+        texts += [angle.label for angle in figure.angles if angle.label]
+    if isinstance(figure, Table):
+        texts += [cell.text if isinstance(cell, TableCell) else cell for row in figure.rows for cell in row]
     return texts
 
 

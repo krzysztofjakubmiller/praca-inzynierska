@@ -52,7 +52,7 @@ export interface PlaneFigure {
   names?: string[]
   polygons?: {
     points: string[]
-    fill?: boolean | 'niebieski' | 'zolty'
+    fill?: boolean | 'niebieski' | 'zolty' | 'tlo'
     dashed?: boolean
     outline?: boolean
   }[]
@@ -64,18 +64,75 @@ export interface PlaneFigure {
     arrow?: boolean
   }[]
   dimensions?: { from: Point; to: Point; label: string }[]
-  angles?: { vertex: string; from: string; to: string; label?: string | null; right?: boolean }[]
+  angles?: {
+    vertex: string
+    from: string
+    to: string
+    label?: string | null
+    right?: boolean
+    fill?: boolean
+    arcs?: 1 | 2
+  }[]
+  circles?: {
+    center: string
+    radius: number
+    radius_y?: number | null
+    dashed?: boolean
+    back_dashed?: boolean
+    fill?: boolean
+  }[]
+  dots?: string[]
   texts?: FigureText[]
+}
+
+export interface SolidPoint {
+  /** Środek podanych punktów. */
+  midpoint?: string[] | null
+  /** Punkt na okręgu dolnej (base) albo górnej (top) podstawy, kąt w stopniach, 270 z przodu. */
+  base?: number | null
+  top?: number | null
 }
 
 export interface SolidFigure {
   type: 'bryla'
-  solid: 'prostopadloscian'
-  a: number
-  b: number
-  h: number
+  solid: 'prostopadloscian' | 'graniastoslup' | 'ostroslup' | 'walec' | 'stozek' | 'kula'
+  n?: number | null
+  a?: number | null
+  b?: number | null
+  h?: number | null
+  r?: number | null
   names?: string[]
+  points?: Record<string, SolidPoint>
   edge_labels?: { from: string; to: string; label: string }[]
+  segments?: PlaneFigure['segments']
+  polygons?: PlaneFigure['polygons']
+  angles?: PlaneFigure['angles']
+  dots?: string[]
+}
+
+export interface BarChartFigure {
+  type: 'diagram-slupkowy'
+  categories: string[]
+  charts: { title?: string | null; values: number[] }[]
+  x_label?: string | null
+  y_label?: string | null
+  y_max?: number | null
+  y_step?: number | null
+  show_values?: boolean
+}
+
+export interface PieChartFigure {
+  type: 'diagram-kolowy'
+  slices: { value: number; label?: string | null; legend?: string | null }[]
+}
+
+/** Komórka to sam tekst albo tekst zajmujący kilka kolumn. */
+export type TableCell = string | { text: string; colspan?: number }
+
+export interface TableFigure {
+  type: 'tabela'
+  rows: TableCell[][]
+  header_rows?: number
 }
 
 export interface UnknownFigure {
@@ -83,7 +140,14 @@ export interface UnknownFigure {
 }
 
 export type Figure =
-  NumberLineFigure | CoordinatePlaneFigure | PlaneFigure | SolidFigure | UnknownFigure
+  | NumberLineFigure
+  | CoordinatePlaneFigure
+  | PlaneFigure
+  | SolidFigure
+  | BarChartFigure
+  | PieChartFigure
+  | TableFigure
+  | UnknownFigure
 
 /** Klucz content to rysunek pod treścią, etykieta wariantu to rysunek w tym wariancie. */
 export type Figures = Record<string, Figure>
