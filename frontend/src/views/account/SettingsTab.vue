@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import {
-  DAILY_REVIEW_LIMITS,
-  profile,
-  updateProfile,
-  type DailyReviews,
-  type ProfileSettings,
-} from '@/profile'
+import { profile, updateProfile, type DailyReviews, type ProfileSettings } from '@/profile'
 import { setDarkShade, setTheme, type DarkShade, type Theme } from '@/theme'
 
 type Field = keyof ProfileSettings
@@ -176,7 +170,7 @@ function chooseReviews(event: Event) {
           max="2"
           step="1"
           :value="reviewIndex"
-          :aria-valuetext="`${REVIEWS[reviewIndex]?.label}, do ${DAILY_REVIEW_LIMITS[profile.daily_reviews]} dziennie`"
+          :aria-valuetext="`${REVIEWS[reviewIndex]?.label}, do ${profile.daily_review_limit} dziennie`"
           @change="chooseReviews"
         />
         <div class="settings__ticks" aria-hidden="true">
@@ -189,8 +183,8 @@ function chooseReviews(event: Event) {
           </span>
         </div>
         <p class="settings__hint">
-          Najwięcej {{ DAILY_REVIEW_LIMITS[profile.daily_reviews] }} powtórek jednego dnia. Resztę
-          aplikacja przesuwa na kolejne dni, a nowe zadania możesz robić bez limitu.
+          Najwięcej {{ profile.daily_review_limit }} powtórek jednego dnia. Resztę aplikacja
+          przesuwa na kolejne dni, a nowe zadania możesz robić bez limitu.
         </p>
         <p v-if="saved === 'daily_reviews'" class="settings__saved" role="status">Zapisano</p>
         <p v-if="problems.daily_reviews" class="settings__problem" role="alert">

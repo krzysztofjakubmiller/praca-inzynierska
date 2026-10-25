@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import MatchingTable from '@/components/panel/MatchingTable.vue'
-import MathText from '@/components/panel/MathText.vue'
-import TrueFalseTable from '@/components/panel/TrueFalseTable.vue'
+import MatchingTable from '@/components/task/MatchingTable.vue'
+import MathText from '@/components/task/MathText.vue'
+import TrueFalseTable from '@/components/task/TrueFalseTable.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
 import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {

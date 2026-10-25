@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MathText from '@/components/panel/MathText.vue'
+import MathText from '@/components/task/MathText.vue'
 import type { TableCell, TableFigure } from '@/figures'
 
 defineProps<{ figure: TableFigure }>()

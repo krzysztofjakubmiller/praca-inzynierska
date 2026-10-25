@@ -6,5 +6,6 @@ alembic==1.20.0
 pytest==9.1.1
 httpx2==2.13.1
 argon2-cffi==25.1.0
+fsrs==6.3.2
 google-auth==2.62.0
 requests==2.34.2

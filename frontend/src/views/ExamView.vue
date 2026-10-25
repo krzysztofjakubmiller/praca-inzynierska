@@ -14,14 +14,29 @@ import { useMediaQuery } from '@/composables/useMediaQuery'
 import { EXAMS } from '@/config/exams'
 import type { DiagnosticSheets } from '@/maps/nextStep'
 import type { MapProgress, TopicMap } from '@/maps/types'
+import { loadProgress } from '@/practice'
 import { setTheme, theme } from '@/theme'
 
-// Ta sama strona dla każdego egzaminu; mapę i postęp ucznia podaje router.
+// Ta sama strona dla każdego egzaminu; mapę i przykładowy postęp podaje router. Zalogowany
+// uczeń widzi zamiast przykładu swój postęp z bazy.
 const props = defineProps<{
   map: TopicMap
   progress: MapProgress<string>
   sheets: DiagnosticSheets
 }>()
+
+const ownProgress = ref<MapProgress<string> | null>(null)
+const shownProgress = computed(() => ownProgress.value ?? props.progress)
+
+// Gdy serwer nie odpowie, zalogowany uczeń widzi pustą mapę, a nie cudzy przykładowy postęp.
+watch(
+  () => props.map.examId,
+  async (examId) => {
+    ownProgress.value = null
+    ownProgress.value = await loadProgress(examId).catch(() => ({ topics: {} }))
+  },
+  { immediate: true },
+)
 
 const exam = computed(() => EXAMS.find((item) => item.id === props.map.examId)!)
 const { view, setView } = useMapView()
@@ -171,7 +186,7 @@ function closeOutside(event: MouseEvent) {
         <NextStepButton
           v-if="beside && !desktop"
           :map="map"
-          :progress="progress"
+          :progress="shownProgress"
           :sheets="sheets"
         />
         <button
@@ -210,7 +225,7 @@ function closeOutside(event: MouseEvent) {
           v-else-if="selected"
           ref="panel"
           :map="map"
-          :progress="progress"
+          :progress="shownProgress"
           :station-id="selected"
           @close="close"
           @select="selected = $event"
@@ -230,10 +245,10 @@ function closeOutside(event: MouseEvent) {
           <NextStepButton
             class="exam-side__next"
             :map="map"
-            :progress="progress"
+            :progress="shownProgress"
             :sheets="sheets"
           />
-          <ExamMenu />
+          <ExamMenu :last-station="shownProgress.lastStation" />
         </div>
       </aside>
       <Transition v-else name="station-panel">
@@ -242,7 +257,7 @@ function closeOutside(event: MouseEvent) {
           ref="panel"
           class="exam-page__panel"
           :map="map"
-          :progress="progress"
+          :progress="shownProgress"
           :station-id="selected"
           @close="close"
           @select="selected = $event"
@@ -253,7 +268,7 @@ function closeOutside(event: MouseEvent) {
           v-if="view === 'map'"
           ref="metroMap"
           :map="map"
-          :progress="progress"
+          :progress="shownProgress"
           :selected="selected"
           :bottom-inset="bottomInset"
           @select="select"
@@ -266,7 +281,7 @@ function closeOutside(event: MouseEvent) {
           v-else
           ref="list"
           :map="map"
-          :progress="progress"
+          :progress="shownProgress"
           :selected="selected"
           :bottom-inset="bottomInset"
           @select="select"
@@ -282,7 +297,7 @@ function closeOutside(event: MouseEvent) {
       v-if="floatingPill"
       class="exam-page__next"
       :map="map"
-      :progress="progress"
+      :progress="shownProgress"
       :sheets="sheets"
     />
 
@@ -303,7 +318,7 @@ function closeOutside(event: MouseEvent) {
         >
           <AppIcon name="close" />
         </button>
-        <ExamMenu @navigate="closeDrawer" />
+        <ExamMenu :last-station="shownProgress.lastStation" @navigate="closeDrawer" />
       </div>
     </dialog>
   </div>

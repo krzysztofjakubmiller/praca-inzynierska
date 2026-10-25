@@ -11,28 +11,31 @@ const props = defineProps<{
   sheets: DiagnosticSheets
 }>()
 
+// Arkuszy jeszcze nie ma, więc arkusz diagnostyczny prowadzi do strony „Wkrótce”.
 const text = computed(() => {
   const step = nextStep(props.map, props.progress, props.sheets)
   if (step.kind === 'diagnostic') {
     const label = step.first ? 'Arkusz diagnostyczny' : 'Kolejny arkusz diagnostyczny'
-    return { label, spoken: label }
+    return { label, spoken: label, to: { name: 'coming-soon' } }
   }
   if (step.kind === 'reviews') {
     return {
       label: `Powtórki · ${shortCount(step.count)}`,
       spoken: `Powtórki, ${step.count} ${plural(step.count, TASK_FORMS)}`,
+      to: { name: 'reviews', params: { exam: props.map.examId } },
     }
   }
   const station = props.map.graph.stations[step.stationId]!
   return {
     label: `Kontynuuj · ${station.shortName ?? station.name}`,
     spoken: `Kontynuuj temat ${station.name}`,
+    to: { name: 'practice-topic', params: { exam: props.map.examId, topic: step.stationId } },
   }
 })
 </script>
 
 <template>
-  <RouterLink class="button next-step" :to="{ name: 'coming-soon' }" :aria-label="text.spoken">
+  <RouterLink class="button next-step" :to="text.to" :aria-label="text.spoken">
     <span class="next-step__label">{{ text.label }}</span>
   </RouterLink>
 </template>

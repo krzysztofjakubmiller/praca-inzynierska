@@ -86,6 +86,12 @@ const router = createRouter({
       meta: { title: 'Przykładowy postęp' },
     },
     {
+      path: '/demo/zadanie',
+      name: 'demo-task',
+      component: () => import('@/views/DemoTaskView.vue'),
+      meta: { title: 'Przykładowe zadanie' },
+    },
+    {
       path: '/potwierdz-adres',
       name: 'confirm-email',
       component: () => import('@/views/ConfirmEmailView.vue'),
@@ -151,6 +157,27 @@ const router = createRouter({
       component: () => import('@/views/ExamView.vue'),
       props: { map: EXTENDED_MAP, progress: EXTENDED_DEMO_PROGRESS, sheets: EXTENDED_DEMO_SHEETS },
       meta: { title: 'Matura rozszerzona', exam: 'matura-rozszerzona' },
+    },
+    {
+      path: '/:exam(matura-podstawowa|matura-rozszerzona)/cwicz/:topic',
+      name: 'practice-topic',
+      component: () => import('@/views/PracticeView.vue'),
+      props: (route) => ({ ...route.params, mode: 'cwiczenie' }),
+      meta: { title: 'Ćwiczenie' },
+    },
+    {
+      path: '/:exam(matura-podstawowa|matura-rozszerzona)/powtorki',
+      name: 'reviews',
+      component: () => import('@/views/PracticeView.vue'),
+      props: (route) => ({ ...route.params, mode: 'powtorka' }),
+      meta: { title: 'Powtórki' },
+    },
+    {
+      path: '/:exam(matura-podstawowa|matura-rozszerzona)/losowe',
+      name: 'random-task',
+      component: () => import('@/views/PracticeView.vue'),
+      props: (route) => ({ ...route.params, mode: 'losowe' }),
+      meta: { title: 'Losowe zadanie' },
     },
     {
       path: '/:pathMatch(.*)*',

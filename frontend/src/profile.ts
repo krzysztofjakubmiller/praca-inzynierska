@@ -16,13 +16,8 @@ export interface ProfileSettings {
 export interface Profile extends ProfileSettings {
   exam_years: number[]
   exam_dates: Record<Level, string>
-}
-
-// Ile powtórek może przyjść jednego dnia. Wartości tymczasowe, do ustalenia przy powtórkach.
-export const DAILY_REVIEW_LIMITS: Record<DailyReviews, number> = {
-  malo: 10,
-  srednio: 20,
-  duzo: 40,
+  /** Ile powtórek może przyjść jednego dnia przy wybranym daily_reviews; liczby zna backend. */
+  daily_review_limit: number
 }
 
 function send(init: RequestInit = {}): Promise<Response> {

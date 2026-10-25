@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import MathText from '@/components/panel/MathText.vue'
+import MathText from '@/components/task/MathText.vue'
 import { panelApi, type ExamOptions, type TaskSummary } from '@/panel/api'
 import { STATUS_LABELS, taskNumber, useProblems } from '@/panel/format'
 import '@/assets/panel.css'

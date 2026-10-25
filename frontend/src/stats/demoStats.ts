@@ -21,6 +21,9 @@ import {
 /** Cel ucznia z dema, pokazany na wykresach arkuszy i prognozy. */
 export const DEMO_TARGET = 75
 
+/** Dzienny limit powtórek ucznia z dema, jak przy „średnio”. */
+export const DEMO_REVIEW_LIMIT = 20
+
 // Tematu bez wpisu w postępie demo nikt nie zaczął, więc liczba jego zadań przychodzi stąd:
 // trudniejsze tematy mają więcej zadań.
 function taskCounts(map: TopicMap, progress: MapProgress<string>): Record<string, number> {

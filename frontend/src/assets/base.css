@@ -181,6 +181,21 @@ canvas {
   color: var(--ground);
 }
 
+.button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  translate: none;
+}
+
+.button:disabled:hover {
+  background: var(--ink);
+}
+
+.button--quiet:disabled:hover {
+  background: transparent;
+  color: var(--ink);
+}
+
 .icon-button {
   display: inline-grid;
   flex: none;

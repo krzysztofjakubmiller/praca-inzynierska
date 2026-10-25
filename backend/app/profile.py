@@ -19,6 +19,10 @@ MATURA_DATES = {
 
 LEVELS = ("podstawowa", "rozszerzona")
 
+# Ile powtórek może przyjść jednego dnia przy „mało”, „średnio” i „dużo”. Jedyne miejsce z tymi
+# liczbami: kolejka powtórek liczy z nich limit, a frontend dostaje liczbę razem z profilem.
+DAILY_REVIEW_LIMITS = {"malo": 10, "srednio": 20, "duzo": 40}
+
 
 class ProfileData(BaseModel):
     level: str
@@ -57,7 +61,7 @@ def problems(data: ProfileData) -> list[str]:
         found.append("Wybierz motyw: jasny albo ciemny.")
     if data.dark_shade not in ("grey", "black"):
         found.append("Wybierz odcień ciemnego motywu: szary albo czarny.")
-    if data.daily_reviews not in ("malo", "srednio", "duzo"):
+    if data.daily_reviews not in DAILY_REVIEW_LIMITS:
         found.append("Wybierz liczbę powtórek na dzień: mało, średnio albo dużo.")
     return found
 
@@ -66,6 +70,7 @@ def response(data: ProfileData) -> dict:
     return data.model_dump() | {
         "exam_years": exam_years(date.today()),
         "exam_dates": {level: exam_date(data.exam_year, level).isoformat() for level in LEVELS},
+        "daily_review_limit": DAILY_REVIEW_LIMITS[data.daily_reviews],
     }
 
 

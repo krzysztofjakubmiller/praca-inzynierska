@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, describe, it, expect, vi } from 'vitest'
-import { mount, type VueWrapper } from '@vue/test-utils'
+import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
 import { setMapView } from '@/composables/useMapView'
@@ -49,6 +49,7 @@ afterEach(() => {
   wrapper?.unmount()
   setMapView('map')
   localStorage.clear()
+  progressReply = NOT_LOGGED_IN
 })
 
 interface ExamProps {
@@ -68,7 +69,16 @@ const EXTENDED: ExamProps = {
   sheets: EXTENDED_DEMO_SHEETS,
 }
 
+// Domyślnie nikt nie jest zalogowany, więc mapa pokazuje przykładowy postęp.
+const NOT_LOGGED_IN = { status: 401, body: { detail: ['Nie zalogowano.'] } as object }
+let progressReply = NOT_LOGGED_IN
+
 async function render(desktop: boolean, props = BASIC) {
+  const { status, body } = progressReply
+  vi.stubGlobal(
+    'fetch',
+    vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify(body), { status })),
+  )
   vi.stubGlobal('matchMedia', () => ({
     matches: desktop,
     addEventListener() {},
@@ -200,5 +210,24 @@ describe('ExamView for the extended matura', () => {
     await pickStation(page, 'wielomiany')
     await page.setProps(EXTENDED)
     expect(side(page).find('nav').exists()).toBe(true)
+  })
+})
+
+describe('ExamView for a logged-in student', () => {
+  it('shows the progress from the server instead of the example', async () => {
+    progressReply = {
+      status: 200,
+      body: {
+        topics: { potegi: { total: 4, done: 1, due: 0, recent: { attempts: 1, correct: 1 } } },
+        last_station: 'potegi',
+      },
+    }
+    const page = await render(true)
+    await flushPromises()
+    setMapView('list')
+    await flushPromises()
+
+    expect(page.text()).toContain('25%')
+    expect(page.text()).not.toContain('Kontynuuj · Wielomiany')
   })
 })

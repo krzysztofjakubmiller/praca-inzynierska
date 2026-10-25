@@ -4,6 +4,9 @@ import { useRoute, type RouteLocationRaw } from 'vue-router'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import { EXAMS, type Exam } from '@/config/exams'
 
+// Ostatnio robiony temat; bez niego „Kontynuuj” nie ma dokąd prowadzić i znika z menu.
+const props = defineProps<{ lastStation?: string }>()
+
 const emit = defineEmits<{
   navigate: []
 }>()
@@ -25,17 +28,41 @@ const soon = (label: string): MenuItem => ({ label, to: SOON })
 
 const route = useRoute()
 
-// Menu stoi na stronie egzaminu, więc postęp otwiera się dla tego samego egzaminu.
+// Menu stoi na stronie egzaminu, więc postęp, powtórki i losowe otwierają się dla tego egzaminu.
+const exam = computed(() => route.meta.exam ?? 'matura-podstawowa')
 const groups = computed<{ title: string; items: MenuItem[] }[]>(() => [
-  { title: 'Dziś', items: ['Powtórki', 'Praca domowa', 'Kontynuuj'].map(soon) },
-  { title: 'Ćwiczenia', items: ['Tryb losowy', 'Moje zestawy'].map(soon) },
+  {
+    title: 'Dziś',
+    items: [
+      { label: 'Powtórki', to: { name: 'reviews', params: { exam: exam.value } } },
+      soon('Praca domowa'),
+      ...(props.lastStation
+        ? [
+            {
+              label: 'Kontynuuj',
+              to: {
+                name: 'practice-topic',
+                params: { exam: exam.value, topic: props.lastStation },
+              },
+            },
+          ]
+        : []),
+    ],
+  },
+  {
+    title: 'Ćwiczenia',
+    items: [
+      { label: 'Tryb losowy', to: { name: 'random-task', params: { exam: exam.value } } },
+      soon('Moje zestawy'),
+    ],
+  },
   { title: 'Arkusze', items: ['Arkusz diagnostyczny', 'Arkusz równoległy'].map(soon) },
   {
     title: 'Postęp',
     items: [
       {
         label: 'Wykresy i prognoza',
-        to: { name: 'account-progress', params: { exam: route.meta.exam ?? 'matura-podstawowa' } },
+        to: { name: 'account-progress', params: { exam: exam.value } },
       },
     ],
   },

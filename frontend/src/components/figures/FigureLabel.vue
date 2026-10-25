@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MathText from '@/components/panel/MathText.vue'
+import MathText from '@/components/task/MathText.vue'
 
 defineProps<{ at: [number, number]; text: string }>()
 

@@ -4,7 +4,7 @@ import NoDataYet from '@/components/profile/NoDataYet.vue'
 import ExamHeading from '@/components/stats/ExamHeading.vue'
 import ProgressCharts from '@/components/stats/ProgressCharts.vue'
 import type { Exam } from '@/config/exams'
-import { DAILY_REVIEW_LIMITS, profile } from '@/profile'
+import { profile } from '@/profile'
 import { studentStats } from '@/stats/stats'
 
 defineProps<{ exam: Exam['id'] }>()
@@ -21,7 +21,7 @@ const stats = studentStats()
       v-if="stats"
       :stats="stats"
       :target="profile?.target_percent ?? null"
-      :limit="DAILY_REVIEW_LIMITS[profile?.daily_reviews ?? 'srednio']"
+      :limit="profile?.daily_review_limit ?? 20"
     />
     <NoDataYet v-else :exam-id="exam" />
   </div>

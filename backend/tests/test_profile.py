@@ -81,6 +81,7 @@ def test_new_account_gets_the_default_profile(client, account):
             "podstawowa": exam_date(year, "podstawowa").isoformat(),
             "rozszerzona": exam_date(year, "rozszerzona").isoformat(),
         },
+        "daily_review_limit": 20,
     }
 
 

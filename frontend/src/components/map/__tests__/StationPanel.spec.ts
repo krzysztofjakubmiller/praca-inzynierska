@@ -40,6 +40,29 @@ describe('StationPanel', () => {
     expect(links).toEqual(['Kontynuuj', 'Powtórki · 11', 'Teoria'])
   })
 
+  it('links practice and reviews to the pages of this topic', () => {
+    const links = open('wielomiany').findAll('a')
+    expect(links[0]!.attributes('href')).toBe('/matura-podstawowa/cwicz/wielomiany')
+    expect(links[1]!.attributes('href')).toBe('/matura-podstawowa/powtorki')
+  })
+
+  it('turns practice off when every task of the topic is done', () => {
+    wrapper = mount(StationPanel, {
+      props: {
+        map: BASIC_MAP,
+        progress: {
+          topics: { potegi: { total: 2, done: 2, due: 0, recent: { attempts: 2, correct: 2 } } },
+        },
+        stationId: 'potegi',
+      },
+      global: { plugins: [router] },
+      attachTo: document.body,
+    })
+    const practice = wrapper.findAll('button').find((button) => button.text() === 'Ćwicz')
+    expect(practice?.attributes('disabled')).toBeDefined()
+    expect(wrapper.text()).toContain('Wszystkie zadania z tego tematu są zrobione.')
+  })
+
   it('shows effectiveness from the first variant without judging the topic yet', () => {
     const text = open('wartosc-bezwzgledna').text()
     expect(text).toMatch(/Skuteczność\s*67%\s*dobrze z ostatnich 3/)

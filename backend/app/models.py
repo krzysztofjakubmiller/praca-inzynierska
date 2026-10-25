@@ -217,3 +217,55 @@ class Profile(Base):
     dark_shade: Mapped[str]
     # Ile powtórek może przyjść jednego dnia: mało, średnio albo dużo. Liczby ustala frontend.
     daily_reviews: Mapped[str]
+
+
+# Każda próba rozwiązania zadania przez ucznia, w każdym trybie. Z tych wierszy liczy się
+# postęp na mapie i wykresy w profilu.
+class Solution(Base):
+    __tablename__ = "solution"
+    __table_args__ = (
+        CheckConstraint("mode in ('cwiczenie', 'losowe', 'powtorka')", name="solution_mode_valid"),
+        CheckConstraint("points >= 0", name="solution_points_not_negative"),
+        CheckConstraint(
+            "rating in ('latwy', 'sredni', 'trudny', 'bardzo-trudny')", name="solution_rating_valid"
+        ),
+        Index("solution_by_day", "account_id", "created_at"),
+        Index("solution_by_task", "account_id", "task_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
+    task_id: Mapped[int] = mapped_column(ForeignKey("task.id", ondelete="CASCADE"))
+    mode: Mapped[str]
+    # Zaznaczona odpowiedź w zadaniu zamkniętym, np. "B" albo "PF". Puste przy otwartym.
+    answer: Mapped[str | None]
+    # Dobrze rozwiązane to pełne punkty zadania. Bez osobnej kolumny, bo korepetytor może
+    # później zmienić punkty.
+    points: Mapped[int] = mapped_column(SmallInteger)
+    # Ocena trudności wybrana przez ucznia po zadaniu; puste, dopóki jej nie wybierze.
+    rating: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+# Karta powtórek FSRS: kiedy zadanie ma wrócić do ucznia. Warianty zadania to ta sama karta.
+# Powstaje przy pierwszej ocenie trudności, a każda kolejna ocena, w każdym trybie, ją zmienia.
+class ReviewCard(Base):
+    __tablename__ = "review_card"
+    __table_args__ = (
+        CheckConstraint(
+            "state in ('nauka', 'powtorka', 'ponowna-nauka')", name="review_card_state_valid"
+        ),
+        Index("review_card_due", "account_id", "due"),
+    )
+
+    account_id: Mapped[int] = mapped_column(
+        ForeignKey("account.id", ondelete="CASCADE"), primary_key=True
+    )
+    task_id: Mapped[int] = mapped_column(ForeignKey("task.id", ondelete="CASCADE"), primary_key=True)
+    # Pola karty z biblioteki fsrs, zapisane bez zmian, żeby dało się ją odtworzyć.
+    state: Mapped[str]
+    step: Mapped[int | None] = mapped_column(SmallInteger)
+    stability: Mapped[float | None]
+    difficulty: Mapped[float | None]
+    due: Mapped[datetime]
+    last_review: Mapped[datetime | None]

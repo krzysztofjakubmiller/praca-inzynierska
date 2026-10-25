@@ -34,6 +34,10 @@ const due = computed(() => topic.value?.due ?? 0)
 const passengers = computed(() => passengerCount(topic.value))
 const stops = computed(() => lineStops(props.map, props.stationId))
 const isLast = computed(() => props.progress?.lastStation === props.stationId)
+// Ćwiczenie daje tylko nierobione zadania, więc po ostatnim nie ma już czego otworzyć.
+const finished = computed(
+  () => !!topic.value && topic.value.total > 0 && topic.value.done >= topic.value.total,
+)
 
 const percent = (value: number) => `${Math.round(value * 100)}%`
 // Po „z” rzeczownik stoi w dopełniaczu: z 1 zadania, z 2 zadań, z 32 zadań.
@@ -189,10 +193,24 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
     <p v-if="lastSeen" class="station-panel__seen">Ostatnio: {{ lastSeen }}</p>
 
     <div class="station-panel__actions">
-      <RouterLink class="button station-panel__main" :to="{ name: 'coming-soon' }">
+      <p v-if="finished" class="station-panel__finished">
+        Wszystkie zadania z tego tematu są zrobione. Wrócą w powtórkach.
+      </p>
+      <button v-if="finished" type="button" class="button station-panel__main" disabled>
+        Ćwicz
+      </button>
+      <RouterLink
+        v-else
+        class="button station-panel__main"
+        :to="{ name: 'practice-topic', params: { exam: map.examId, topic: stationId } }"
+      >
         {{ isLast ? 'Kontynuuj' : 'Ćwicz' }}
       </RouterLink>
-      <RouterLink v-if="due" class="button button--quiet" :to="{ name: 'coming-soon' }">
+      <RouterLink
+        v-if="due"
+        class="button button--quiet"
+        :to="{ name: 'reviews', params: { exam: map.examId } }"
+      >
         Powtórki · {{ shortCount(due) }}
       </RouterLink>
       <RouterLink
@@ -378,5 +396,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 
 .station-panel__main {
   grid-column: 1 / -1;
+}
+
+.station-panel__finished {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
 }
 </style>

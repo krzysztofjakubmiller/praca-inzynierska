@@ -14,6 +14,7 @@ const PROFILE = {
   ...SETTINGS,
   exam_years: [2027, 2028, 2029],
   exam_dates: { podstawowa: '2027-05-05', rozszerzona: '2027-05-11' },
+  daily_review_limit: 40,
 }
 
 function answer(status: number, body?: unknown) {

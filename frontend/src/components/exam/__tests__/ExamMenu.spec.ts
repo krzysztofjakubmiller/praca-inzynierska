@@ -10,9 +10,9 @@ beforeAll(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 
-async function render() {
+async function render(lastStation?: string) {
   await router.push('/matura-podstawowa')
-  return mount(ExamMenu, { global: { plugins: [router] } })
+  return mount(ExamMenu, { props: { lastStation }, global: { plugins: [router] } })
 }
 
 describe('ExamMenu', () => {
@@ -36,8 +36,21 @@ describe('ExamMenu', () => {
   })
 
   it('sends pages that do not exist yet to the coming soon page', async () => {
-    const link = (await render()).findAll('a').find((item) => item.text() === 'Tryb losowy')
+    const link = (await render()).findAll('a').find((item) => item.text() === 'Moje zestawy')
     expect(link?.attributes('href')).toBe('/wkrotce')
+  })
+
+  it('opens reviews and random tasks of the same exam', async () => {
+    const links = (await render()).findAll('a')
+    const href = (label: string) => links.find((item) => item.text() === label)?.attributes('href')
+    expect(href('Powtórki')).toBe('/matura-podstawowa/powtorki')
+    expect(href('Tryb losowy')).toBe('/matura-podstawowa/losowe')
+  })
+
+  it('continues the last topic, and only when there is one', async () => {
+    expect((await render()).text()).not.toContain('Kontynuuj')
+    const link = (await render('potegi')).findAll('a').find((item) => item.text() === 'Kontynuuj')
+    expect(link?.attributes('href')).toBe('/matura-podstawowa/cwicz/potegi')
   })
 
   it('tells the drawer to close after a choice', async () => {

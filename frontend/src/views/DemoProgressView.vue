@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
-import StationMarker from '@/components/landing/StationMarker.vue'
+import DemoSign from '@/components/DemoSign.vue'
 import ExamHeading from '@/components/stats/ExamHeading.vue'
 import ProgressCharts from '@/components/stats/ProgressCharts.vue'
 import type { Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
-import { DAILY_REVIEW_LIMITS } from '@/profile'
-import { DEMO_TARGET, demoProgressStats } from '@/stats/demoStats'
+import { DEMO_REVIEW_LIMIT, DEMO_TARGET, demoProgressStats } from '@/stats/demoStats'
 import { setTheme, theme } from '@/theme'
 
 const props = defineProps<{ exam: Exam['id'] }>()
@@ -31,10 +30,7 @@ const stats = computed(() => demoProgressStats(props.exam))
     </header>
 
     <main class="demo__main">
-      <div class="demo__sign">
-        <StationMarker shape="question" class="demo__sign-marker" />
-        <p class="demo__sign-name">Przykładowe dane</p>
-      </div>
+      <DemoSign label="Przykładowe dane" />
       <p class="demo__lead">
         Tak wygląda postęp ucznia po kilku tygodniach nauki. Liczby są wymyślone, wykresy te same,
         które dostaniesz na swoim koncie.
@@ -42,7 +38,7 @@ const stats = computed(() => demoProgressStats(props.exam))
       <RouterLink class="button demo__action" :to="{ name: 'register' }">Załóż konto</RouterLink>
 
       <ExamHeading class="demo__heading" :exam-id="exam" other-route="demo-progress" />
-      <ProgressCharts :stats="stats" :target="DEMO_TARGET" :limit="DAILY_REVIEW_LIMITS.srednio" />
+      <ProgressCharts :stats="stats" :target="DEMO_TARGET" :limit="DEMO_REVIEW_LIMIT" />
 
       <section class="demo__close" aria-labelledby="demo-close-title">
         <h2 id="demo-close-title" class="demo__close-title">Twoja trasa zaczyna się od zadania</h2>
@@ -83,36 +79,6 @@ const stats = computed(() => demoProgressStats(props.exam))
   overflow-x: clip;
 }
 
-/* Czarny znak stacji jak „Jak to działa” na wizytówce: pas wychodzi zza lewej krawędzi. */
-.demo__sign {
-  --marker-fill: var(--ink);
-  --marker-stroke: var(--surface);
-
-  display: flex;
-  align-items: center;
-  gap: 0.3em;
-  width: fit-content;
-  max-width: calc(100% + var(--gutter));
-  margin-left: calc(-1 * var(--gutter));
-  padding: 0.2em 0.62em 0.24em var(--gutter);
-  border-radius: 0 999px 999px 0;
-  background: var(--ink);
-  color: var(--ground);
-  font-size: clamp(1.75rem, 1.1rem + 3.2vw, 3rem);
-}
-
-.demo__sign-marker {
-  flex: none;
-  font-size: 0.6em;
-}
-
-.demo__sign-name {
-  font-weight: 800;
-  font-stretch: 78%;
-  letter-spacing: 0.005em;
-  line-height: 1.02;
-  text-transform: uppercase;
-}
 
 .demo__lead {
   max-width: 34ch;

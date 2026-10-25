@@ -16,6 +16,7 @@ const PROFILE = {
   daily_reviews: 'srednio',
   exam_years: [2027, 2028, 2029],
   exam_dates: { podstawowa: '2027-05-05', rozszerzona: '2027-05-11' },
+  daily_review_limit: 20,
 }
 
 let wrapper: VueWrapper | undefined
