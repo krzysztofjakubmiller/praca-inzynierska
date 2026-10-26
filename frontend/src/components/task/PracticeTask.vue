@@ -6,6 +6,7 @@ import MatchingTable from '@/components/task/MatchingTable.vue'
 import MathText from '@/components/task/MathText.vue'
 import OpenAnswer from '@/components/task/OpenAnswer.vue'
 import TrueFalseTable from '@/components/task/TrueFalseTable.vue'
+import TaskWhiteboard from '@/components/task/TaskWhiteboard.vue'
 import { coordinatePlaneSpan, numberLineRange } from '@/figures'
 import type { Difficulty } from '@/maps/types'
 import {
@@ -125,6 +126,7 @@ const keyText = computed(() => {
       :range="range"
       :span="span"
     />
+    <TaskWhiteboard />
 
     <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
       <button

@@ -40,10 +40,16 @@ function button(wrapper: ReturnType<typeof mount>, text: string) {
 
 afterEach(() => vi.unstubAllGlobals())
 
+// Tablica ma własne testy, a jsdom nie ma płótna ani ResizeObserver, więc tu jej nie ma.
+const stubs = { TaskWhiteboard: true }
+
 describe('PracticeTask', () => {
   it('checks the chosen answer and says it is right', async () => {
     const fetch = serverAnswers({ id: 3, points: 1, max_points: 1, answer: 'C' })
-    const wrapper = mount(PracticeTask, { props: { task: TASK, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task: TASK, mode: 'cwiczenie' },
+    })
 
     expect(button(wrapper, 'Sprawdź').attributes('disabled')).toBeDefined()
     await button(wrapper, 'C.').trigger('click')
@@ -62,7 +68,10 @@ describe('PracticeTask', () => {
 
   it('shows the key and hides "easy" after a wrong answer', async () => {
     serverAnswers({ id: 3, points: 0, max_points: 1, answer: 'C' })
-    const wrapper = mount(PracticeTask, { props: { task: TASK, mode: 'losowe' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task: TASK, mode: 'losowe' },
+    })
 
     await button(wrapper, 'A.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
@@ -78,7 +87,10 @@ describe('PracticeTask', () => {
       { id: 3, points: 1, max_points: 1, answer: 'C' },
       { due: '2026-10-27T12:00:00+00:00', after_exam: false },
     )
-    const wrapper = mount(PracticeTask, { props: { task: TASK, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task: TASK, mode: 'cwiczenie' },
+    })
 
     await button(wrapper, 'C.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
@@ -96,7 +108,10 @@ describe('PracticeTask', () => {
       { id: 3, points: 1, max_points: 1, answer: 'C' },
       { due: '2027-06-01T12:00:00+00:00', after_exam: true },
     )
-    const wrapper = mount(PracticeTask, { props: { task: TASK, mode: 'powtorka' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task: TASK, mode: 'powtorka' },
+    })
 
     await button(wrapper, 'C.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
@@ -117,7 +132,10 @@ describe('PracticeTask', () => {
       answer_format: 'prawda-falsz',
       choices: { '1': 'Zdanie pierwsze', '2': 'Zdanie drugie' },
     }
-    const wrapper = mount(PracticeTask, { props: { task, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task, mode: 'cwiczenie' },
+    })
 
     await wrapper.find('[aria-label="Zdanie 1: prawda"]').trigger('click')
     expect(button(wrapper, 'Sprawdź').attributes('disabled')).toBeDefined()
@@ -136,7 +154,10 @@ describe('PracticeTask', () => {
       choices: { A: 'Tak', B: 'Nie', '1': 'bo $2>1$', '2': 'bo $2<1$' },
       connector: 'ponieważ',
     }
-    const wrapper = mount(PracticeTask, { props: { task, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task, mode: 'cwiczenie' },
+    })
 
     await button(wrapper, 'A.').trigger('click')
     await button(wrapper, '2.').trigger('click')
@@ -157,7 +178,10 @@ describe('PracticeTask', () => {
       max_points: 2,
       model_answer: '$x = 3$',
     }
-    const wrapper = mount(PracticeTask, { props: { task, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task, mode: 'cwiczenie' },
+    })
 
     expect(wrapper.text()).not.toContain('Sprawdź')
     await button(wrapper, 'Pokaż rozwiązanie').trigger('click')
@@ -179,7 +203,10 @@ describe('PracticeTask', () => {
           new Response(JSON.stringify({ detail: ['Nie ma takiego zadania.'] }), { status: 404 }),
         ),
     )
-    const wrapper = mount(PracticeTask, { props: { task: TASK, mode: 'cwiczenie' } })
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task: TASK, mode: 'cwiczenie' },
+    })
 
     await button(wrapper, 'C.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
