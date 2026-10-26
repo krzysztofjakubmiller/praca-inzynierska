@@ -9,3 +9,4 @@ argon2-cffi==25.1.0
 fsrs==6.3.2
 google-auth==2.62.0
 requests==2.34.2
+sympy==1.14.0
