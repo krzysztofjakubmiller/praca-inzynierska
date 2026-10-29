@@ -146,6 +146,7 @@ function startReview() {
     <header class="panel__header">
       <h1>Panel</h1>
       <RouterLink :to="{ name: 'home' }">Wszystkie strony</RouterLink>
+      <RouterLink :to="{ name: 'panel-ai-grades' }">Oceny AI</RouterLink>
     </header>
 
     <section class="panel__card">

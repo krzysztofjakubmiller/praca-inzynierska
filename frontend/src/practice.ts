@@ -117,6 +117,50 @@ export function checkSolution(
   return request(`/tasks/${id}/solution`, { mode, ...given })
 }
 
+export interface Graded extends Checked {
+  /** Dwa, trzy zdania od AI: gdzie jest błąd albo czego zabrakło. */
+  explanation: string
+  /** Rozwiązanie ucznia tak, jak odczytało je AI. */
+  reading: string
+  /** Zapytanie do AI, do którego uczeń może dodać reakcję. */
+  request_id: number
+}
+
+export type Feedback = 'zgadzam-sie' | 'nie-zgadzam-sie' | 'pomoglo' | 'nie-pomoglo'
+
+export function sendFeedback(requestId: number, feedback: Feedback, comment = ''): Promise<null> {
+  return request(`/ai-requests/${requestId}/feedback`, { feedback, comment })
+}
+
+/** Rozwiązanie do oceny przez AI: zdjęcie albo tablica w base64 albo opis z wzorami w $...$. */
+export type Attempt = { image: string; image_type: 'image/jpeg' | 'image/png' } | { text: string }
+
+export function gradeSolution(
+  id: number,
+  mode: PracticeMode,
+  answers: string[],
+  attempt: Attempt,
+): Promise<Graded> {
+  return request(`/tasks/${id}/grade`, { mode, answers, ...attempt })
+}
+
+export function showAiSolution(id: number): Promise<{ solution: string; request_id: number }> {
+  return request(`/tasks/${id}/ai-solution`, {})
+}
+
+export interface ChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+/** „Dopytaj się”: cała rozmowa, ostatnia wiadomość to nowe pytanie ucznia. */
+export function askAboutTask(
+  id: number,
+  messages: ChatMessage[],
+): Promise<{ answer: string; request_id: number }> {
+  return request(`/tasks/${id}/question`, { messages })
+}
+
 /** Jak serwer odczytał wpis, w LaTeX-u; null, gdy zapisu nie da się odczytać. */
 export function readAnswer(kind: ResultKind, text: string): Promise<{ latex: string | null }> {
   return request('/read', { kind, text })

@@ -3,6 +3,9 @@ import { flushPromises, mount } from '@vue/test-utils'
 import PracticeTask from '../PracticeTask.vue'
 import type { PracticeTask as Task } from '@/practice'
 
+// MathLive potrzebuje prawdziwej przeglądarki; tu wystarczą wiersze tekstu w edytorze.
+vi.mock('@/mathKeyboard', () => ({ loadMathLive: () => Promise.resolve() }))
+
 const TASK: Task = {
   id: 7,
   exam: 'matura-podstawowa',
@@ -202,8 +205,42 @@ describe('PracticeTask', () => {
     expect(sentBody(fetch, 0)).toEqual({ kind: 'liczba', text: '4' })
     expect(sentBody(fetch, 1)).toEqual({ mode: 'cwiczenie', answers: ['4'] })
     expect(wrapper.find('.practice-task__result').text()).toContain('0 z 2 pkt. Poprawny wynik:')
+    expect(wrapper.text()).toContain('Oceń rozwiązanie')
     expect(wrapper.find('input').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).not.toContain('łatwy')
+  })
+
+  it('sends a described proof to AI and shows the points with the explanation', async () => {
+    const fetch = serverAnswers({
+      id: 5,
+      points: 1,
+      max_points: 2,
+      answer: 'Szkic dowodu.',
+      explanation: 'Brakuje wniosku.',
+      reading: 'Wyłączam 2.',
+    })
+    const task: Task = {
+      ...TASK,
+      answer_format: 'otwarte',
+      choices: null,
+      max_points: 2,
+      results: [],
+    }
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task, mode: 'cwiczenie' },
+    })
+
+    await button(wrapper, 'Opis').trigger('click')
+    await wrapper.find('textarea').setValue('Wyłączam 2.')
+    await button(wrapper, 'Oceń rozwiązanie').trigger('click')
+    await flushPromises()
+
+    expect(fetch.mock.calls[0]![0]).toContain(`/tasks/${TASK.id}/grade`)
+    expect(sentBody(fetch, 0)).toEqual({ mode: 'cwiczenie', answers: [], text: 'Wyłączam 2.' })
+    expect(wrapper.find('.practice-task__result').text()).toBe('1 z 2 pkt')
+    expect(wrapper.text()).toContain('Brakuje wniosku.')
+    expect(wrapper.text()).toContain('Dopytaj się')
   })
 
   it('says only "Dobrze" when the open result is right', async () => {

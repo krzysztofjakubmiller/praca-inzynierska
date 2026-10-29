@@ -4,8 +4,10 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
+from app import practice
 from app.accounts import token_hash
-from app.models import Account, LoginSession, ReviewCard, Solution
+from app.grading import Grade, Reply, UnreadableSolution
+from app.models import Account, AiRequest, LoginSession, ReviewCard, Solution
 from tests.test_task import make_task
 
 KEY = "klucz-sesji-testowej"
@@ -475,6 +477,132 @@ def test_proof_has_no_answer_fields_and_goes_to_ai(client, account, proof):
     assert shown["results"] == []
     assert response.status_code == 422
     assert response.json()["detail"] == ["Dowód oceni AI na podstawie rozwiązania."]
+
+
+def grade(client, task_id, **body):
+    return client.post(
+        f"/api/practice/tasks/{task_id}/grade", json={"mode": "cwiczenie"} | body, headers=COOKIE
+    )
+
+
+def test_grading_is_unavailable_until_ai_is_connected(client, account, proof, session):
+    response = grade(client, proof.id, text="Wyłączam 2 przed nawias.")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == ["Ocena chwilowo niedostępna."]
+    assert session.scalar(select(Solution)) is None
+
+
+@pytest.mark.parametrize("body", [{}, {"text": "opis", "image": "aGVq"}])
+def test_grading_needs_either_a_photo_or_a_text(client, account, proof, body):
+    response = grade(client, proof.id, **body)
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == ["Wyślij zdjęcie albo opis rozwiązania."]
+
+
+def model_reply(text):
+    return Reply(
+        text=text, model="model", failed=[], input_tokens=10, output_tokens=5, cost=0.001, seconds=1.5
+    )
+
+
+def test_ai_grade_is_saved_with_the_photo_kept_for_analysis(
+    client, account, proof, session, monkeypatch
+):
+    def fake_grade(content, scoring, answer, max_points, image=None, image_type=None, text=None):
+        assert scoring == "2 pkt – pełny dowód."
+        assert image == b"hej" and image_type == "image/png"
+        return Grade(
+            points=1,
+            explanation="Brakuje wniosku.",
+            reading="2(...)",
+            model="model",
+            reply=model_reply('{"points": 1}'),
+        )
+
+    monkeypatch.setattr(practice, "grade", fake_grade)
+    response = grade(client, proof.id, image="aGVq", image_type="image/png")
+
+    assert response.json()["points"] == 1
+    assert response.json()["explanation"] == "Brakuje wniosku."
+    solution = session.scalar(select(Solution))
+    assert solution.open_answer == {
+        "answers": [],
+        "checked": "ai",
+        "model": "model",
+        "reading": "2(...)",
+    }
+    request = session.scalar(select(AiRequest))
+    assert (request.kind, request.image, request.solution_id) == ("ocena", b"hej", solution.id)
+    assert request.reply == '{"points": 1}'
+
+
+def test_unreadable_photo_is_kept_without_points(client, account, proof, session, monkeypatch):
+    def fake_grade(*args, **kwargs):
+        raise UnreadableSolution(model_reply('{"readable": false}'))
+
+    monkeypatch.setattr(practice, "grade", fake_grade)
+    response = grade(client, proof.id, image="aGVq", image_type="image/jpeg")
+
+    assert response.status_code == 422
+    assert session.scalar(select(Solution)) is None
+    assert session.scalar(select(AiRequest.solution_id)) is None
+
+
+def test_question_gets_an_answer_and_is_saved(client, account, proof, session, monkeypatch):
+    def fake_answer(content, scoring, answer, messages):
+        assert messages[-1] == {"role": "user", "content": "Od czego zacząć?"}
+        return model_reply("Zacznij od wyłączenia wspólnego czynnika.")
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    response = client.post(
+        f"/api/practice/tasks/{proof.id}/question",
+        json={"messages": [{"role": "user", "content": "Od czego zacząć?"}]},
+        headers=COOKIE,
+    )
+
+    assert response.json()["answer"] == "Zacznij od wyłączenia wspólnego czynnika."
+    assert session.scalar(select(AiRequest.text)) == "Od czego zacząć?"
+
+
+def test_student_feedback_is_saved_with_a_comment(client, account, proof, session, monkeypatch):
+    monkeypatch.setattr(practice, "show_solution", lambda *args: model_reply("Krok 1."))
+    shown = client.post(f"/api/practice/tasks/{proof.id}/ai-solution", headers=COOKIE).json()
+
+    response = client.post(
+        f"/api/practice/ai-requests/{shown['request_id']}/feedback",
+        json={"feedback": "nie-pomoglo", "comment": "Za krótko."},
+        headers=COOKIE,
+    )
+
+    assert response.status_code == 204
+    request = session.scalar(select(AiRequest))
+    assert (request.feedback, request.feedback_comment) == ("nie-pomoglo", "Za krótko.")
+
+
+def test_ai_stops_at_the_daily_limit(client, account, proof, session, monkeypatch):
+    monkeypatch.setattr(practice, "show_solution", lambda *args: model_reply("Krok 1."))
+    for _ in range(practice.AI_DAILY_LIMIT):
+        session.add(
+            AiRequest(
+                account_id=account.id,
+                task_id=proof.id,
+                kind="rozwiazanie",
+                reply="Krok 1.",
+                model="model",
+                failed_models=[],
+                prompt_version=1,
+                input_tokens=1,
+                output_tokens=1,
+                seconds=1,
+            )
+        )
+    session.flush()
+
+    response = client.post(f"/api/practice/tasks/{proof.id}/ai-solution", headers=COOKIE)
+
+    assert response.status_code == 429
 
 
 def test_preview_shows_what_was_read(client):

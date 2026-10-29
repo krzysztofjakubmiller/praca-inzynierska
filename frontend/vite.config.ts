@@ -7,7 +7,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
-    vue(),
+    // math-field to element edytora wzorów MathLive, a nie komponent Vue.
+    vue({ template: { compilerOptions: { isCustomElement: (tag) => tag === 'math-field' } } }),
     vueDevTools(),
   ],
   server: {

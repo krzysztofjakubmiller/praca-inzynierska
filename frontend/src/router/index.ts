@@ -139,6 +139,12 @@ const router = createRouter({
       meta: { title: 'Zadanie', panel: true },
     },
     {
+      path: '/panel/oceny-ai',
+      name: 'panel-ai-grades',
+      component: () => import('@/views/PanelAiGradesView.vue'),
+      meta: { title: 'Oceny AI', panel: true },
+    },
+    {
       path: '/wkrotce',
       name: 'coming-soon',
       component: () => import('@/views/ComingSoonView.vue'),

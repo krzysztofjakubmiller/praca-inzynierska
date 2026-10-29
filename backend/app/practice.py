@@ -1,9 +1,11 @@
+import base64
+import binascii
 import random
 from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session
 
@@ -11,7 +13,16 @@ from app.access import require_password
 from app.accounts import current_account
 from app.db import get_session
 from app.equivalence import KINDS, equivalent, read_latex
-from app.models import Account, Exam, ReviewCard, Solution, SourceKind, Task, Topic
+from app.grading import (
+    PROMPT_VERSION,
+    GradingUnavailable,
+    Reply,
+    UnreadableSolution,
+    answer_question,
+    grade,
+    show_solution,
+)
+from app.models import AiRequest, Account, Exam, ReviewCard, Solution, SourceKind, Task, Topic
 from app.reviews import daily_limit, day_start, exam_start, tomorrow, update_card
 
 router = APIRouter(prefix="/api/practice", dependencies=[Depends(require_password)])
@@ -32,6 +43,30 @@ class SolutionIn(BaseModel):
     answer: str | None = None
     # Zadanie otwarte: wpisane wyniki końcowe, w kolejności wyników z zasad oceniania.
     answers: list[str] | None = None
+
+
+class GradeIn(BaseModel):
+    mode: Literal["cwiczenie", "losowe", "powtorka"]
+    answers: list[str] | None = None
+    # Zdjęcie albo obraz tablicy w base64, bez zapisu na dysku; albo opis rozwiązania tekstem.
+    image: str | None = None
+    image_type: Literal["image/jpeg", "image/png"] | None = None
+    text: str | None = None
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
+
+
+class QuestionIn(BaseModel):
+    # Cała rozmowa, bo serwer jej nie przechowuje; ostatnia wiadomość to nowe pytanie ucznia.
+    messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+
+
+class FeedbackIn(BaseModel):
+    feedback: Literal["zgadzam-sie", "nie-zgadzam-sie", "pomoglo", "nie-pomoglo"]
+    comment: str | None = Field(default=None, max_length=2000)
 
 
 class ReadIn(BaseModel):
@@ -147,6 +182,195 @@ def save_solution(
         "max_points": task.max_points,
         "answer": answer_key(task),
     }
+
+
+# Ile zapytań do AI (oceny, rozwiązania i pytania razem) ma uczeń na dzień.
+AI_DAILY_LIMIT = 30
+
+
+def open_task_for_ai(session: Session, task_id: int, account: Account) -> Task:
+    task = load_task(session, task_id)
+    if task.answer_format != "otwarte":
+        raise HTTPException(status_code=422, detail=["AI pomaga tylko przy zadaniach otwartych."])
+    used = session.scalar(
+        select(func.count())
+        .select_from(AiRequest)
+        .where(AiRequest.account_id == account.id, AiRequest.created_at >= day_start())
+    )
+    if used >= AI_DAILY_LIMIT:
+        raise HTTPException(
+            status_code=429, detail=["Dzisiejszy limit pytań do AI się skończył. Wróć jutro."]
+        )
+    return task
+
+
+def scoring_text(task: Task) -> str:
+    scoring = task.scoring["rules"]
+    if task.scoring.get("notes"):
+        scoring += "\n\nUwagi:\n" + task.scoring["notes"]
+    return scoring
+
+
+def save_ai_request(
+    session: Session,
+    account: Account,
+    task: Task,
+    kind: str,
+    reply: Reply,
+    image: bytes | None = None,
+    image_type: str | None = None,
+    text: str | None = None,
+    solution: Solution | None = None,
+) -> AiRequest:
+    request = AiRequest(
+        account_id=account.id,
+        task_id=task.id,
+        solution_id=solution.id if solution else None,
+        kind=kind,
+        image=image,
+        image_type=image_type,
+        text=text,
+        reply=reply.text,
+        model=reply.model,
+        failed_models=reply.failed,
+        prompt_version=PROMPT_VERSION,
+        input_tokens=reply.input_tokens,
+        output_tokens=reply.output_tokens,
+        cost=reply.cost,
+        seconds=reply.seconds,
+    )
+    session.add(request)
+    session.flush()
+    return request
+
+
+# Zły wynik albo dowód: rozwiązanie ze zdjęcia, tablicy albo opisu ocenia AI według zasad CKE.
+# Zdjęcie zostaje w ai_request do analizy w pracy, w rozwiązaniu jest tylko odczyt.
+@router.post("/tasks/{task_id}/grade")
+def grade_solution(
+    task_id: int,
+    body: GradeIn,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    task = open_task_for_ai(session, task_id, account)
+    if (body.image is None) == (body.text is None):
+        raise HTTPException(status_code=422, detail=["Wyślij zdjęcie albo opis rozwiązania."])
+    try:
+        image = base64.b64decode(body.image, validate=True) if body.image else None
+    except binascii.Error:
+        raise HTTPException(
+            status_code=422, detail=["Nie udało się odczytać zdjęcia."]
+        ) from None
+    try:
+        result = grade(
+            task.content,
+            scoring_text(task),
+            task.answer,
+            task.max_points,
+            image=image,
+            image_type=body.image_type,
+            text=body.text,
+        )
+    except GradingUnavailable:
+        raise HTTPException(status_code=503, detail=["Ocena chwilowo niedostępna."]) from None
+    except UnreadableSolution as unreadable:
+        save_ai_request(
+            session, account, task, "ocena", unreadable.reply, image, body.image_type, body.text
+        )
+        session.commit()
+        raise HTTPException(
+            status_code=422,
+            detail=["Nie da się odczytać rozwiązania. Wyślij wyraźniejsze zdjęcie."],
+        ) from None
+    solution = Solution(
+        account_id=account.id,
+        task_id=task.id,
+        mode=body.mode,
+        points=min(result.points, task.max_points),
+        open_answer={
+            "answers": body.answers or [],
+            "checked": "ai",
+            "model": result.model,
+            "reading": result.reading,
+        },
+    )
+    session.add(solution)
+    session.flush()
+    request = save_ai_request(
+        session, account, task, "ocena", result.reply, image, body.image_type, body.text, solution
+    )
+    session.commit()
+    return {
+        "id": solution.id,
+        "request_id": request.id,
+        "points": solution.points,
+        "max_points": task.max_points,
+        "answer": answer_key(task),
+        "explanation": result.explanation,
+        "reading": result.reading,
+    }
+
+
+# Pełne rozwiązanie krok po kroku, gdy uczeń o nie poprosi.
+@router.post("/tasks/{task_id}/ai-solution")
+def ai_solution(
+    task_id: int,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    task = open_task_for_ai(session, task_id, account)
+    try:
+        reply = show_solution(task.content, scoring_text(task), task.answer)
+    except GradingUnavailable:
+        raise HTTPException(
+            status_code=503, detail=["Rozwiązanie chwilowo niedostępne."]
+        ) from None
+    request = save_ai_request(session, account, task, "rozwiazanie", reply)
+    session.commit()
+    return {"solution": reply.text, "request_id": request.id}
+
+
+# „Dopytaj się”: pytanie ucznia o zadanie, z całą dotychczasową rozmową.
+@router.post("/tasks/{task_id}/question")
+def ask_about_task(
+    task_id: int,
+    body: QuestionIn,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    task = open_task_for_ai(session, task_id, account)
+    if body.messages[-1].role != "user":
+        raise HTTPException(status_code=422, detail=["Wpisz pytanie."])
+    messages = [message.model_dump() for message in body.messages]
+    try:
+        reply = answer_question(task.content, scoring_text(task), task.answer, messages)
+    except GradingUnavailable:
+        raise HTTPException(
+            status_code=503, detail=["Odpowiedź chwilowo niedostępna."]
+        ) from None
+    request = save_ai_request(
+        session, account, task, "pytanie", reply, text=body.messages[-1].content
+    )
+    session.commit()
+    return {"answer": reply.text, "request_id": request.id}
+
+
+# Reakcja ucznia na ocenę, rozwiązanie albo odpowiedź AI, do analizy w pracy. Druga reakcja
+# zastępuje pierwszą, bo komentarz dochodzi po kliknięciu.
+@router.post("/ai-requests/{request_id}/feedback", status_code=204)
+def give_feedback(
+    request_id: int,
+    body: FeedbackIn,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    request = session.get(AiRequest, request_id)
+    if request is None or request.account_id != account.id:
+        raise HTTPException(status_code=404, detail=["Nie ma takiego zapytania."])
+    request.feedback = body.feedback
+    request.feedback_comment = body.comment or None
+    session.commit()
 
 
 # Podgląd pod polem wyniku: jak serwer odczytał wpis, zanim uczeń go wyśle.

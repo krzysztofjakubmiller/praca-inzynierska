@@ -36,6 +36,12 @@ def engine():
     engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def no_ai_key(monkeypatch):
+    # Testy nigdy nie wysyłają prawdziwych zapytań do modeli, nawet gdy klucz jest w systemie.
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+
+
 @pytest.fixture
 def session(engine):
     # Każdy test działa w transakcji cofanej na końcu, więc nie zostawia po sobie danych.

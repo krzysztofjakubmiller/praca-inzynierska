@@ -288,6 +288,48 @@ class Solution(Base):
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
+# Każde zapytanie ucznia do AI z pełną odpowiedzią modelu: do dziennego limitu i do analizy
+# modeli w pracy. Zdjęcia pobiera się na dysk właściciela i czyści z bazy.
+class AiRequest(Base):
+    __tablename__ = "ai_request"
+    __table_args__ = (
+        CheckConstraint("kind in ('ocena', 'rozwiazanie', 'pytanie')", name="ai_request_kind_valid"),
+        CheckConstraint(
+            "feedback in ('zgadzam-sie', 'nie-zgadzam-sie', 'pomoglo', 'nie-pomoglo')",
+            name="ai_request_feedback_valid",
+        ),
+        Index("ai_request_by_day", "account_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
+    task_id: Mapped[int] = mapped_column(ForeignKey("task.id", ondelete="CASCADE"))
+    # Rozwiązanie z punktami od AI; puste przy nieczytelnym zdjęciu, rozwiązaniu i pytaniu.
+    solution_id: Mapped[int | None] = mapped_column(ForeignKey("solution.id", ondelete="SET NULL"))
+    kind: Mapped[str]
+    image: Mapped[bytes | None]
+    image_type: Mapped[str | None]
+    # Tekst od ucznia: opis rozwiązania albo pytanie w „Dopytaj się”.
+    text: Mapped[str | None]
+    # Odpowiedź modelu bez zmian: JSON oceny albo tekst rozwiązania czy odpowiedzi.
+    reply: Mapped[str]
+    model: Mapped[str]
+    failed_models: Mapped[list] = mapped_column(JSONB)
+    prompt_version: Mapped[int] = mapped_column(SmallInteger)
+    input_tokens: Mapped[int]
+    output_tokens: Mapped[int]
+    cost: Mapped[float | None]
+    seconds: Mapped[float]
+    # Reakcja ucznia: zgoda z oceną albo czy rozwiązanie i odpowiedź pomogły.
+    feedback: Mapped[str | None]
+    feedback_comment: Mapped[str | None]
+    # Punkty od korepetytora za to samo rozwiązanie, do porównania z oceną AI.
+    tutor_points: Mapped[int | None] = mapped_column(SmallInteger)
+    # Nazwa pliku na dysku właściciela, gdy zdjęcie zostało już pobrane i usunięte z bazy.
+    image_file: Mapped[str | None]
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
 # Karta powtórek FSRS: kiedy zadanie ma wrócić do ucznia. Warianty zadania to ta sama karta.
 # Powstaje przy pierwszej ocenie trudności, a każda kolejna ocena, w każdym trybie, ją zmienia.
 class ReviewCard(Base):

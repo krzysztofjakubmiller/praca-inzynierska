@@ -176,4 +176,36 @@ export const panelApi = {
   acceptTemplate: (id: number) =>
     request<TemplateDetails>(`/tasks/${id}/template/accept`, { method: 'POST' }),
   removeTemplate: (id: number) => request<void>(`/tasks/${id}/template`, { method: 'DELETE' }),
+  aiGrades: () => request<AiGrade[]>('/ai/grades'),
+  setTutorPoints: (id: number, points: number) =>
+    request<void>(`/ai/grades/${id}/tutor-points`, json('PUT', { points })),
+}
+
+/** Ocena rozwiązania przez AI w aplikacji, do porównania z oceną korepetytora. */
+export interface AiGrade {
+  id: number
+  created_at: string
+  task_id: number
+  content: string
+  max_points: number
+  model: string
+  /** null, gdy AI nie odczytało rozwiązania. */
+  ai_points: number | null
+  reading: string
+  explanation: string
+  text: string | null
+  has_image: boolean
+  image_file: string | null
+  tutor_points: number | null
+  feedback: string | null
+  feedback_comment: string | null
+}
+
+/** Zdjęcie rozwiązania jako adres do <img>; obraz wymaga hasła panelu, więc idzie przez fetch. */
+export async function aiGradeImage(id: number): Promise<string> {
+  const response = await fetch(`${API_URL}/api/panel/ai/grades/${id}/image`, {
+    headers: authorization('panel'),
+  })
+  if (!response.ok) throw new Rejected(['nie udało się pobrać zdjęcia'])
+  return URL.createObjectURL(await response.blob())
 }

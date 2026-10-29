@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
 import StationIcon from '@/components/map/StationIcon.vue'
+import AiFeedback from '@/components/task/AiFeedback.vue'
+import AiGrade from '@/components/task/AiGrade.vue'
+import AiTutor from '@/components/task/AiTutor.vue'
 import MatchingTable from '@/components/task/MatchingTable.vue'
 import MathText from '@/components/task/MathText.vue'
 import OpenAnswer from '@/components/task/OpenAnswer.vue'
@@ -16,6 +19,7 @@ import {
   Rejected,
   taskSource,
   type Checked,
+  type Graded,
   type PracticeMode,
   type PracticeTask,
   type Rating,
@@ -50,9 +54,20 @@ const rated = ref(false)
 const afterExam = ref(false)
 const busy = ref(false)
 const problems = ref<string[]>([])
+const graded = ref<Graded | null>(null)
+const answers = ref<string[]>([])
+const whiteboard = useTemplateRef<InstanceType<typeof TaskWhiteboard>>('whiteboard')
 
 const isOpen = computed(() => format.value === 'otwarte')
 const isProof = computed(() => isOpen.value && !props.task.results?.length)
+// AI ocenia zły wynik zadania otwartego i każdy dowód, raz.
+const canGrade = computed(
+  () =>
+    isOpen.value &&
+    !props.demo &&
+    !graded.value &&
+    (checked.value ? !correct.value : isProof.value),
+)
 
 const complete = computed(() => {
   if (format.value === 'prawda-falsz') return !picked.value.includes(' ')
@@ -90,7 +105,20 @@ async function send(action: () => Promise<void>) {
   }
 }
 
+function whiteboardImage(): Promise<Blob | null> {
+  return whiteboard.value?.image() ?? Promise.resolve(null)
+}
+
+// Ocena AI zastępuje wynik z programu: zapisuje osobne rozwiązanie z punktami od AI, a ocena
+// trudności trafia już do niego.
+function onGraded(result: Graded) {
+  graded.value = result
+  checked.value = result
+  emit('checked')
+}
+
 function check(given: { answer: string } | { answers: string[] }) {
+  if ('answers' in given) answers.value = given.answers
   return send(async () => {
     checked.value =
       props.demo && 'answer' in given
@@ -136,7 +164,7 @@ const keyText = computed(() => {
       :range="range"
       :span="span"
     />
-    <TaskWhiteboard />
+    <TaskWhiteboard ref="whiteboard" />
 
     <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
       <button
@@ -205,6 +233,27 @@ const keyText = computed(() => {
         </template>
         <template v-else>Źle. Poprawna odpowiedź: {{ keyText }}</template>
       </p>
+      <template v-if="graded">
+        <MathText :text="graded.explanation" class="practice-task__explanation" />
+        <details class="practice-task__reading">
+          <summary>Tak AI odczytało Twoje rozwiązanie</summary>
+          <MathText :text="graded.reading" />
+        </details>
+        <AiFeedback :request-id="graded.request_id" about="ocena" />
+      </template>
+    </template>
+
+    <AiGrade
+      v-if="canGrade"
+      :task-id="task.id"
+      :mode="mode"
+      :answers="answers"
+      :whiteboard="whiteboardImage"
+      @graded="onGraded"
+    />
+
+    <template v-if="checked">
+      <AiTutor v-if="isOpen && !demo" :task-id="task.id" />
 
       <template v-if="afterExam">
         <p class="practice-task__after-exam" role="status">
@@ -333,6 +382,18 @@ const keyText = computed(() => {
 
 .practice-task__after-exam {
   font-weight: 650;
+}
+
+.practice-task__explanation {
+  line-height: 1.55;
+}
+
+.practice-task__reading {
+  color: var(--ink-soft);
+}
+
+.practice-task__reading summary {
+  cursor: pointer;
 }
 
 .practice-task__rating {
