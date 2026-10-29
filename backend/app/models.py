@@ -97,6 +97,9 @@ class Task(Base):
             name="task_reviewed_has_answer",
         ),
         CheckConstraint("has_figure = (figures is not null)", name="task_has_figure_matches"),
+        CheckConstraint(
+            "scoring is null or answer_format = 'otwarte'", name="task_scoring_only_open"
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -121,6 +124,9 @@ class Task(Base):
     figures: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     answer: Mapped[str | None]
     max_points: Mapped[int] = mapped_column(SmallInteger)
+    # Zadanie otwarte: wyniki końcowe dla programu i zasady oceniania CKE dla AI, format w
+    # Scoring (import_tasks.py). Uczeń dostaje zadanie otwarte dopiero wtedy, gdy są.
+    scoring: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
 
     review_status: Mapped[str] = mapped_column(default="do-sprawdzenia")
     read_method: Mapped[str]
@@ -242,6 +248,9 @@ class Solution(Base):
     # Dobrze rozwiązane to pełne punkty zadania. Bez osobnej kolumny, bo korepetytor może
     # później zmienić punkty.
     points: Mapped[int] = mapped_column(SmallInteger)
+    # Zadanie otwarte: wpisy ucznia i kto ocenił, np. {"answers": ["-3; 1"], "checked": "program"}.
+    # Przy ocenie przez AI dochodzą model i odczyt rozwiązania. Zdjęcia się nie zapisuje.
+    open_answer: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     # Ocena trudności wybrana przez ucznia po zadaniu; puste, dopóki jej nie wybierze.
     rating: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

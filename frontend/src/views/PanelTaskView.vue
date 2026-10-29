@@ -10,6 +10,7 @@ import {
   panelApi,
   type ExamOptions,
   type ReviewStatus,
+  type Scoring,
   type TaskDetails,
   type TaskUpdate,
   Rejected,
@@ -27,6 +28,7 @@ const task = ref<TaskDetails | null>(null)
 const form = ref<TaskDetails | null>(null)
 const choices = ref<{ label: string; text: string }[]>([])
 const figuresText = ref('')
+const scoringText = ref('')
 const saved = ref(false)
 
 const exam = computed(() => exams.value.find((exam) => exam.code === task.value?.exam))
@@ -48,6 +50,14 @@ const parsedFigures = computed((): { figures: Figures | null; error: string | nu
     return { figures: null, error: 'Rysunki: niepoprawny JSON' }
   }
 })
+const parsedScoring = computed((): { scoring: Scoring | null; error: string | null } => {
+  if (!scoringText.value.trim()) return { scoring: null, error: null }
+  try {
+    return { scoring: JSON.parse(scoringText.value), error: null }
+  } catch {
+    return { scoring: null, error: 'Zasady oceniania: niepoprawny JSON' }
+  }
+})
 const allFigures = computed(() => Object.values(parsedFigures.value.figures ?? {}))
 const range = computed(() => numberLineRange(allFigures.value))
 const span = computed(() => coordinatePlaneSpan(allFigures.value))
@@ -66,6 +76,7 @@ function fill(details: TaskDetails) {
   form.value = { ...details }
   choices.value = Object.entries(details.choices ?? {}).map(([label, text]) => ({ label, text }))
   figuresText.value = figuresToText(details.figures)
+  scoringText.value = details.scoring ? JSON.stringify(details.scoring, null, 2) : ''
 }
 
 watch(
@@ -82,6 +93,7 @@ watch(
 function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
   const { figures, error } = parsedFigures.value
   if (error) throw new Rejected([error])
+  if (parsedScoring.value.error) throw new Rejected([parsedScoring.value.error])
   return {
     topic: edited.topic,
     source: edited.source,
@@ -100,6 +112,7 @@ function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
     connector: matching.value ? edited.connector?.trim() || null : null,
     figures,
     answer: edited.answer?.trim() || null,
+    scoring: closed.value ? null : parsedScoring.value.scoring,
     review_status: status,
   }
 }
@@ -247,6 +260,16 @@ function remove() {
           <input v-model="form.answer" placeholder="np. B, PFP, A2, $x=3$" spellcheck="false" />
         </label>
 
+        <label v-if="!closed">
+          Zasady oceniania (JSON)
+          <textarea
+            v-model="scoringText"
+            rows="10"
+            spellcheck="false"
+            placeholder='{"results": [{"expected": "$3$", "kind": "liczba"}], "rules": "...", "notes": null}'
+          />
+        </label>
+
         <div class="review__actions">
           <button type="button" class="button" @click="approveAndNext">Sprawdzone, następne</button>
           <button type="submit" class="button button--quiet">Zapisz</button>
@@ -293,6 +316,31 @@ function remove() {
           </li>
         </ol>
         <p v-if="form.answer">Odpowiedź: <MathText :text="form.answer" /></p>
+        <template v-if="!closed">
+          <p v-if="parsedScoring.error" class="review__figure">{{ parsedScoring.error }}</p>
+          <template v-else-if="parsedScoring.scoring">
+            <h3>Wyniki dla programu</h3>
+            <p v-if="!parsedScoring.scoring.results.length" class="review__meta">
+              Brak, dowód ocenia AI.
+            </p>
+            <ul v-else class="review__scoring">
+              <li v-for="(result, index) in parsedScoring.scoring.results" :key="index">
+                <span class="review__meta">
+                  {{ result.part ? `część ${result.part}, ${result.points} pkt · ` : ''
+                  }}{{ result.kind }}:
+                </span>
+                <MathText :text="result.expected" />
+              </li>
+            </ul>
+            <h3>Zasady oceniania (dla AI)</h3>
+            <MathText :text="parsedScoring.scoring.rules" />
+            <template v-if="parsedScoring.scoring.notes">
+              <h3>Uwagi (dla AI)</h3>
+              <MathText :text="parsedScoring.scoring.notes" />
+            </template>
+          </template>
+          <p v-else class="review__figure">Brak zasad oceniania: zadanie nie trafia do ucznia.</p>
+        </template>
       </section>
     </div>
   </main>
@@ -388,5 +436,11 @@ function remove() {
   gap: 0.4rem;
   list-style: none;
   padding: 0;
+}
+
+.review__scoring {
+  display: grid;
+  gap: 0.4rem;
+  padding-left: 1.25rem;
 }
 </style>

@@ -19,6 +19,7 @@ EDITABLE = [
     "connector",
     "figures",
     "answer",
+    "scoring",
     "review_status",
 ]
 
@@ -101,6 +102,58 @@ def test_tasks_are_filtered_by_figure(client, session):
 
     assert listed("true") == [with_figure]
     assert listed("false") == [without_figure]
+
+
+SCORING = {"results": [{"expected": "$3$", "kind": "liczba"}], "rules": "1 pkt – $3$."}
+
+
+def import_scoring(client, *numbers):
+    data = {
+        "exam": "matura-podstawowa",
+        "read_method": "gemini",
+        "tasks": [
+            {"source": "maj", "year": 2024, "month": 5, "number": number, "max_points": 1}
+            | SCORING
+            for number in numbers
+        ],
+    }
+    return client.post("/api/panel/import-scoring", json={"text": json.dumps(data)})
+
+
+def test_scoring_is_added_by_source_without_changing_status(client, session):
+    [task_id] = import_tasks(client, 1)
+    edit(client, task_id, review_status="sprawdzone")
+
+    response = import_scoring(client, 1)
+
+    assert response.json() == {"ids": [task_id]}
+    task = session.get(Task, task_id)
+    assert task.scoring == SCORING
+    assert task.review_status == "sprawdzone"
+
+
+def test_scoring_import_problems_are_returned(client):
+    response = import_scoring(client, 7)
+
+    assert response.status_code == 422
+    assert response.json()["detail"] == ["zadanie 1 (maj 2024, nr 7): nie ma takiego zadania w bazie"]
+
+
+def test_open_tasks_without_scoring_are_listed(client):
+    with_scoring, without_scoring = import_tasks(client, 1, 2)
+    import_scoring(client, 1)
+
+    listed = client.get("/api/panel/tasks", params={"without_scoring": "true"}).json()
+
+    assert [task["id"] for task in listed] == [without_scoring]
+
+
+def test_edit_saves_scoring(client):
+    [task_id] = import_tasks(client, 1)
+
+    edit(client, task_id, scoring=SCORING)
+
+    assert client.get(f"/api/panel/tasks/{task_id}").json()["scoring"] == SCORING
 
 
 def test_import_problems_are_returned(client):

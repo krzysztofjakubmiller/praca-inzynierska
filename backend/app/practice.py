@@ -4,12 +4,13 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import Select, func, select
+from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.access import require_password
 from app.accounts import current_account
 from app.db import get_session
+from app.equivalence import KINDS, equivalent, read_latex
 from app.models import Account, Exam, ReviewCard, Solution, SourceKind, Task, Topic
 from app.reviews import daily_limit, day_start, exam_start, tomorrow, update_card
 
@@ -17,12 +18,25 @@ router = APIRouter(prefix="/api/practice", dependencies=[Depends(require_passwor
 
 CLOSED_FORMATS = ("wielokrotny-wybor", "prawda-falsz", "dobieranie")
 
+# Zadanie gotowe dla ucznia: sprawdzone w panelu, a otwarte także z zasadami oceniania, bez
+# których nie da się go ocenić. Ten sam warunek we wszystkich zapytaniach ucznia i w postępie.
+READY_FOR_STUDENT = and_(
+    Task.review_status == "sprawdzone",
+    or_(Task.answer_format != "otwarte", Task.scoring.is_not(None)),
+)
+
 
 class SolutionIn(BaseModel):
     mode: Literal["cwiczenie", "losowe", "powtorka"]
-    # Zadanie zamknięte: zaznaczona odpowiedź. Otwarte: punkty z samooceny.
+    # Zadanie zamknięte: zaznaczona odpowiedź.
     answer: str | None = None
-    points: int | None = None
+    # Zadanie otwarte: wpisane wyniki końcowe, w kolejności wyników z zasad oceniania.
+    answers: list[str] | None = None
+
+
+class ReadIn(BaseModel):
+    kind: str
+    text: str
 
 
 class DemoAnswer(BaseModel):
@@ -33,10 +47,9 @@ class RatingIn(BaseModel):
     rating: Literal["latwy", "sredni", "trudny", "bardzo-trudny"]
 
 
-# Uczeń widzi tylko zadania sprawdzone w panelu.
 def load_task(session: Session, task_id: int) -> Task:
-    task = session.get(Task, task_id)
-    if task is None or task.review_status != "sprawdzone":
+    task = session.scalar(select(Task).where(Task.id == task_id, READY_FOR_STUDENT))
+    if task is None:
         raise HTTPException(status_code=404, detail=["Nie ma takiego zadania."])
     return task
 
@@ -66,9 +79,12 @@ def task_for_student(session: Session, task: Task) -> dict:
         "connector": task.connector,
         "figures": task.figures,
     }
-    # Przy samoocenie uczeń porównuje swoje rozwiązanie z kluczem, zanim poda punkty.
+    # Pola na wyniki końcowe, bez wyników z klucza; zasad oceniania uczeń nie widzi wcale.
     if task.answer_format == "otwarte":
-        shown["model_answer"] = answer_key(task)
+        shown["results"] = [
+            {key: value for key, value in result.items() if key != "expected"}
+            for result in task.scoring["results"]
+        ]
     return shown
 
 
@@ -78,11 +94,24 @@ def scored_points(task: Task, body: SolutionIn) -> int:
             raise HTTPException(status_code=422, detail=["Zaznacz odpowiedź."])
         # Jak w arkuszu CKE: punkt tylko za całą odpowiedź, także w prawda-fałsz.
         return task.max_points if body.answer == answer_key(task) else 0
-    if body.points is None or not 0 <= body.points <= task.max_points:
+    results = task.scoring["results"]
+    if not results:
+        raise HTTPException(status_code=422, detail=["Dowód oceni AI na podstawie rozwiązania."])
+    if body.answers is None or len(body.answers) != len(results):
+        raise HTTPException(status_code=422, detail=["Wpisz wszystkie wyniki."])
+    correct = [
+        equivalent(given, result["expected"], result["kind"])
+        for given, result in zip(body.answers, results)
+    ]
+    # Podgląd pod polem nie pozwala wysłać nieczytelnego wpisu, więc tu to tylko zabezpieczenie.
+    if None in correct:
         raise HTTPException(
-            status_code=422, detail=[f"Podaj liczbę punktów od 0 do {task.max_points}."]
+            status_code=422, detail=["Nie rozumiem zapisu wyniku. Wpisz go inaczej."]
         )
-    return body.points
+    # Części z własnymi punktami liczą się osobno; inaczej komplet tylko za wszystkie wyniki.
+    if "part" in results[0]:
+        return sum(result["points"] for result, ok in zip(results, correct) if ok)
+    return task.max_points if all(correct) else 0
 
 
 @router.get("/tasks/{task_id}", dependencies=[Depends(current_account)])
@@ -104,6 +133,11 @@ def save_solution(
         mode=body.mode,
         answer=body.answer if task.answer_format in CLOSED_FORMATS else None,
         points=scored_points(task, body),
+        open_answer=(
+            {"answers": body.answers, "checked": "program"}
+            if task.answer_format == "otwarte"
+            else None
+        ),
     )
     session.add(solution)
     session.commit()
@@ -113,6 +147,14 @@ def save_solution(
         "max_points": task.max_points,
         "answer": answer_key(task),
     }
+
+
+# Podgląd pod polem wyniku: jak serwer odczytał wpis, zanim uczeń go wyśle.
+@router.post("/read")
+def read_answer(body: ReadIn):
+    if body.kind not in KINDS:
+        raise HTTPException(status_code=422, detail=["Nieznany rodzaj wyniku."])
+    return {"latex": read_latex(body.text, body.kind)}
 
 
 # Ćwiczenie tematu daje zadania, których uczeń jeszcze nie robił, w losowej kolejności.
@@ -131,7 +173,7 @@ def next_in_topic(
     )
     if topic_id is None:
         raise HTTPException(status_code=404, detail=["Nie ma takiego tematu."])
-    checked = select(Task.id).where(Task.topic_id == topic_id, Task.review_status == "sprawdzone")
+    checked = select(Task.id).where(Task.topic_id == topic_id, READY_FOR_STUDENT)
     total = session.scalar(select(func.count()).select_from(checked.subquery()))
     solved = select(Solution.task_id).where(Solution.account_id == account.id)
     unsolved = session.scalars(checked.where(Task.id.not_in(solved))).all()
@@ -179,7 +221,7 @@ def cards_of(account: Account, exam: str) -> Select:
         .where(
             ReviewCard.account_id == account.id,
             Exam.code == exam,
-            Task.review_status == "sprawdzone",
+            READY_FOR_STUDENT,
         )
     )
 
@@ -268,7 +310,7 @@ def progress(
         select(Topic.code, func.count(Task.id))
         .join(Task, Task.topic_id == Topic.id)
         .join(Exam, Exam.id == Topic.exam_id)
-        .where(Exam.code == exam, Task.review_status == "sprawdzone")
+        .where(Exam.code == exam, READY_FOR_STUDENT)
         .group_by(Topic.code)
     ).all()
     topics = {
@@ -284,7 +326,7 @@ def progress(
         .where(
             Solution.account_id == account.id,
             Exam.code == exam,
-            Task.review_status == "sprawdzone",
+            READY_FOR_STUDENT,
         )
         .order_by(Solution.created_at.desc())
     ).all()
@@ -309,7 +351,7 @@ def progress(
             ReviewCard.account_id == account.id,
             ReviewCard.due < tomorrow(),
             Exam.code == exam,
-            Task.review_status == "sprawdzone",
+            READY_FOR_STUDENT,
         )
         .group_by(Topic.code)
     ).all()
@@ -334,7 +376,7 @@ def demo_task(session: Session) -> Task:
             Task.year == DEMO_TASK["year"],
             Task.number == DEMO_TASK["number"],
             Task.subnumber.is_not_distinct_from(DEMO_TASK["subnumber"]),
-            Task.review_status == "sprawdzone",
+            READY_FOR_STUDENT,
         )
     )
     if task is None:

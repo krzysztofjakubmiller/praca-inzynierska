@@ -173,29 +173,63 @@ describe('PracticeTask', () => {
     expect(sentBody(fetch, 0).answer).toBe('B1')
   })
 
-  it('saves self-assessed points of an open task', async () => {
-    const fetch = serverAnswers({ id: 3, points: 1, max_points: 2, answer: '$x = 3$' })
+  it('sends the final result of an open task once and shows the key when it is wrong', async () => {
+    vi.useFakeTimers()
+    const fetch = serverAnswers(
+      { latex: '4' },
+      { id: 3, points: 0, max_points: 2, answer: '$x = 3$' },
+    )
     const task: Task = {
       ...TASK,
       answer_format: 'otwarte',
       choices: null,
       max_points: 2,
-      model_answer: '$x = 3$',
+      results: [{ kind: 'liczba' }],
     }
     const wrapper = mount(PracticeTask, {
       global: { stubs },
       props: { task, mode: 'cwiczenie' },
     })
 
-    expect(wrapper.text()).not.toContain('Sprawdź')
-    await button(wrapper, 'Pokaż rozwiązanie').trigger('click')
-    expect(wrapper.find('.open-answer__model .katex').exists()).toBe(true)
-    await button(wrapper, '1 z 2').trigger('click')
+    expect(button(wrapper, 'Wyślij wynik').attributes('disabled')).toBeDefined()
+    await wrapper.find('input').setValue('4')
+    await vi.advanceTimersByTimeAsync(400)
     await flushPromises()
+    await button(wrapper, 'Wyślij wynik').trigger('click')
+    await flushPromises()
+    vi.useRealTimers()
 
-    expect(sentBody(fetch, 0)).toEqual({ mode: 'cwiczenie', points: 1 })
-    expect(wrapper.find('[role="status"]').text()).toBe('1 z 2 pkt')
+    expect(sentBody(fetch, 0)).toEqual({ kind: 'liczba', text: '4' })
+    expect(sentBody(fetch, 1)).toEqual({ mode: 'cwiczenie', answers: ['4'] })
+    expect(wrapper.find('.practice-task__result').text()).toContain('0 z 2 pkt. Poprawny wynik:')
+    expect(wrapper.find('input').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).not.toContain('łatwy')
+  })
+
+  it('says only "Dobrze" when the open result is right', async () => {
+    vi.useFakeTimers()
+    serverAnswers({ latex: '3' }, { id: 4, points: 2, max_points: 2, answer: '$x = 3$' })
+    const task: Task = {
+      ...TASK,
+      answer_format: 'otwarte',
+      choices: null,
+      max_points: 2,
+      results: [{ kind: 'liczba' }],
+    }
+    const wrapper = mount(PracticeTask, {
+      global: { stubs },
+      props: { task, mode: 'cwiczenie' },
+    })
+
+    await wrapper.find('input').setValue('3')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await button(wrapper, 'Wyślij wynik').trigger('click')
+    await flushPromises()
+    vi.useRealTimers()
+
+    expect(wrapper.find('.practice-task__result').text()).toBe('Dobrze')
+    expect(wrapper.text()).not.toContain('Poprawny wynik')
   })
 
   it('shows the messages from the server', async () => {

@@ -6,6 +6,15 @@ export type AnswerFormat = 'wielokrotny-wybor' | 'prawda-falsz' | 'dobieranie' |
 export type PracticeMode = 'cwiczenie' | 'losowe' | 'powtorka'
 export type Rating = 'latwy' | 'sredni' | 'trudny' | 'bardzo-trudny'
 
+export type ResultKind = 'liczba' | 'wartosci' | 'przedzial' | 'punkt' | 'rownanie' | 'wyrazenie'
+
+/** Pole na wynik końcowy zadania otwartego; part i points tylko przy kilku częściach. */
+export interface ResultField {
+  part?: string
+  kind: ResultKind
+  points?: number
+}
+
 /** Zadanie w postaci dla ucznia: bez klucza, który przychodzi dopiero po sprawdzeniu. */
 export interface PracticeTask {
   id: number
@@ -22,8 +31,8 @@ export interface PracticeTask {
   choices: Record<string, string> | null
   connector: string | null
   figures: Figures | null
-  /** Tylko przy zadaniu otwartym, do porównania przed samooceną. */
-  model_answer?: string
+  /** Tylko przy zadaniu otwartym; pusta lista to dowód. */
+  results?: ResultField[]
 }
 
 export interface Checked {
@@ -99,13 +108,18 @@ export function randomTask(
   return request(`/random/${exam}${query({ topics, skipped })}`)
 }
 
-/** Zamknięte wysyła zaznaczoną odpowiedź, otwarte punkty z samooceny. */
+/** Zamknięte wysyła zaznaczoną odpowiedź, otwarte wpisane wyniki końcowe. */
 export function checkSolution(
   id: number,
   mode: PracticeMode,
-  given: { answer: string } | { points: number },
+  given: { answer: string } | { answers: string[] },
 ): Promise<Checked> {
   return request(`/tasks/${id}/solution`, { mode, ...given })
+}
+
+/** Jak serwer odczytał wpis, w LaTeX-u; null, gdy zapisu nie da się odczytać. */
+export function readAnswer(kind: ResultKind, text: string): Promise<{ latex: string | null }> {
+  return request('/read', { kind, text })
 }
 
 // Zadanie ze strony demo, do zrobienia bez konta.

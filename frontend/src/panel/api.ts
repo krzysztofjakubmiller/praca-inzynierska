@@ -1,5 +1,6 @@
 import { API_URL, authorization, forgetPassword } from '@/access'
 import type { Figures } from '@/figures'
+import type { ResultKind } from '@/practice'
 import router from '@/router'
 
 export type ReviewStatus = 'do-sprawdzenia' | 'sprawdzone'
@@ -28,6 +29,13 @@ export interface TaskSummary {
   review_status: ReviewStatus
 }
 
+/** Zasady oceniania zadania otwartego: wyniki dla programu, zasady i uwagi CKE dla AI. */
+export interface Scoring {
+  results: { part?: string; expected: string; kind: ResultKind; points?: number }[]
+  rules: string
+  notes?: string | null
+}
+
 export interface TaskUpdate {
   topic: string
   source: string
@@ -44,6 +52,8 @@ export interface TaskUpdate {
   connector: string | null
   figures: Figures | null
   answer: string | null
+  /** Tylko przy zadaniu otwartym; bez zasad zadanie nie trafia do ucznia. */
+  scoring: Scoring | null
   review_status: ReviewStatus
 }
 
@@ -61,6 +71,8 @@ export interface TaskFilters {
   status?: string
   /** 'true' albo 'false'; pusty tekst to wszystkie zadania. */
   has_figure?: string
+  /** 'true': tylko zadania otwarte bez zasad oceniania. */
+  without_scoring?: string
 }
 
 // Backend odrzuca błędne dane kodem 422 z listą problemów po polsku.
@@ -125,4 +137,6 @@ export const panelApi = {
   exportTasks: (ids: number[]) =>
     request<{ exam: string; topic: string }>('/export', json('POST', { ids })),
   importText: (text: string) => request<{ ids: number[] }>('/import', json('POST', { text })),
+  importScoring: (text: string) =>
+    request<{ ids: number[] }>('/import-scoring', json('POST', { text })),
 }

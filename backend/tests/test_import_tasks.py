@@ -262,3 +262,83 @@ def test_broken_json_gets_a_hint():
         parse_json(r'{"content": "$\sqrt{2}$"}')
 
     assert "pojedynczy ukośnik" in error.value.problems[0]
+
+
+def open_task(**changes):
+    fields = {
+        "answer_format": "otwarte",
+        "choices": None,
+        "answer": "$x \\in (-3, 1)$",
+        "max_points": 2,
+        "scoring": {
+            "results": [{"expected": "$x \\in (-3, 1)$", "kind": "przedzial"}],
+            "rules": "1 pkt – obliczenie pierwiastków.\n2 pkt – zapisanie zbioru $(-3, 1)$.",
+        },
+    }
+    fields.update(changes)
+    return task(**fields)
+
+
+def parts(*points):
+    return [
+        {"part": str(number), "expected": "$1$", "kind": "liczba", "points": value}
+        for number, value in enumerate(points, start=1)
+    ]
+
+
+def test_scoring_is_saved_without_empty_fields(session):
+    [task_id] = import_tasks(session, task_file(open_task()))
+
+    scoring = session.get(Task, task_id).scoring
+    assert scoring["results"] == [{"expected": "$x \\in (-3, 1)$", "kind": "przedzial"}]
+    assert "notes" not in scoring
+
+
+def test_scoring_only_in_open_tasks(session):
+    problems = rejected(session, task_file(task(scoring=open_task()["scoring"])))
+
+    assert problems == [
+        "zadanie 1 (maj 2024, nr 3): zasady oceniania (scoring) są tylko przy zadaniu otwartym"
+    ]
+
+
+def test_result_must_be_readable(session):
+    data = open_task()
+    data["scoring"]["results"][0]["expected"] = "$x=$"
+
+    problems = rejected(session, task_file(data))
+
+    assert problems[0].startswith("zadanie 1 (maj 2024, nr 3): wynik 1: nie da się odczytać")
+
+
+@pytest.mark.parametrize(
+    "results, problem",
+    [
+        (parts(2), "part jest przy wszystkich wynikach albo przy żadnym, i tylko przy kilku"),
+        (parts(1, None), "przy wynikach z part każdy potrzebuje points"),
+        (parts(1, 2), "części dają razem 3 pkt, a zadanie ma 2"),
+        (
+            [{"expected": "$1$", "kind": "liczba", "points": 2}],
+            "points jest tylko przy wynikach z part",
+        ),
+    ],
+)
+def test_parts_need_their_points(session, results, problem):
+    data = open_task()
+    data["scoring"]["results"] = results
+
+    assert rejected(session, task_file(data)) == [f"zadanie 1 (maj 2024, nr 3): {problem}"]
+
+
+def test_parts_with_points_adding_up_are_accepted(session):
+    data = open_task()
+    data["scoring"]["results"] = parts(1, 1)
+
+    assert import_tasks(session, task_file(data))
+
+
+def test_proof_has_no_results(session):
+    data = open_task()
+    data["scoring"]["results"] = []
+
+    assert import_tasks(session, task_file(data))

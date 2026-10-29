@@ -10,7 +10,15 @@ from sqlalchemy.orm import Session
 from app.access import require_panel_password
 from app.db import get_session
 from app.figures import figures_json
-from app.import_tasks import ImportRejected, TaskIn, import_tasks, parse_json, task_problems
+from app.import_scoring import import_scoring
+from app.import_tasks import (
+    ImportRejected,
+    TaskIn,
+    import_tasks,
+    parse_json,
+    scoring_json,
+    task_problems,
+)
 from app.models import Exam, SourceKind, Task, Topic
 
 router = APIRouter(prefix="/api/panel", dependencies=[Depends(require_panel_password)])
@@ -62,6 +70,7 @@ def task_details(session: Session, task: Task) -> dict:
         "connector": task.connector,
         "figures": task.figures,
         "answer": task.answer,
+        "scoring": task.scoring,
         "review_status": task.review_status,
         "read_method": task.read_method,
         "read_model": task.read_model,
@@ -106,6 +115,8 @@ def list_tasks(
     topic: str | None = None,
     status: str | None = None,
     has_figure: bool | None = None,
+    # Zadania otwarte, którym brakuje zasad oceniania, więc nie trafiają jeszcze do ucznia.
+    without_scoring: bool = False,
     session: Session = Depends(get_session),
 ):
     query = (
@@ -123,6 +134,8 @@ def list_tasks(
         query = query.where(Task.review_status == status)
     if has_figure is not None:
         query = query.where(Task.has_figure == has_figure)
+    if without_scoring:
+        query = query.where(Task.answer_format == "otwarte", Task.scoring.is_(None))
 
     return [
         {
@@ -181,6 +194,7 @@ def update_task(task_id: int, update: TaskUpdate, session: Session = Depends(get
     task.connector = update.connector
     task.figures = figures_json(update.figures)
     task.answer = update.answer
+    task.scoring = scoring_json(update.scoring)
     if update.review_status == "sprawdzone" and task.review_status != "sprawdzone":
         task.reviewed_at = datetime.now(UTC)
     if update.review_status == "do-sprawdzenia":
@@ -262,6 +276,7 @@ def exported_task(session: Session, task: Task) -> dict:
         "connector": task.connector,
         "figures": task.figures,
         "answer": task.answer,
+        "scoring": task.scoring,
     }
     # Puste pola pomijane jak w plikach od Gemini, żeby plik dało się czytać.
     return {key: value for key, value in fields.items() if value is not None}
@@ -288,6 +303,16 @@ def export_tasks(body: TaskIds, session: Session = Depends(get_session)):
 def import_text(body: ImportText, session: Session = Depends(get_session)):
     try:
         ids = import_tasks(session, parse_json(body.text))
+    except ImportRejected as error:
+        raise rejected(error.problems) from None
+    session.commit()
+    return {"ids": ids}
+
+
+@router.post("/import-scoring")
+def import_scoring_text(body: ImportText, session: Session = Depends(get_session)):
+    try:
+        ids = import_scoring(session, parse_json(body.text))
     except ImportRejected as error:
         raise rejected(error.problems) from None
     session.commit()

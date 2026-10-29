@@ -49,6 +49,10 @@ def open_task(session):
         answer="$x = 3$",
         max_points=2,
         review_status="sprawdzone",
+        scoring={
+            "results": [{"expected": "$x = 3$", "kind": "liczba"}],
+            "rules": "2 pkt – rozwiązanie równania: $x = 3$.",
+        },
     )
 
 
@@ -74,16 +78,24 @@ def test_student_gets_the_task_without_the_answer(client, account, task):
     assert response.status_code == 200
     shown = response.json()
     assert "answer" not in shown
-    assert "model_answer" not in shown
     assert shown["topic_name"] == "Logarytmy"
     assert shown["source"] == "Maj"
     assert shown["choices"] == {"A": "$1$", "B": "$2$", "C": "$3$", "D": "$4$"}
 
 
-def test_open_task_shows_the_model_answer_for_self_assessment(client, account, open_task):
+def test_open_task_shows_answer_fields_without_the_key_or_rules(client, account, open_task):
     shown = client.get(f"/api/practice/tasks/{open_task.id}", headers=COOKIE).json()
 
-    assert shown["model_answer"] == "$x = 3$"
+    assert shown["results"] == [{"kind": "liczba"}]
+    assert "scoring" not in shown and "answer" not in shown
+
+
+def test_open_task_without_scoring_is_hidden_from_students(client, account, open_task, session):
+    open_task.scoring = None
+    session.flush()
+
+    assert client.get(f"/api/practice/tasks/{open_task.id}", headers=COOKIE).status_code == 404
+    assert next_in_topic(client).json()["total"] == 0
 
 
 def test_unchecked_task_is_hidden_from_students(client, account, session):
@@ -134,19 +146,57 @@ def test_closed_task_needs_an_answer(client, account, task):
     assert response.json()["detail"] == ["Zaznacz odpowiedź."]
 
 
-def test_open_task_saves_self_assessed_points(client, account, open_task, session):
-    response = solve(client, open_task.id, points=1)
+def test_right_open_result_scores_full_points(client, account, open_task, session):
+    response = solve(client, open_task.id, answers=["6/2"])
 
-    assert response.json()["points"] == 1
-    assert session.scalar(select(Solution.answer)) is None
+    assert response.json()["points"] == 2
+    saved = session.scalar(select(Solution))
+    assert saved.answer is None
+    assert saved.open_answer == {"answers": ["6/2"], "checked": "program"}
 
 
-@pytest.mark.parametrize("points", [None, -1, 3])
-def test_open_task_rejects_points_outside_the_task(client, account, open_task, points):
-    response = solve(client, open_task.id, points=points)
+def test_wrong_open_result_scores_nothing_and_shows_the_key(client, account, open_task):
+    response = solve(client, open_task.id, answers=["4"])
+
+    assert response.json()["points"] == 0
+    assert response.json()["answer"] == "$x = 3$"
+
+
+@pytest.mark.parametrize(
+    "answers, problem",
+    [
+        (None, "Wpisz wszystkie wyniki."),
+        (["3", "4"], "Wpisz wszystkie wyniki."),
+        (["???"], "Nie rozumiem zapisu wyniku. Wpisz go inaczej."),
+    ],
+)
+def test_open_result_must_be_complete_and_readable(client, account, open_task, answers, problem):
+    response = solve(client, open_task.id, answers=answers)
 
     assert response.status_code == 422
-    assert response.json()["detail"] == ["Podaj liczbę punktów od 0 do 2."]
+    assert response.json()["detail"] == [problem]
+
+
+def test_parts_score_their_own_points(client, account, session):
+    task = make_task(
+        session,
+        number=21,
+        answer_format="otwarte",
+        choices=None,
+        answer="$6{,}38$, $6{,}5$",
+        max_points=2,
+        review_status="sprawdzone",
+        scoring={
+            "results": [
+                {"part": "1", "expected": "$6{,}38$", "kind": "liczba", "points": 1},
+                {"part": "2", "expected": "$6{,}5$", "kind": "liczba", "points": 1},
+            ],
+            "rules": "Po 1 pkt za każdą lukę.",
+        },
+    )
+
+    assert solve(client, task.id, answers=["6,38", "7"]).json()["points"] == 1
+    assert solve(client, task.id, answers=["6,38", "6,5"]).json()["points"] == 2
 
 
 def test_rating_is_saved_once(client, account, task, session):
@@ -164,8 +214,8 @@ def test_wrong_answer_cannot_be_rated_easy(client, account, task):
     assert rate(client, solution_id, "sredni").status_code == 200
 
 
-def test_partial_points_cannot_be_rated_easy(client, account, open_task):
-    solution_id = solve(client, open_task.id, points=1).json()["id"]
+def test_wrong_open_result_cannot_be_rated_easy(client, account, open_task):
+    solution_id = solve(client, open_task.id, answers=["4"]).json()["id"]
 
     assert rate(client, solution_id, "latwy").status_code == 422
 
@@ -402,3 +452,34 @@ def test_missing_demo_task_is_reported(client):
     response = client.get("/api/practice/demo")
 
     assert response.status_code == 404
+
+
+@pytest.fixture
+def proof(session):
+    return make_task(
+        session,
+        number=22,
+        answer_format="otwarte",
+        choices=None,
+        answer="Szkic dowodu.",
+        max_points=2,
+        review_status="sprawdzone",
+        scoring={"results": [], "rules": "2 pkt – pełny dowód."},
+    )
+
+
+def test_proof_has_no_answer_fields_and_goes_to_ai(client, account, proof):
+    shown = client.get(f"/api/practice/tasks/{proof.id}", headers=COOKIE).json()
+    response = solve(client, proof.id, answers=[])
+
+    assert shown["results"] == []
+    assert response.status_code == 422
+    assert response.json()["detail"] == ["Dowód oceni AI na podstawie rozwiązania."]
+
+
+def test_preview_shows_what_was_read(client):
+    read = client.post("/api/practice/read", json={"kind": "liczba", "text": "1/4"}).json()
+    unreadable = client.post("/api/practice/read", json={"kind": "liczba", "text": "???"}).json()
+
+    assert read["latex"] == "\\frac{1}{4}"
+    assert unreadable == {"latex": None}

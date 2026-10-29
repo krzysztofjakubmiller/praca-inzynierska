@@ -51,6 +51,9 @@ const afterExam = ref(false)
 const busy = ref(false)
 const problems = ref<string[]>([])
 
+const isOpen = computed(() => format.value === 'otwarte')
+const isProof = computed(() => isOpen.value && !props.task.results?.length)
+
 const complete = computed(() => {
   if (format.value === 'prawda-falsz') return !picked.value.includes(' ')
   if (format.value === 'dobieranie') return /\D/.test(picked.value) && /\d/.test(picked.value)
@@ -87,7 +90,7 @@ async function send(action: () => Promise<void>) {
   }
 }
 
-function check(given: { answer: string } | { points: number }) {
+function check(given: { answer: string } | { answers: string[] }) {
   return send(async () => {
     checked.value =
       props.demo && 'answer' in given
@@ -194,10 +197,12 @@ const keyText = computed(() => {
 
     <template v-if="checked">
       <p class="practice-task__result" role="status">
-        <template v-if="format === 'otwarte'"
-          >{{ checked.points }} z {{ checked.max_points }} pkt</template
-        >
-        <template v-else-if="correct">Dobrze</template>
+        <template v-if="correct">Dobrze</template>
+        <template v-else-if="isOpen">
+          {{ checked.points }} z {{ checked.max_points }} pkt<template v-if="!isProof"
+            >. Poprawny wynik: <MathText :text="checked.answer"
+          /></template>
+        </template>
         <template v-else>Źle. Poprawna odpowiedź: {{ keyText }}</template>
       </p>
 

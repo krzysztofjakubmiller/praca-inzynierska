@@ -9,8 +9,30 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import SessionLocal
+from app.equivalence import expected_problem
 from app.figures import Figure, figure_problems, figure_texts, figures_json
 from app.models import Exam, SourceKind, Task, Topic
+
+
+# Wynik końcowy zadania otwartego, który program porównuje z wpisem ucznia (equivalence.py).
+class Result(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Numer zdania albo luki, tylko przy kilku wynikach z osobnymi punktami.
+    part: str | None = None
+    expected: str
+    kind: Literal["liczba", "wartosci", "przedzial", "punkt", "rownanie", "wyrazenie"]
+    points: int | None = Field(default=None, ge=1)
+
+
+# Zasady oceniania zadania otwartego. Pusta lista wyników to dowód. Zasady i uwagi z PDF CKE
+# czyta tylko AI, uczeń ich nie widzi.
+class Scoring(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    results: list[Result]
+    rules: str = Field(min_length=1)
+    notes: str | None = None
 
 
 class TaskIn(BaseModel):
@@ -31,6 +53,7 @@ class TaskIn(BaseModel):
     # Klucz "content" to rysunek pod treścią, etykieta wariantu to rysunek w tym wariancie.
     figures: dict[str, Figure] | None = None
     answer: str | None = None
+    scoring: Scoring | None = None
 
 
 class TaskFile(BaseModel):
@@ -141,7 +164,43 @@ def task_problems(task: TaskIn) -> list[str]:
                 problems.append(f"odpowiedź {task.answer}: przy P/F po jednej literze P albo F na zdanie")
         elif set(task.answer) - set(task.choices):
             problems.append(f"odpowiedź {task.answer}: etykieta spoza wariantów")
+    if task.scoring is not None:
+        problems += scoring_problems(task.scoring, task.answer_format, task.max_points)
     return problems
+
+
+def scoring_problems(scoring: Scoring, answer_format: str, max_points: int) -> list[str]:
+    if answer_format != "otwarte":
+        return ["zasady oceniania (scoring) są tylko przy zadaniu otwartym"]
+    problems = text_problems(scoring.rules) + text_problems(scoring.notes or "")
+    for number, result in enumerate(scoring.results, start=1):
+        place = f"wynik {number}"
+        problems += [f"{place}: {problem}" for problem in text_problems(result.expected)]
+        # Wzorzec, którego nie da się odczytać, wywróciłby sprawdzanie dopiero u ucznia.
+        problem = expected_problem(result.expected, result.kind)
+        if problem:
+            problems.append(f"{place}: {problem}")
+
+    # Części z własnymi punktami (np. dwa zdania w 12.1) albo jedna odpowiedź za komplet.
+    with_part = [result for result in scoring.results if result.part is not None]
+    with_points = [result for result in scoring.results if result.points is not None]
+    if not with_part:
+        if with_points:
+            problems.append("points jest tylko przy wynikach z part")
+    elif len(with_part) != len(scoring.results) or len(with_part) == 1:
+        problems.append("part jest przy wszystkich wynikach albo przy żadnym, i tylko przy kilku")
+    elif len(with_points) != len(with_part):
+        problems.append("przy wynikach z part każdy potrzebuje points")
+    elif sum(result.points for result in with_points) != max_points:
+        total = sum(result.points for result in with_points)
+        problems.append(f"części dają razem {total} pkt, a zadanie ma {max_points}")
+    return problems
+
+
+def scoring_json(scoring: Scoring | None) -> dict | None:
+    if scoring is None:
+        return None
+    return scoring.model_dump(exclude_none=True)
 
 
 def task_label(index: int, task: TaskIn) -> str:
@@ -245,6 +304,7 @@ def import_tasks(session: Session, data) -> list[int]:
                 connector=task.connector,
                 figures=figures_json(task.figures),
                 answer=task.answer,
+                scoring=scoring_json(task.scoring),
                 read_method=file.read_method,
                 read_model=file.read_model,
                 ai_content=task.content if file.read_method != "recznie" else None,

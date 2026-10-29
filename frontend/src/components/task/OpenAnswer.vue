@@ -1,46 +1,61 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import MathText from '@/components/task/MathText.vue'
+import { computed, ref } from 'vue'
+import AnswerInput from '@/components/task/AnswerInput.vue'
 import type { PracticeTask } from '@/practice'
 
-// Samoocena zadania otwartego: uczeń rozwiązuje w zeszycie, porównuje z kluczem i sam podaje
-// punkty. Zadania z krokami schematu CKE mają zamiast tego sprawdzanie krok po kroku.
-defineProps<{ task: PracticeTask }>()
+// Zadanie otwarte: uczeń rozwiązuje w zeszycie albo na tablicy i wpisuje tylko wynik końcowy,
+// raz. Punkty liczy backend. Dowód nie ma wyniku do wpisania, ocenia go AI.
+const props = defineProps<{ task: PracticeTask }>()
 
-const emit = defineEmits<{ done: [result: { points: number }] }>()
+const emit = defineEmits<{ done: [given: { answers: string[] }] }>()
 
-const shown = ref(false)
-const chosen = ref<number | null>(null)
+const results = computed(() => props.task.results ?? [])
+const answers = ref(results.value.map(() => ''))
+const readable = ref<(boolean | null)[]>(results.value.map(() => null))
+const sent = ref(false)
 
-function choose(points: number) {
-  chosen.value = points
-  emit('done', { points })
+const ready = computed(() => readable.value.every((ok) => ok === true))
+
+function label(index: number): string {
+  const result = results.value[index]!
+  if (!result.part) return results.value.length === 1 ? 'Twój wynik' : `Wynik ${index + 1}`
+  return `Część ${result.part} (${result.points} pkt)`
+}
+
+function send() {
+  sent.value = true
+  emit('done', { answers: answers.value.map((answer) => answer.trim()) })
 }
 </script>
 
 <template>
   <div class="open-answer">
-    <button v-if="!shown" type="button" class="button" @click="shown = true">
-      Pokaż rozwiązanie
-    </button>
+    <template v-if="results.length">
+      <p class="open-answer__intro">
+        Rozwiąż zadanie w zeszycie albo na tablicy i wpisz wynik końcowy. Masz jedną próbę.
+      </p>
+      <AnswerInput
+        v-for="(result, index) in results"
+        :key="index"
+        v-model="answers[index]!"
+        v-model:readable="readable[index]"
+        :kind="result.kind"
+        :label="label(index)"
+        :disabled="sent"
+      />
+      <button
+        type="button"
+        class="button open-answer__send"
+        :disabled="!ready || sent"
+        @click="send"
+      >
+        Wyślij wynik
+      </button>
+    </template>
     <template v-else>
-      <section class="open-answer__model" aria-label="Rozwiązanie z klucza">
-        <MathText :text="task.model_answer ?? ''" />
-      </section>
-      <fieldset class="open-answer__points">
-        <legend>Ile punktów ma Twoje rozwiązanie?</legend>
-        <button
-          v-for="points in task.max_points + 1"
-          :key="points"
-          type="button"
-          class="button button--quiet"
-          :aria-pressed="chosen === points - 1"
-          :disabled="chosen !== null"
-          @click="choose(points - 1)"
-        >
-          {{ points - 1 }} z {{ task.max_points }}
-        </button>
-      </fieldset>
+      <p class="open-answer__intro">
+        To zadanie na dowodzenie. Rozwiąż je w zeszycie albo na tablicy i wyślij do oceny przez AI.
+      </p>
     </template>
   </div>
 </template>
@@ -48,33 +63,14 @@ function choose(points: number) {
 <style scoped>
 .open-answer {
   display: grid;
-  justify-items: start;
   gap: 1rem;
 }
 
-.open-answer__model {
-  width: 100%;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
+.open-answer__intro {
+  color: var(--ink-soft);
 }
 
-.open-answer__points {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.open-answer__points legend {
-  margin-bottom: 0.5rem;
-  font-weight: 650;
-}
-
-.open-answer__points .button[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--ground);
+.open-answer__send {
+  justify-self: start;
 }
 </style>

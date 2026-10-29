@@ -10,7 +10,13 @@ const router = useRouter()
 const { problems, run } = useProblems()
 
 const exams = ref<ExamOptions[]>([])
-const filters = ref({ exam: '', topic: '', status: 'do-sprawdzenia', has_figure: '' })
+const filters = ref({
+  exam: '',
+  topic: '',
+  status: 'do-sprawdzenia',
+  has_figure: '',
+  without_scoring: '',
+})
 const tasks = ref<TaskSummary[]>([])
 const selected = ref<number[]>([])
 const importText = ref('')
@@ -68,6 +74,17 @@ function importTasks() {
     const { ids } = await panelApi.importText(importText.value)
     importText.value = ''
     await router.push({ name: 'panel-task', params: { id: ids[0] } })
+  })
+}
+
+// Zasady dochodzą do zadań, które już są w bazie, więc lista zostaje na miejscu.
+function importScoring() {
+  notice.value = ''
+  return run(async () => {
+    const { ids } = await panelApi.importScoring(importText.value)
+    importText.value = ''
+    notice.value = `Zapisano zasady oceniania zadań: ${ids.length}.`
+    await refreshTasks()
   })
 }
 
@@ -137,9 +154,17 @@ function startReview() {
         JSON od Gemini
         <textarea v-model="importText" rows="8" spellcheck="false" />
       </label>
-      <div>
+      <div class="import__actions">
         <button type="button" class="button" :disabled="!importText.trim()" @click="importTasks">
-          Importuj
+          Importuj zadania
+        </button>
+        <button
+          type="button"
+          class="button button--quiet"
+          :disabled="!importText.trim()"
+          @click="importScoring"
+        >
+          Importuj zasady oceniania
         </button>
       </div>
     </section>
@@ -191,6 +216,13 @@ function startReview() {
             <option value="">wszystkie</option>
             <option value="true">z rysunkiem</option>
             <option value="false">bez rysunku</option>
+          </select>
+        </label>
+        <label>
+          Zasady oceniania
+          <select v-model="filters.without_scoring">
+            <option value="">wszystkie</option>
+            <option value="true">otwarte bez zasad</option>
           </select>
         </label>
       </div>
@@ -271,6 +303,12 @@ function startReview() {
 </template>
 
 <style scoped>
+.import__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .task-list__toolbar,
 .task-list__selection {
   display: flex;
