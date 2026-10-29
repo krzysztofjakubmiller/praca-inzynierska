@@ -23,6 +23,8 @@ from app.equivalence import equivalent, expected_problem, read_latex
         ("2sqrt(13)", "$|BC|=2\\sqrt{13}$", "liczba"),
         ("2sqrt(2)", "$\\sqrt{8}$", "liczba"),
         ("2√2", "$2\\sqrt{2}$", "liczba"),
+        ("x√2", "$\\sqrt{2}x$", "wyrazenie"),
+        ("xsqrt(2)", "$\\sqrt{2}x$", "wyrazenie"),
         ("\\frac{\\sqrt{3}}{2}", "$\\frac{\\sqrt{3}}{2}$", "liczba"),
         ("sqrt(3)/2", "$\\frac{\\sqrt{3}}{2}$", "liczba"),
         ("2^10", "$1024$", "liczba"),
@@ -124,6 +126,13 @@ def test_expected_problem_names_the_result():
         ("(-3; 1]", "przedzial", "\\left(-3, 1\\right]"),
         ("y=2x+1", "rownanie", "y = 2 x + 1"),
         ("x(3x-2)", "wyrazenie", "x \\left(3 x - 2\\right)"),
+        ("3^2", "liczba", "3^{2}"),
+        ("22/48", "liczba", "\\frac{22}{48}"),
+        ("1/2+1/3", "liczba", "\\frac{1}{2} + \\frac{1}{3}"),
+        ("21*(1/3)", "liczba", "21 \\cdot \\frac{1}{3}"),
+        ("2(3+1)", "liczba", "2 \\left(3 + 1\\right)"),
+        ("x√2", "wyrazenie", "x \\sqrt{2}"),
+        ("9^9^9^9", "liczba", None),
     ],
 )
 def test_preview_shows_what_was_read(student, kind, shown):

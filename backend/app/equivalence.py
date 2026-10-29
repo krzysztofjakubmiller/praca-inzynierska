@@ -143,8 +143,9 @@ def latex_to_plain(text: str) -> str:
 
 
 def split_letters(match: re.Match) -> str:
-    word = match.group()
-    return word if word in FUNCTIONS else " ".join(word)
+    # Znane nazwy zostają w całości, reszta to pojedyncze zmienne: "xsqrt" z "x√2" to x razy
+    # sqrt, a nie x, s, q, r, t.
+    return " ".join(re.findall(r"sqrt|root|pi|oo|[A-Za-z]", match.group()))
 
 
 def parse_unevaluated(text: str, names: dict):
@@ -174,7 +175,7 @@ def parse_safely(text: str, names: dict):
     return checked_doit(parse_unevaluated(text, names))
 
 
-def read_expression(text: str) -> Expr:
+def plain_text(text: str) -> str:
     for old, new in REPLACEMENTS:
         text = text.replace(old, new)
     text = latex_to_plain(text).replace("^", "**").replace(",", ".")
@@ -186,20 +187,27 @@ def read_expression(text: str) -> Expr:
         raise Unreadable
     # "xy" to x razy y, a "2x" i "x2" to mnożenie, a nie jedna nazwa.
     text = re.sub(r"[A-Za-z]+", split_letters, text)
-    text = re.sub(r"(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])", " ", text)
-    expr = parse_safely(text, NAMES)
+    return re.sub(r"(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])", " ", text)
+
+
+def read_expression(text: str) -> Expr:
+    expr = parse_safely(plain_text(text), NAMES)
     if not isinstance(expr, Expr) or expr.has(zoo, nan):
         raise Unreadable
     return expr
 
 
-def read_number(text: str) -> Expr:
+def number_text(text: str) -> str:
     text = NAME_PREFIX.sub("", text, count=1)
     unit = UNIT.search(text)
     # "2 pi" to liczba, a nie 2 z jednostką "pi".
     if unit and unit.group().strip(" .") not in FUNCTIONS:
         text = text[: unit.start()]
-    number = read_expression(text)
+    return text
+
+
+def read_number(text: str) -> Expr:
+    number = read_expression(number_text(text))
     if number.free_symbols:
         raise Unreadable
     return number
@@ -425,20 +433,32 @@ def shown(value: Expr, decimal: bool) -> str:
     return latex(value)
 
 
+def typed_latex(text: str) -> str:
+    # Bez wyliczania: kto wpisał 3^2, widzi 3^2, a nie 9. Wywoływane dopiero po read, więc wpis
+    # przeszedł już wszystkie sprawdzenia, a bez wyliczania potęgi nie liczą się wcale.
+    shown = latex(parse_unevaluated(plain_text(text), NAMES), order="none")
+    # Bez wyliczania 1/3 to 1 razy 1/3 i SymPy drukuje "1 \cdot \frac{1}{3}".
+    return re.sub(r"(?<![\d.])1 \\cdot (?=\\frac\{1\})", "", shown)
+
+
 # Podgląd pod polem odpowiedzi: uczeń widzi, co aplikacja odczytała, zanim wyśle. None, gdy
 # wpisu nie da się odczytać. Kto wpisał 0,25, widzi 0{,}25, a nie \frac{1}{4}.
 def read_latex(student: str, kind: str) -> str | None:
     if len(student) > MAX_LENGTH:
         return None
+    text = TEXT.sub(r" \1 ", student).replace("$", "")
+    decimal = bool(re.search(r"\d[.,]\d|(?<!\d)[.,]\d", student))
     try:
         value = read(student, kind)
         if kind == "rownanie":
             # Strony tak, jak je wpisał uczeń, a nie przeniesione na jedną stronę.
-            sides = TEXT.sub(r" \1 ", student).replace("$", "").split("=")
-            return " = ".join(latex(read_expression(side)) for side in sides)
+            return " = ".join(typed_latex(side) for side in text.split("="))
+        if kind == "liczba" and not decimal:
+            return typed_latex(number_text(text))
+        if kind == "wyrazenie" and not decimal:
+            return typed_latex(text)
     except Unreadable:
         return None
-    decimal = bool(re.search(r"\d[.,]\d|(?<!\d)[.,]\d", student))
     if kind == "wartosci":
         return "; ".join(shown(number, decimal) for number in sorted(value, key=default_sort_key))
     if kind == "punkt":
