@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { computed, useId } from 'vue'
-import { besideSegment, centerOf, freeSpot, type PlaneFigure, type Point } from '@/figures'
+import {
+  centerOf,
+  clearance,
+  clearestSpot,
+  spotsAround,
+  spotsBeside,
+  type Line,
+  type PlaneFigure,
+  type Point,
+} from '@/figures'
 import FigureLabel from './FigureLabel.vue'
 
 const props = defineProps<{ figure: PlaneFigure }>()
@@ -10,6 +19,8 @@ const MAX_WIDTH = 420
 const MAX_HEIGHT = 320
 const PAD = 40
 const LABEL_DISTANCE = 14
+// Tyle pikseli wolnego miejsca potrzebuje litera przy punkcie.
+const NAME_ROOM = 12
 
 const arrowId = useId()
 
@@ -52,21 +63,6 @@ const screen = (point: Point): Point => [
 const at = (name: string) => screen(props.figure.points[name]!)
 const center = computed(() => centerOf(Object.values(props.figure.points).map(screen)))
 
-// Sąsiedzi punktu to końce boków wielokątów i odcinków, które z niego wychodzą.
-function neighbors(name: string): Point[] {
-  const names = (props.figure.polygons ?? []).flatMap((polygon) => {
-    const index = polygon.points.indexOf(name)
-    if (index === -1) return []
-    const count = polygon.points.length
-    return [polygon.points[(index + 1) % count]!, polygon.points[(index + count - 1) % count]!]
-  })
-  for (const segment of props.figure.segments ?? []) {
-    if (segment.from === name) names.push(segment.to)
-    if (segment.to === name) names.push(segment.from)
-  }
-  return names.map(at)
-}
-
 // Okrąg rysowany jako dwie połówki, żeby u walca i stożka tylną połowę podstawy dało się
 // narysować przerywaną.
 const circles = computed(() =>
@@ -79,26 +75,41 @@ const circles = computed(() =>
   }),
 )
 
-// Łuk kąta po krótszej stronie, w rozmiarze niezależnym od skali rysunku.
-const ANGLE_RADIUS = 22
-const FILLED_RADIUS = 28
+// Każdy kąt to zacieniowany wycinek w kolorze arkusza, w rozmiarze niezależnym od skali rysunku.
+const ANGLE_RADIUS = 30
 const SECOND_ARC = 4
-const LABEL_INSIDE = 26
 // Przy bardzo wąskim kącie napis nie mieści się między ramionami, a łuk nie może rosnąć bez
 // końca, więc napis wtedy lekko na nie wchodzi, jak w arkuszach.
-const LABEL_FARTHEST = 62
-const CHARACTER_WIDTH = 8
+const LABEL_FARTHEST = 90
+// Wymiary napisu w pikselach przy czcionce 16 px z FigureLabel.vue.
+const CHARACTER_WIDTH = 9
+const DEGREE_WIDTH = 5
+const LABEL_HALF_HEIGHT = 8
 
-// Przybliżona połowa szerokości napisu: polecenie LaTeX-a, np. \circ, liczy się jak jeden znak,
-// a $, ^ i nawiasy klamrowe nie zajmują miejsca.
+// Przybliżona połowa szerokości napisu: polecenie LaTeX-a, np. \alpha, liczy się jak jeden znak,
+// stopień jak pół znaku, a $, ^, spacje i nawiasy klamrowe nie zajmują miejsca.
 function halfWidth(text: string): number {
-  const visible = text.replace(/\\[a-zA-Z]+/g, 'x').replace(/[${}^_]/g, '')
-  return (Math.max(1, visible.length) * CHARACTER_WIDTH) / 2
+  const degrees = (text.match(/\\circ/g) ?? []).length
+  const visible = text
+    .replace(/\\circ/g, '')
+    .replace(/\\[a-zA-Z]+/g, 'x')
+    .replace(/[${}^_\s]/g, '')
+  return (Math.max(1, visible.length) * CHARACTER_WIDTH + degrees * DEGREE_WIDTH) / 2
 }
+
+// Promień koła, w którym mieści się napis.
+const labelRadius = (text: string) => Math.hypot(halfWidth(text), LABEL_HALF_HEIGHT)
+
+// Napis jako przeszkoda: poziomy odcinek o jego szerokości.
+const textLine = (at: Point, text: string): Line => [
+  [at[0] - halfWidth(text), at[1]],
+  [at[0] + halfWidth(text), at[1]],
+]
 
 const angles = computed(() =>
   (props.figure.angles ?? []).map((angle) => {
-    const [vx, vy] = at(angle.vertex)
+    const vertex = at(angle.vertex)
+    const [vx, vy] = vertex
     const unit = (name: string): Point => {
       const [x, y] = at(name)
       const length = Math.hypot(x - vx, y - vy) || 1
@@ -113,25 +124,114 @@ const angles = computed(() =>
     ]
     // Na ekranie oś y idzie w dół, więc znak iloczynu wektorowego wybiera kierunek łuku.
     const sweep = a[0] * b[1] - a[1] * b[0] > 0 ? 1 : 0
-    // Litera stoi wewnątrz łuku, więc przy wąskim kącie łuk musi być większy, żeby litera
-    // zmieściła się między ramionami.
+    // Napis stoi wewnątrz łuku: przy wąskim kącie trzeba go odsunąć od wierzchołka, żeby całe
+    // koło napisu zmieściło się między ramionami, a łuk idzie tuż za napisem.
     const halfAngle = Math.acos(Math.min(1, length / 2))
-    const half = angle.label ? halfWidth(angle.label) : 0
+    const radius = angle.label ? labelRadius(angle.label) : 0
     const labelDistance = Math.min(
       LABEL_FARTHEST,
-      Math.max(LABEL_INSIDE, half / Math.sin(halfAngle || 1)),
+      Math.max(radius + 6, (radius + 2) / Math.sin(halfAngle || 1)),
     )
-    const r = angle.label ? labelDistance + 14 : angle.fill ? FILLED_RADIUS : ANGLE_RADIUS
-    const arc = (radius: number) =>
-      `M${vx + a[0] * radius} ${vy + a[1] * radius} A${radius} ${radius} 0 0 ${sweep} ${vx + b[0] * radius} ${vy + b[1] * radius}`
+    const r = angle.label ? Math.max(ANGLE_RADIUS, labelDistance + radius + 2) : ANGLE_RADIUS
+    const arcPoint = (t: number, size: number): Point => {
+      const x = a[0] * (1 - t) + b[0] * t
+      const y = a[1] * (1 - t) + b[1] * t
+      const norm = Math.hypot(x, y) || 1
+      return [vx + (x / norm) * size, vy + (y / norm) * size]
+    }
+    const arc = (size: number) =>
+      `M${vx + a[0] * size} ${vy + a[1] * size} A${size} ${size} 0 0 ${sweep} ${vx + b[0] * size} ${vy + b[1] * size}`
+    // Łuk i dwusieczna jako linie, żeby nazwa wierzchołka nie stanęła w środku kąta.
+    const obstacles: Line[] = [
+      [vertex, along(r)],
+      ...[0, 0.25, 0.5, 0.75].map((t): Line => [arcPoint(t, r), arcPoint(t + 0.25, r)]),
+    ]
     return {
       arcs: angle.arcs === 2 ? [arc(r), arc(r + SECOND_ARC)] : [arc(r)],
-      sector: angle.fill ? `M${vx} ${vy} L${arc(r).slice(1)} Z` : null,
+      sector: `M${vx} ${vy} L${arc(r).slice(1)} Z`,
       dot: angle.right ? along(r / 2) : null,
       label: angle.label ? { text: angle.label, at: along(labelDistance) } : null,
+      obstacles,
     }
   }),
 )
+
+// Wszystkie linie rysunku, od których napisy trzymają się z daleka. Okrąg i elipsa są
+// przybliżone łamaną, a stały napis z texts jest punktem.
+const lines = computed((): Line[] => {
+  const edges = (props.figure.polygons ?? []).flatMap((polygon) =>
+    polygon.points.map((name, index): Line => [
+      at(name),
+      at(polygon.points[(index + 1) % polygon.points.length]!),
+    ]),
+  )
+  const outlines = circles.value.flatMap(({ cx, cy, rx, ry }) =>
+    Array.from({ length: 36 }, (_, index): Line => {
+      const t1 = (index * Math.PI) / 18
+      const t2 = ((index + 1) * Math.PI) / 18
+      return [
+        [cx + rx * Math.cos(t1), cy + ry * Math.sin(t1)],
+        [cx + rx * Math.cos(t2), cy + ry * Math.sin(t2)],
+      ]
+    }),
+  )
+  return [
+    ...edges,
+    ...(props.figure.segments ?? []).map((segment): Line => [at(segment.from), at(segment.to)]),
+    ...(props.figure.dimensions ?? []).map((dimension): Line => [
+      screen(dimension.from),
+      screen(dimension.to),
+    ]),
+    ...outlines,
+    ...angles.value.flatMap((angle) => angle.obstacles),
+    ...angles.value.flatMap((angle) =>
+      angle.label ? [textLine(angle.label.at, angle.label.text)] : [],
+    ),
+    ...(props.figure.texts ?? []).map((text) => textLine(screen(text.at), text.text)),
+  ]
+})
+
+// Napisy stawiane po kolei: każdy postawiony napis jest przeszkodą dla następnych.
+const labels = computed(() => {
+  const taken = [...lines.value]
+  const place = (candidates: Point[], text: string) => {
+    const spot = clearestSpot(candidates, taken)
+    taken.push(textLine(spot, text))
+    return spot
+  }
+  const segments = (props.figure.segments ?? []).flatMap((segment) =>
+    segment.label
+      ? [
+          {
+            text: segment.label,
+            at: place(
+              spotsBeside(at(segment.from), at(segment.to), center.value, LABEL_DISTANCE),
+              segment.label,
+            ),
+          },
+        ]
+      : [],
+  )
+  const dimensions = (props.figure.dimensions ?? []).map((dimension) => ({
+    text: dimension.label,
+    at: place(
+      spotsBeside(screen(dimension.from), screen(dimension.to), center.value, LABEL_DISTANCE),
+      dimension.label,
+    ),
+  }))
+  // Gdy przez punkt przechodzi kilka linii, przy samym punkcie nie ma miejsca na literę, więc
+  // dopiero wtedy odsuwamy ją dalej.
+  const names = (props.figure.names ?? []).map((name) => {
+    const near = clearestSpot(spotsAround(at(name), center.value, LABEL_DISTANCE), taken)
+    const roomy = clearance(near, taken) >= NAME_ROOM
+    const distance = roomy ? LABEL_DISTANCE : LABEL_DISTANCE * 1.5
+    return {
+      text: `$${name}$`,
+      at: place(spotsAround(at(name), center.value, distance), name),
+    }
+  })
+  return [...segments, ...dimensions, ...names]
+})
 
 const polygonPath = (names: string[]) => `M${names.map((name) => at(name).join(' ')).join(' L')} Z`
 const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')}`
@@ -210,11 +310,7 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
     />
 
     <template v-for="(angle, index) in angles" :key="`a${index}`">
-      <path
-        v-if="angle.sector"
-        :d="angle.sector"
-        class="plane-figure__fill plane-figure__line--none"
-      />
+      <path :d="angle.sector" class="plane-figure__fill plane-figure__line--none" />
       <path v-for="arc in angle.arcs" :key="arc" :d="arc" class="plane-figure__angle" />
       <circle
         v-if="angle.dot"
@@ -226,19 +322,6 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
       <FigureLabel v-if="angle.label" :at="angle.label.at" :text="angle.label.text" />
     </template>
 
-    <template v-for="(segment, index) in figure.segments" :key="`sl${index}`">
-      <FigureLabel
-        v-if="segment.label"
-        :at="besideSegment(at(segment.from), at(segment.to), center, LABEL_DISTANCE)"
-        :text="segment.label"
-      />
-    </template>
-    <FigureLabel
-      v-for="(dimension, index) in figure.dimensions"
-      :key="`dl${index}`"
-      :at="besideSegment(screen(dimension.from), screen(dimension.to), center, LABEL_DISTANCE)"
-      :text="dimension.label"
-    />
     <circle
       v-for="name in figure.dots"
       :key="`k${name}`"
@@ -248,10 +331,10 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
       class="plane-figure__dot"
     />
     <FigureLabel
-      v-for="name in figure.names"
-      :key="name"
-      :at="freeSpot(at(name), neighbors(name), center, LABEL_DISTANCE)"
-      :text="`$${name}$`"
+      v-for="(label, index) in labels"
+      :key="`l${index}`"
+      :at="label.at"
+      :text="label.text"
     />
     <FigureLabel
       v-for="(text, index) in figure.texts"

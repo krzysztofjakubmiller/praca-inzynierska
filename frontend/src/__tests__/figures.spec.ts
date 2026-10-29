@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { coordinatePlaneSpan, freeSpot, numberLineRange, throughPoints } from '@/figures'
+import {
+  clearestSpot,
+  coordinatePlaneSpan,
+  numberLineRange,
+  spotsAround,
+  spotsBeside,
+  throughPoints,
+} from '@/figures'
 
 describe('numberLineRange', () => {
   it('gives all number lines of a task one range, three ticks beyond the outermost numbers', () => {
@@ -35,21 +42,46 @@ describe('throughPoints', () => {
   })
 })
 
-describe('freeSpot', () => {
+describe('clearestSpot', () => {
   it('puts the label in the widest gap between the lines', () => {
     // Linie w prawo i w górę, więc najwięcej miejsca jest w lewo w dół.
-    const [x, y] = freeSpot(
-      [0, 0],
+    const [x, y] = clearestSpot(spotsAround([0, 0], [5, -5], 10), [
       [
+        [0, 0],
         [10, 0],
+      ],
+      [
+        [0, 0],
         [0, -10],
       ],
-      [5, 5],
-      10,
-    )
+    ])
 
     expect(x).toBeLessThan(0)
     expect(y).toBeGreaterThan(0)
+  })
+
+  it('avoids a line that only passes through the point', () => {
+    // Pozioma prosta przez punkt: napis nie może stanąć ani w lewo, ani w prawo.
+    const [, y] = clearestSpot(spotsAround([0, 0], [10, 0], 10), [
+      [
+        [-20, 0],
+        [20, 0],
+      ],
+    ])
+
+    expect(Math.abs(y)).toBeGreaterThan(9)
+  })
+
+  it('moves a segment label off another line crossing its middle', () => {
+    const middle = spotsBeside([0, 0], [20, 0], [10, -10], 8)
+    const crossing: [[number, number], [number, number]] = [
+      [10, -20],
+      [10, 20],
+    ]
+
+    const [x] = clearestSpot(middle, [crossing])
+
+    expect(Math.abs(x - 10)).toBeGreaterThan(2)
   })
 })
 

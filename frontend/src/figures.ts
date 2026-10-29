@@ -175,23 +175,64 @@ export function numberLineRange(figures: Figure[]): Range {
   return { min: Math.min(...values) - MARGIN, max: Math.max(...values) + MARGIN }
 }
 
-// Napisy przy punktach i krawędziach odsuwamy od środka rysunku, żeby nie wchodziły na linie.
-export function awayFrom(point: Point, center: Point, distance: number): Point {
-  const dx = point[0] - center[0]
-  const dy = point[1] - center[1]
-  const length = Math.hypot(dx, dy)
-  if (!length) return [point[0], point[1] - distance]
-  return [point[0] + (dx / length) * distance, point[1] + (dy / length) * distance]
+/** Odcinek na ekranie; odcinek o równych końcach to pojedynczy punkt, np. inny napis. */
+export type Line = [Point, Point]
+
+export function distanceToLine(point: Point, [from, to]: Line): number {
+  const dx = to[0] - from[0]
+  const dy = to[1] - from[1]
+  const lengthSquared = dx * dx + dy * dy
+  const along = lengthSquared
+    ? ((point[0] - from[0]) * dx + (point[1] - from[1]) * dy) / lengthSquared
+    : 0
+  const t = Math.max(0, Math.min(1, along))
+  return Math.hypot(point[0] - (from[0] + t * dx), point[1] - (from[1] + t * dy))
 }
 
-// Środek odcinka przesunięty prostopadle do niego, na zewnątrz rysunku.
-export function besideSegment(from: Point, to: Point, center: Point, distance: number): Point {
-  const middle: Point = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2]
+export const clearance = (point: Point, lines: Line[]) =>
+  Math.min(...lines.map((line) => distanceToLine(point, line)))
+
+// Spośród miejsc na napis bierze to, które leży najdalej od wszystkich linii, żeby napis nie
+// wchodził na żadną z nich. Przy prawie równej odległości wygrywa wcześniejsze na liście.
+export function clearestSpot(candidates: Point[], lines: Line[]): Point {
+  let best = candidates[0]!
+  let bestClearance = -1
+  for (const candidate of candidates) {
+    const free = clearance(candidate, lines)
+    if (free > bestClearance + 0.5) {
+      best = candidate
+      bestClearance = free
+    }
+  }
+  return best
+}
+
+// Miejsca dookoła punktu, zaczynając od kierunku od środka rysunku, bo tam zwykle jest pusto.
+export function spotsAround(point: Point, center: Point, distance: number): Point[] {
+  const start = Math.atan2(point[1] - center[1], point[0] - center[0]) || 0
+  return Array.from({ length: 24 }, (_, index) => {
+    const turn = Math.ceil(index / 2) * (index % 2 ? 1 : -1)
+    const angle = start + (turn * Math.PI) / 12
+    return [point[0] + Math.cos(angle) * distance, point[1] + Math.sin(angle) * distance]
+  })
+}
+
+// Miejsca po obu stronach odcinka: najpierw przy środku od strony zewnętrznej rysunku,
+// potem bliżej końców.
+export function spotsBeside(from: Point, to: Point, center: Point, distance: number): Point[] {
   const length = Math.hypot(to[0] - from[0], to[1] - from[1]) || 1
   let normal: Point = [-(to[1] - from[1]) / length, (to[0] - from[0]) / length]
+  const middle: Point = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2]
   const outward = (middle[0] - center[0]) * normal[0] + (middle[1] - center[1]) * normal[1]
   if (outward < 0) normal = [-normal[0], -normal[1]]
-  return [middle[0] + normal[0] * distance, middle[1] + normal[1] * distance]
+  return [0.5, 0.35, 0.65].flatMap((t) => {
+    const x = from[0] + (to[0] - from[0]) * t
+    const y = from[1] + (to[1] - from[1]) * t
+    return [1, -1].map((side): Point => [
+      x + side * normal[0] * distance,
+      y + side * normal[1] * distance,
+    ])
+  })
 }
 
 export function centerOf(points: Point[]): Point {
@@ -213,21 +254,6 @@ export function throughPoints(points: Point[]): (x: number) => number {
           ),
       0,
     )
-}
-
-// Napis przy wierzchołku stawiamy w najszerszej wolnej szczelinie między wychodzącymi z niego
-// liniami, żeby nie leżał na żadnej z nich. Bez linii odsuwamy go od środka rysunku.
-export function freeSpot(point: Point, neighbors: Point[], center: Point, distance: number): Point {
-  if (!neighbors.length) return awayFrom(point, center, distance)
-  const angles = neighbors
-    .map(([x, y]) => Math.atan2(y - point[1], x - point[0]))
-    .sort((first, second) => first - second)
-  let best = { gap: -1, middle: 0 }
-  angles.forEach((angle, index) => {
-    const next = index + 1 < angles.length ? angles[index + 1]! : angles[0]! + 2 * Math.PI
-    if (next - angle > best.gap) best = { gap: next - angle, middle: (angle + next) / 2 }
-  })
-  return [point[0] + Math.cos(best.middle) * distance, point[1] + Math.sin(best.middle) * distance]
 }
 
 export interface PlaneSpan {
