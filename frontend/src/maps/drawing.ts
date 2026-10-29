@@ -200,6 +200,7 @@ function compose({
       badgeGap: BASE.badgeGap * scale,
       gap: BASE.labelGap * scale,
       lineClearance: lineWidth / 2 + 2,
+      manualLineClearance: lineWidth / 2,
       segments: lines.flatMap((line) =>
         line.points.slice(1).map((to, index) => [line.points[index]!, to] as const),
       ),

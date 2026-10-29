@@ -8,6 +8,7 @@ const settings: LabelSettings = {
   badgeGap: 2,
   gap: 4,
   lineClearance: 5,
+  manualLineClearance: 3,
   segments: [],
   bounds: { x: 0, y: 0, width: 400, height: 400 },
   preferTwoLines: false,

@@ -50,6 +50,8 @@ export interface LabelSettings {
   gap: number
   /** Jak blisko linii mapy może stanąć etykieta: połowa grubości linii i margines. */
   lineClearance: number
+  /** To samo dla miejsca wybranego ręcznie: etykieta może dotykać linii, ale jej nie przecina. */
+  manualLineClearance: number
   segments: readonly (readonly [Point, Point])[]
   /** Obszar, poza który etykieta nie może wyjść. */
   bounds: Box
@@ -120,11 +122,13 @@ function candidate(
   reach: number,
   width: number,
   height: number,
+  textHeight: number,
 ): Box {
   const diagonal = offset * reach
+  // Z boku nazwa stoi na wysokości stacji, a pasażerowie pod nią.
   const [x, y] = {
-    right: [at.x + offset, at.y - height / 2],
-    left: [at.x - offset - width, at.y - height / 2],
+    right: [at.x + offset, at.y - textHeight / 2],
+    left: [at.x - offset - width, at.y - textHeight / 2],
     above: [at.x - width / 2, at.y - offset - height],
     below: [at.x - width / 2, at.y + offset],
     'above-right': [at.x + diagonal, at.y - diagonal - height],
@@ -204,18 +208,19 @@ function describe(request: LabelRequest, settings: LabelSettings) {
       badge?.width ?? 0,
     ),
     height: rows(lines) * settings.lineHeight + (badge ? settings.badgeGap + badge.height : 0),
+    textHeight: rows(lines) * settings.lineHeight,
   })
   const offset = request.radius + settings.gap
 
   const options: Option[] = []
   for (const side of sides) {
     for (const lines of variants) {
-      const { width, height } = size(lines)
+      const { width, height, textHeight } = size(lines)
       for (const reach of side.includes('-') ? DIAGONAL_REACH : [1]) {
         options.push({
           lines,
           side,
-          box: candidate(side, request.at, offset, reach, width, height),
+          box: candidate(side, request.at, offset, reach, width, height, textHeight),
         })
       }
     }
@@ -224,7 +229,7 @@ function describe(request: LabelRequest, settings: LabelSettings) {
   const fallback: Option = {
     lines: variants[0]!,
     side: sides[0]!,
-    box: candidate(sides[0]!, request.at, offset, 1, first.width, first.height),
+    box: candidate(sides[0]!, request.at, offset, 1, first.width, first.height, first.textHeight),
   }
 
   // Pasażerowie stoją po tej stronie nazwy, która jest bliżej stacji.
@@ -260,10 +265,15 @@ export function placeLabels(
   const placed = new Map<string, PlacedLabel>()
 
   // Miejsce wolne od granic, linii i innych stacji; etykiety sprawdza osobno `blocking`.
-  const free = (request: LabelRequest, box: Box) =>
-    inside(box, settings.bounds) &&
-    !markers.some((marker) => marker.id !== request.id && overlap(grow(box, 1), marker.box)) &&
-    !settings.segments.some((segment) => crosses(grow(box, settings.lineClearance), segment))
+  const free = (request: LabelRequest, { box, side }: Option) => {
+    const clearance =
+      side === request.side ? settings.manualLineClearance : settings.lineClearance
+    return (
+      inside(box, settings.bounds) &&
+      !markers.some((marker) => marker.id !== request.id && overlap(grow(box, 1), marker.box)) &&
+      !settings.segments.some((segment) => crosses(grow(box, clearance), segment))
+    )
+  }
   const blocking = (box: Box, ignore: string[]) =>
     [...placed.values()].filter(
       (label) => !ignore.includes(label.id) && overlap(grow(box, 2), label.box),
@@ -274,7 +284,7 @@ export function placeLabels(
   for (const request of ordered) {
     const { options, fallback, label } = described.get(request.id)!
     const option = options.find(
-      (item) => free(request, item.box) && blocking(item.box, [request.id]).length === 0,
+      (item) => free(request, item) && blocking(item.box, [request.id]).length === 0,
     )
     placed.set(request.id, label(option ?? fallback, !option))
     if (!option) failed.push(request)
@@ -285,7 +295,7 @@ export function placeLabels(
   for (const request of failed) {
     const { options, label } = described.get(request.id)!
     repair: for (const option of options) {
-      if (!free(request, option.box)) continue
+      if (!free(request, option)) continue
       const blockers = blocking(option.box, [request.id])
       if (blockers.length !== 1) continue
       const blocker = blockers[0]!
@@ -294,7 +304,7 @@ export function placeLabels(
       for (const alternative of moved.options) {
         if (
           alternative.box !== blocker.box &&
-          free(other, alternative.box) &&
+          free(other, alternative) &&
           !overlap(grow(alternative.box, 2), option.box) &&
           blocking(alternative.box, [other.id, request.id]).length === 0
         ) {

@@ -27,4 +27,17 @@ export const BASIC_LAYOUT: MapLayout<BasicStationId> = {
     'inne-funkcje': { x: 0, y: 15 },
     'dowody-geometria': { x: 2, y: 15 },
   },
+  labels: {
+    'rachunek-prawdopodobienstwa': { landscape: 'right' },
+    wykresy: { landscape: 'below' },
+    'geometria-analityczna': { landscape: 'above-left' },
+    trygonometria: { landscape: 'above' },
+    planimetria: { landscape: 'below' },
+    stereometria: { landscape: 'above' },
+    'funkcja-kwadratowa': { landscape: 'above' },
+    optymalizacja: { landscape: 'below' },
+    'funkcja-liniowa': { portrait: 'right' },
+    'inne-funkcje': { landscape: 'right' },
+    'dowody-geometria': { landscape: 'right' },
+  },
 }

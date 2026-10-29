@@ -20,4 +20,11 @@ export const EXTENDED_LAYOUT: MapLayout<ExtendedStationId> = {
     planimetria: { x: 2, y: 11 },
     stereometria: { x: 2, y: 12 },
   },
+  labels: {
+    'wzory-vieta': { landscape: 'above' },
+    'wartosc-bezwzgledna': { landscape: 'below' },
+    'rachunek-prawdopodobienstwa': { landscape: 'right' },
+    optymalizacja: { portrait: 'right', landscape: 'right' },
+    stereometria: { landscape: 'right' },
+  },
 }
