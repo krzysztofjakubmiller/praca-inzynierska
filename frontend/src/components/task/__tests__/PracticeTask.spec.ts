@@ -79,7 +79,11 @@ describe('PracticeTask', () => {
 
     expect(wrapper.find('[role="status"]').text()).toBe('Źle. Poprawna odpowiedź: C')
     expect(wrapper.text()).not.toContain('łatwy')
-    expect(button(wrapper, 'C.').classes()).toContain('practice-task__choice--key')
+    expect(button(wrapper, 'C.').classes()).toContain('practice-task__choice--correct')
+    expect(button(wrapper, 'C.').find('.practice-task__sign').text()).toBe('✓')
+    expect(button(wrapper, 'A.').classes()).toContain('practice-task__choice--wrong')
+    expect(button(wrapper, 'A.').find('.practice-task__sign').text()).toBe('✗')
+    expect(button(wrapper, 'B.').find('.practice-task__sign').exists()).toBe(false)
   })
 
   it('sends the rating and asks for the next task', async () => {

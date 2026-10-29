@@ -6,6 +6,9 @@
   --ink-soft: #55595f;
   --hairline: rgb(29 31 34 / 0.12);
   --danger: #b42318;
+  /* Dobra odpowiedź po sprawdzeniu, para do --danger. Kontrast z tłem i z białym znakiem ✓ co
+     najmniej 4,5:1 w każdym motywie. */
+  --correct: #157a3a;
 
   --exam-e8: #2e6fe0;
   --exam-matura-podstawowa: #1f9d55;
@@ -50,6 +53,7 @@
   --ink-soft: #a8abaf;
   --hairline: rgb(235 236 233 / 0.14);
   --danger: #ff8b7b;
+  --correct: #22c55e;
 
   --line-1: #dba840;
   --line-2: #98b6fc;

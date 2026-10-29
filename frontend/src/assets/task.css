@@ -1,7 +1,9 @@
 /* Pole odpowiedzi w tabeli prawda-fałsz i dobierania, które uczeń zaznacza. */
 .answer-mark {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25em;
   width: 100%;
   height: 100%;
   min-height: 2.75rem;
@@ -27,13 +29,22 @@
   cursor: default;
 }
 
-/* Po sprawdzeniu: dobra odpowiedź z klucza dostaje gruby obrys, zła zaznaczona kolor błędu. */
-.answer-mark--key {
-  outline: 3px solid var(--ink);
-  outline-offset: -5px;
+/* Po sprawdzeniu dobra odpowiedź z klucza jest zielona, a zła zaznaczona przez ucznia czerwona.
+   Obok litery stoi znak ✓ albo ✗, żeby wynik nie zależał od rozróżniania kolorów. */
+.answer-mark.answer-mark--key {
+  background: var(--correct);
+  color: var(--surface);
+}
+
+.answer-mark.answer-mark--key::after {
+  content: '✓';
 }
 
 .answer-mark--wrong[aria-pressed='true'] {
   background: var(--danger);
   color: var(--surface);
+}
+
+.answer-mark--wrong[aria-pressed='true']::after {
+  content: '✗';
 }

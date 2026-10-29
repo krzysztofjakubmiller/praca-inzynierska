@@ -106,6 +106,13 @@ function rate(rating: Rating) {
   })
 }
 
+// Po sprawdzeniu dobra odpowiedź jest zielona, a zła zaznaczona przez ucznia czerwona.
+function resultOf(label: string): 'correct' | 'wrong' | '' {
+  if (!checked.value) return ''
+  if (checked.value.answer === label) return 'correct'
+  return picked.value === label ? 'wrong' : ''
+}
+
 // Klucz po sprawdzeniu w czytelnej postaci: „P, F” zamiast „PF”.
 const keyText = computed(() => {
   const answer = checked.value?.answer ?? ''
@@ -134,10 +141,7 @@ const keyText = computed(() => {
         :key="choice.label"
         type="button"
         class="practice-task__choice"
-        :class="{
-          'practice-task__choice--key': checked && checked.answer === choice.label,
-          'practice-task__choice--wrong': checked && checked.answer !== choice.label,
-        }"
+        :class="`practice-task__choice--${resultOf(choice.label)}`"
         :aria-pressed="picked === choice.label"
         :disabled="checked !== null"
         @click="picked = choice.label"
@@ -151,6 +155,9 @@ const keyText = computed(() => {
             :range="range"
             :span="span"
           />
+        </span>
+        <span v-if="resultOf(choice.label)" class="practice-task__sign" aria-hidden="true">
+          {{ resultOf(choice.label) === 'correct' ? '✓' : '✗' }}
         </span>
       </button>
     </div>
@@ -244,7 +251,7 @@ const keyText = computed(() => {
 
 .practice-task__choice {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr);
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
   align-items: start;
   gap: 0.5rem;
   min-height: 3rem;
@@ -270,15 +277,29 @@ const keyText = computed(() => {
   cursor: default;
 }
 
-/* Po sprawdzeniu: klucz ma gruby obrys, zła zaznaczona odpowiedź kolor błędu. */
-.practice-task__choice--key {
-  border-color: var(--ink);
-  outline: 2px solid var(--ink);
+/* Kolor nie jest jedynym sygnałem: obok stoi znak ✓ albo ✗, a wynik mówi też tekst pod spodem. */
+.practice-task__choice.practice-task__choice--correct,
+.practice-task__choice.practice-task__choice--wrong {
+  --result: var(--correct);
+
+  border-color: var(--result);
+  outline: 2px solid var(--result);
   outline-offset: -4px;
 }
 
-.practice-task__choice--wrong[aria-pressed='true'] {
-  border-color: var(--danger);
+.practice-task__choice.practice-task__choice--wrong {
+  --result: var(--danger);
+}
+
+.practice-task__sign {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--result);
+  color: var(--surface);
+  font-weight: 800;
 }
 
 .practice-task__choice-body {
