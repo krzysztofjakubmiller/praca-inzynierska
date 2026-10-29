@@ -5,6 +5,7 @@ import MatchingTable from '@/components/task/MatchingTable.vue'
 import MathText from '@/components/task/MathText.vue'
 import TrueFalseTable from '@/components/task/TrueFalseTable.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
+import TemplateReview from '@/components/panel/TemplateReview.vue'
 import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {
   panelApi,
@@ -343,6 +344,8 @@ function remove() {
         </template>
       </section>
     </div>
+
+    <TemplateReview v-if="task" :task-id="task.id" :exam="task.exam" />
   </main>
 </template>
 

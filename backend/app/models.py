@@ -137,6 +137,35 @@ class Task(Base):
     reviewed_at: Mapped[datetime | None]
 
 
+# Szablon wariantów zadania: to samo zadanie z innymi liczbami. Oryginał w task zostaje bez zmian.
+# Uczniowie dostają warianty tylko z szablonów sprawdzonych przez właściciela.
+class TaskTemplate(Base):
+    __tablename__ = "task_template"
+    __table_args__ = (
+        CheckConstraint(
+            "review_status in ('do-sprawdzenia', 'sprawdzone')",
+            name="task_template_review_status_valid",
+        ),
+        CheckConstraint(
+            "read_method in ('recznie', 'gemini', 'inne-ai')", name="task_template_read_method_valid"
+        ),
+    )
+
+    task_id: Mapped[int] = mapped_column(ForeignKey("task.id", ondelete="CASCADE"), primary_key=True)
+    # Format opisuje klasa Template w variants.py.
+    body: Mapped[dict] = mapped_column(JSONB)
+    # Nieedytowana kopia szablonu od AI, do pomiaru, ile szablonów trzeba było poprawiać.
+    ai_body: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    read_method: Mapped[str]
+    read_model: Mapped[str | None]
+    review_status: Mapped[str] = mapped_column(default="do-sprawdzenia")
+    # Wynik ostatniego sprawdzenia losowaniem: czy przeszedł, problemy, liczba wariantów.
+    check_result: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now(), onupdate=func.now())
+    reviewed_at: Mapped[datetime | None]
+
+
 class Account(Base):
     __tablename__ = "account"
 
@@ -251,6 +280,9 @@ class Solution(Base):
     # Zadanie otwarte: wpisy ucznia i kto ocenił, np. {"answers": ["-3; 1"], "checked": "program"}.
     # Przy ocenie przez AI dochodzą model i odczyt rozwiązania. Zdjęcia się nie zapisuje.
     open_answer: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    # Liczby wariantu, który uczeń widział, np. {"k": 5, "b": 2}; puste przy oryginale.
+    # Z liczb i szablonu wariant składa się od nowa (variants.py).
+    variant: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
     # Ocena trudności wybrana przez ucznia po zadaniu; puste, dopóki jej nie wybierze.
     rating: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())

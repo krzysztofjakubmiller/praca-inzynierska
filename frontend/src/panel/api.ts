@@ -65,6 +65,36 @@ export interface TaskDetails extends TaskUpdate {
   ai_content: string | null
 }
 
+export interface TemplateCheck {
+  passed: boolean
+  problems: string[]
+  /** Brak przy szablonie, który odpadł już na formacie. */
+  successful?: number
+  draws?: number
+  distinct?: number
+}
+
+/** Oryginał (variant null) albo wariant tak, jak zobaczy go uczeń. */
+export interface TemplatePreview {
+  variant: Record<string, number | string> | null
+  content: string
+  choices: Record<string, string> | null
+  figures: Figures | null
+  answer: string
+  /** Zasady oceniania zadania otwartego z liczbami wariantu; panel ich nie pokazuje. */
+  scoring: Record<string, unknown> | null
+}
+
+export interface TemplateDetails {
+  body: Record<string, unknown>
+  ai_body: Record<string, unknown> | null
+  read_method: string
+  read_model: string | null
+  review_status: ReviewStatus
+  check_result: TemplateCheck
+  preview: TemplatePreview[]
+}
+
 export interface TaskFilters {
   exam?: string
   topic?: string
@@ -139,4 +169,11 @@ export const panelApi = {
   importText: (text: string) => request<{ ids: number[] }>('/import', json('POST', { text })),
   importScoring: (text: string) =>
     request<{ ids: number[] }>('/import-scoring', json('POST', { text })),
+  // null, gdy zadanie nie ma jeszcze szablonu.
+  template: (id: number) => request<TemplateDetails | null>(`/tasks/${id}/template`),
+  saveTemplate: (id: number, body: unknown) =>
+    request<TemplateDetails>(`/tasks/${id}/template`, json('PUT', { body })),
+  acceptTemplate: (id: number) =>
+    request<TemplateDetails>(`/tasks/${id}/template/accept`, { method: 'POST' }),
+  removeTemplate: (id: number) => request<void>(`/tasks/${id}/template`, { method: 'DELETE' }),
 }

@@ -5,12 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import accounts, panel, practice, profile
+from app import accounts, panel, panel_templates, practice, profile
 from app.access import require_password
 from app.db import get_session
 
 app = FastAPI()
 app.include_router(panel.router)
+app.include_router(panel_templates.router)
 app.include_router(accounts.router)
 app.include_router(profile.router)
 app.include_router(practice.router)
