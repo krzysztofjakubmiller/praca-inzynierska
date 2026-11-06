@@ -157,8 +157,9 @@ export interface ChatMessage {
 export function askAboutTask(
   id: number,
   messages: ChatMessage[],
+  checked: boolean,
 ): Promise<{ answer: string; request_id: number }> {
-  return request(`/tasks/${id}/question`, { messages })
+  return request(`/tasks/${id}/question`, { messages, checked })
 }
 
 /** Jak serwer odczytał wpis, w LaTeX-u; null, gdy zapisu nie da się odczytać. */

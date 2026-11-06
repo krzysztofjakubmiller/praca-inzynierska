@@ -551,19 +551,38 @@ def test_unreadable_photo_is_kept_without_points(client, account, proof, session
 
 
 def test_question_gets_an_answer_and_is_saved(client, account, proof, session, monkeypatch):
-    def fake_answer(content, scoring, answer, messages):
+    def fake_answer(task, messages, checked):
+        assert "2 pkt – pełny dowód." in task and checked
         assert messages[-1] == {"role": "user", "content": "Od czego zacząć?"}
         return model_reply("Zacznij od wyłączenia wspólnego czynnika.")
 
     monkeypatch.setattr(practice, "answer_question", fake_answer)
     response = client.post(
         f"/api/practice/tasks/{proof.id}/question",
-        json={"messages": [{"role": "user", "content": "Od czego zacząć?"}]},
+        json={"messages": [{"role": "user", "content": "Od czego zacząć?"}], "checked": True},
         headers=COOKIE,
     )
 
     assert response.json()["answer"] == "Zacznij od wyłączenia wspólnego czynnika."
     assert session.scalar(select(AiRequest.text)) == "Od czego zacząć?"
+
+
+def test_closed_task_question_gets_choices_and_answer_for_a_hint(
+    client, account, task, monkeypatch
+):
+    def fake_answer(task_text, messages, checked):
+        assert "Odpowiedzi do wyboru:" in task_text and "Poprawna odpowiedź: C" in task_text
+        assert not checked
+        return model_reply("Pomyśl, co dzieje się z wykładnikiem.")
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    response = client.post(
+        f"/api/practice/tasks/{task.id}/question",
+        json={"messages": [{"role": "user", "content": "Pomóż."}], "checked": False},
+        headers=COOKIE,
+    )
+
+    assert response.json()["answer"] == "Pomyśl, co dzieje się z wykładnikiem."
 
 
 def test_student_feedback_is_saved_with_a_comment(client, account, proof, session, monkeypatch):

@@ -252,9 +252,10 @@ const keyText = computed(() => {
       @graded="onGraded"
     />
 
-    <template v-if="checked">
-      <AiTutor v-if="isOpen && !demo" :task-id="task.id" />
+    <!-- Przed sprawdzeniem AI tylko podpowiada, po sprawdzeniu może wyjaśnić wszystko. -->
+    <AiTutor v-if="!demo" :task-id="task.id" :checked="checked !== null" />
 
+    <template v-if="checked">
       <template v-if="afterExam">
         <p class="practice-task__after-exam" role="status">
           Opanowane. To zadanie nie wróci już przed maturą.

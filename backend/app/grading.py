@@ -14,7 +14,7 @@ URL = "https://openrouter.ai/api/v1/chat/completions"
 DEFAULT_MODELS = "anthropic/claude-haiku-5.5,openai/gpt-6-luna"
 # Numer zmienia się przy każdej zmianie instrukcji, żeby w zapisanych zapytaniach dało się
 # porównać wersje.
-PROMPT_VERSION = 2
+PROMPT_VERSION = 4
 TIMEOUT = 90
 
 # Aplikacja pokazuje tekst i wzory, bez Markdownu; uczniem może być dziewczyna albo chłopak.
@@ -38,9 +38,17 @@ SOLUTION_INSTRUCTIONS = """Jesteś nauczycielem matematyki i przygotowujesz uczn
 
 Pokaż rozwiązanie krok po kroku, tak jak powinno wyglądać na maturze: każdy krok w osobnym akapicie, z krótkim zdaniem, co robimy i dlaczego. Wzory zapisuj w LaTeX-u w $...$. Na końcu podaj odpowiedź. Pisz prostym językiem, na „ty”. Nie wspominaj o zasadach oceniania ani o punktach. Rozwiązanie ma prowadzić do poprawnego wyniku podanego przy zadaniu."""
 
-QUESTION_INSTRUCTIONS = """Jesteś nauczycielem matematyki i przygotowujesz ucznia do matury. Uczeń pyta o zadanie podane niżej.
+QUESTION_INSTRUCTIONS = """Jesteś nauczycielem matematyki i przygotowujesz ucznia do matury. Uczeń pyta o zadanie podane niżej. Prowadź go małymi krokami, jak korepetytor przy stole.
 
-Odpowiadaj krótko, prostym językiem, na „ty”, wzory w LaTeX-u w $...$. Tłumacz metodę i pojęcia, a gdy to pomoże, zadaj pytanie naprowadzające. Nie rozwiązuj całego zadania i nie podawaj wyniku, chyba że uczeń wprost o to poprosi. Nie wspominaj o zasadach oceniania ani o punktach. Na pytania niezwiązane z matematyką odpowiedz jednym zdaniem, że pomagasz tylko w tym zadaniu."""
+Odpowiadaj krótko, w 2-4 zdaniach, prostym językiem, na „ty”. W jednej odpowiedzi daj jedną wskazówkę albo zadaj jedno pytanie naprowadzające, a potem poczekaj, aż uczeń spróbuje.
+
+Jeśli uczeń proponuje swoją metodę i ona prowadzi do celu, wesprzyj ją i pomóż mu iść dalej właśnie nią. Inną metodę możesz najwyżej wspomnieć jednym zdaniem jako możliwość, bez jej wykonywania.
+
+Nie wykonuj za ucznia kroków rozwiązania: nie zapisuj przekształceń, które ma zrobić sam, ani wyników pośrednich. Nie podawaj wyniku, chyba że uczeń wprost o to poprosi.
+
+Wzory zapisuj w LaTeX-u w $...$. Nie wspominaj o zasadach oceniania ani o punktach. Na pytania niezwiązane z matematyką odpowiedz jednym zdaniem, że pomagasz tylko w tym zadaniu."""
+
+HINT_ONLY = """Uczeń jeszcze nie sprawdził swojej odpowiedzi. Nie zdradzaj, która odpowiedź jest poprawna, nie wykluczaj wprost żadnej z odpowiedzi i nie podawaj wyniku, nawet jeśli uczeń o to prosi. Naprowadzaj wskazówkami do metody i pytaniami."""
 
 GRADE_SCHEMA = {
     "type": "object",
@@ -196,14 +204,15 @@ def grade(
     )
 
 
-def show_solution(content: str, scoring: str, answer: str) -> Reply:
-    return ask(
-        SOLUTION_INSTRUCTIONS + "\n\n" + STYLE,
-        [{"role": "user", "content": describe_task(content, scoring, answer)}],
-    )
+# task: zadanie z poprawną odpowiedzią w postaci tekstu dla modelu (practice.task_for_model).
+def show_solution(task: str) -> Reply:
+    return ask(SOLUTION_INSTRUCTIONS + "\n\n" + STYLE, [{"role": "user", "content": task}])
 
 
 # „Dopytaj się”: messages to cała rozmowa z frontendu, ostatnia wiadomość to pytanie ucznia.
-def answer_question(content: str, scoring: str, answer: str, messages: list[dict]) -> Reply:
-    system = QUESTION_INSTRUCTIONS + "\n\n" + STYLE + "\n\n" + describe_task(content, scoring, answer)
-    return ask(system, messages)
+# Przed sprawdzeniem (checked=False) AI tylko podpowiada, bez wskazania poprawnej odpowiedzi.
+def answer_question(task: str, messages: list[dict], checked: bool) -> Reply:
+    system = QUESTION_INSTRUCTIONS + "\n\n" + STYLE
+    if not checked:
+        system += "\n\n" + HINT_ONLY
+    return ask(system + "\n\n" + task, messages)

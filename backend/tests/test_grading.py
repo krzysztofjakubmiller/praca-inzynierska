@@ -97,8 +97,11 @@ def test_question_sends_the_whole_conversation(openrouter):
         {"role": "user", "content": "Nic."},
     ]
 
-    reply = grading.answer_question("Treść", "Zasady", "$x = 3$", conversation)
+    reply = grading.answer_question("Treść zadania", conversation, checked=True)
+    grading.answer_question("Treść zadania", conversation, checked=False)
 
     assert reply.text == "Spróbuj podstawić."
     assert sent[0]["messages"][1:] == conversation
     assert "response_format" not in sent[0]
+    assert grading.HINT_ONLY not in sent[0]["messages"][0]["content"]
+    assert grading.HINT_ONLY in sent[1]["messages"][0]["content"]

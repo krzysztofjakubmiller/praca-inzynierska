@@ -5,9 +5,10 @@ import MathText from '@/components/task/MathText.vue'
 import SolutionEditor from '@/components/task/SolutionEditor.vue'
 import { askAboutTask, Rejected, showAiSolution, type ChatMessage } from '@/practice'
 
-// Po sprawdzeniu zadania: pełne rozwiązanie od AI na prośbę ucznia i rozmowa „Dopytaj się”.
+// Rozmowa „Dopytaj się” i pełne rozwiązanie od AI na prośbę ucznia. Przed sprawdzeniem
+// odpowiedzi AI tylko podpowiada, a pełne rozwiązanie pojawia się dopiero po sprawdzeniu.
 // Rozmowa żyje tylko na tej stronie; backend dostaje ją całą przy każdym pytaniu.
-const props = defineProps<{ taskId: number }>()
+const props = defineProps<{ taskId: number; checked: boolean }>()
 
 const solution = ref<{ text: string; requestId: number } | null>(null)
 const messages = ref<ChatMessage[]>([])
@@ -42,7 +43,7 @@ function showSolution() {
 function ask() {
   return run(async () => {
     const asked: ChatMessage[] = [...messages.value, { role: 'user', content: question.value }]
-    const { answer, request_id } = await askAboutTask(props.taskId, asked)
+    const { answer, request_id } = await askAboutTask(props.taskId, asked, props.checked)
     answerRequests.value[asked.length] = request_id
     messages.value = [...asked, { role: 'assistant', content: answer }]
     question.value = ''
@@ -59,7 +60,7 @@ function ask() {
       <AiFeedback :request-id="solution.requestId" about="pomoc" />
     </div>
     <button
-      v-else
+      v-else-if="checked"
       type="button"
       class="button button--quiet ai-tutor__action"
       :disabled="busy"

@@ -19,6 +19,7 @@ from app.grading import (
     Reply,
     UnreadableSolution,
     answer_question,
+    describe_task,
     grade,
     show_solution,
 )
@@ -62,6 +63,8 @@ class ChatMessage(BaseModel):
 class QuestionIn(BaseModel):
     # Cała rozmowa, bo serwer jej nie przechowuje; ostatnia wiadomość to nowe pytanie ucznia.
     messages: list[ChatMessage] = Field(min_length=1, max_length=20)
+    # Przed sprawdzeniem odpowiedzi AI tylko podpowiada, bez zdradzania wyniku.
+    checked: bool
 
 
 class FeedbackIn(BaseModel):
@@ -188,10 +191,8 @@ def save_solution(
 AI_DAILY_LIMIT = 30
 
 
-def open_task_for_ai(session: Session, task_id: int, account: Account) -> Task:
+def task_for_ai(session: Session, task_id: int, account: Account) -> Task:
     task = load_task(session, task_id)
-    if task.answer_format != "otwarte":
-        raise HTTPException(status_code=422, detail=["AI pomaga tylko przy zadaniach otwartych."])
     used = session.scalar(
         select(func.count())
         .select_from(AiRequest)
@@ -209,6 +210,21 @@ def scoring_text(task: Task) -> str:
     if task.scoring.get("notes"):
         scoring += "\n\nUwagi:\n" + task.scoring["notes"]
     return scoring
+
+
+# Zadanie z poprawną odpowiedzią jako tekst dla modelu: otwarte z zasadami oceniania CKE,
+# zamknięte z odpowiedziami do wyboru (zasad oceniania nie mają).
+def task_for_model(task: Task) -> str:
+    if task.answer_format == "otwarte":
+        return describe_task(task.content, scoring_text(task), task.answer)
+    choices = "\n".join(f"{label}. {text}" for label, text in task.choices.items())
+    text = f"Treść zadania:\n{task.content}\n\nOdpowiedzi do wyboru:\n{choices}"
+    if task.connector:
+        text += f"\n\nTekst między kolumnami do dobrania: {task.connector}"
+    key = answer_key(task)
+    if task.answer_format == "prawda-falsz":
+        key += " (P albo F dla kolejnych zdań)"
+    return text + f"\n\nPoprawna odpowiedź: {key}"
 
 
 def save_ai_request(
@@ -253,7 +269,9 @@ def grade_solution(
     account: Account = Depends(current_account),
     session: Session = Depends(get_session),
 ):
-    task = open_task_for_ai(session, task_id, account)
+    task = task_for_ai(session, task_id, account)
+    if task.answer_format != "otwarte":
+        raise HTTPException(status_code=422, detail=["AI ocenia tylko zadania otwarte."])
     if (body.image is None) == (body.text is None):
         raise HTTPException(status_code=422, detail=["Wyślij zdjęcie albo opis rozwiązania."])
     try:
@@ -319,9 +337,9 @@ def ai_solution(
     account: Account = Depends(current_account),
     session: Session = Depends(get_session),
 ):
-    task = open_task_for_ai(session, task_id, account)
+    task = task_for_ai(session, task_id, account)
     try:
-        reply = show_solution(task.content, scoring_text(task), task.answer)
+        reply = show_solution(task_for_model(task))
     except GradingUnavailable:
         raise HTTPException(
             status_code=503, detail=["Rozwiązanie chwilowo niedostępne."]
@@ -339,12 +357,12 @@ def ask_about_task(
     account: Account = Depends(current_account),
     session: Session = Depends(get_session),
 ):
-    task = open_task_for_ai(session, task_id, account)
+    task = task_for_ai(session, task_id, account)
     if body.messages[-1].role != "user":
         raise HTTPException(status_code=422, detail=["Wpisz pytanie."])
     messages = [message.model_dump() for message in body.messages]
     try:
-        reply = answer_question(task.content, scoring_text(task), task.answer, messages)
+        reply = answer_question(task_for_model(task), messages, body.checked)
     except GradingUnavailable:
         raise HTTPException(
             status_code=503, detail=["Odpowiedź chwilowo niedostępna."]
