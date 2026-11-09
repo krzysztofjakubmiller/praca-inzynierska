@@ -14,9 +14,11 @@ from app.import_scoring import import_scoring
 from app.import_tasks import (
     ImportRejected,
     TaskIn,
+    dyscalculia_json,
     import_tasks,
     parse_json,
     scoring_json,
+    solutions_json,
     task_problems,
 )
 from app.models import Exam, SourceKind, Task, Topic
@@ -71,6 +73,9 @@ def task_details(session: Session, task: Task) -> dict:
         "figures": task.figures,
         "answer": task.answer,
         "scoring": task.scoring,
+        "solutions": task.solutions,
+        "specific_difficulties": task.specific_difficulties,
+        "dyscalculia": task.dyscalculia,
         "review_status": task.review_status,
         "read_method": task.read_method,
         "read_model": task.read_model,
@@ -195,6 +200,9 @@ def update_task(task_id: int, update: TaskUpdate, session: Session = Depends(get
     task.figures = figures_json(update.figures)
     task.answer = update.answer
     task.scoring = scoring_json(update.scoring)
+    task.solutions = solutions_json(update.solutions)
+    task.specific_difficulties = update.specific_difficulties
+    task.dyscalculia = dyscalculia_json(update.dyscalculia)
     if update.review_status == "sprawdzone" and task.review_status != "sprawdzone":
         task.reviewed_at = datetime.now(UTC)
     if update.review_status == "do-sprawdzenia":
@@ -277,6 +285,9 @@ def exported_task(session: Session, task: Task) -> dict:
         "figures": task.figures,
         "answer": task.answer,
         "scoring": task.scoring,
+        "solutions": task.solutions,
+        "specific_difficulties": task.specific_difficulties,
+        "dyscalculia": task.dyscalculia,
     }
     # Puste pola pomijane jak w plikach od Gemini, żeby plik dało się czytać.
     return {key: value for key, value in fields.items() if value is not None}
@@ -312,8 +323,8 @@ def import_text(body: ImportText, session: Session = Depends(get_session)):
 @router.post("/import-scoring")
 def import_scoring_text(body: ImportText, session: Session = Depends(get_session)):
     try:
-        ids = import_scoring(session, parse_json(body.text))
+        ids, skipped = import_scoring(session, parse_json(body.text))
     except ImportRejected as error:
         raise rejected(error.problems) from None
     session.commit()
-    return {"ids": ids}
+    return {"ids": ids, "skipped": skipped}

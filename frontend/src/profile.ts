@@ -3,6 +3,7 @@ import { API_URL, authorization } from '@/access'
 
 export type Level = 'podstawowa' | 'rozszerzona'
 export type DailyReviews = 'malo' | 'srednio' | 'duzo'
+export type LearningDifficulties = 'brak' | 'specyficzne' | 'dyskalkulia'
 
 export interface ProfileSettings {
   level: Level
@@ -11,6 +12,7 @@ export interface ProfileSettings {
   theme: 'light' | 'dark'
   dark_shade: 'grey' | 'black'
   daily_reviews: DailyReviews
+  learning_difficulties: LearningDifficulties
 }
 
 export interface Profile extends ProfileSettings {
@@ -73,6 +75,7 @@ function settingsOf(current: Profile): ProfileSettings {
     theme: current.theme,
     dark_shade: current.dark_shade,
     daily_reviews: current.daily_reviews,
+    learning_difficulties: current.learning_difficulties,
   }
 }
 

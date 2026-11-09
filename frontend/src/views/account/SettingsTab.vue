@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { profile, updateProfile, type DailyReviews, type ProfileSettings } from '@/profile'
+import {
+  profile,
+  updateProfile,
+  type DailyReviews,
+  type LearningDifficulties,
+  type ProfileSettings,
+} from '@/profile'
 import { setDarkShade, setTheme, type DarkShade, type Theme } from '@/theme'
 
 type Field = keyof ProfileSettings
@@ -21,6 +27,23 @@ const REVIEWS: { value: DailyReviews; label: string }[] = [
   { value: 'malo', label: 'mało' },
   { value: 'srednio', label: 'średnio' },
   { value: 'duzo', label: 'dużo' },
+]
+const DIFFICULTIES: { value: LearningDifficulties; label: string; hint: string }[] = [
+  {
+    value: 'brak',
+    label: 'brak',
+    hint: 'AI ocenia rozwiązania według standardowych zasad CKE.',
+  },
+  {
+    value: 'specyficzne',
+    label: 'specyficzne trudności',
+    hint: 'Masz opinię poradni o dysleksji, dysgrafii albo dysortografii. AI uwzględnia przy ocenie kryteria CKE dla specyficznych trudności.',
+  },
+  {
+    value: 'dyskalkulia',
+    label: 'dyskalkulia',
+    hint: 'Masz opinię poradni o dyskalkulii. AI ocenia przede wszystkim według zasad CKE dla osób z dyskalkulią.',
+  },
 ]
 
 // Przy każdym polu osobny komunikat, bo na telefonie wspólny zniknąłby poza ekranem.
@@ -82,6 +105,14 @@ const reviewIndex = computed(() =>
 function chooseReviews(event: Event) {
   const item = REVIEWS[Number((event.target as HTMLInputElement).value)]!
   save('daily_reviews', { daily_reviews: item.value })
+}
+
+const difficultyIndex = computed(() =>
+  DIFFICULTIES.findIndex((item) => item.value === profile.value?.learning_difficulties),
+)
+function chooseDifficulties(event: Event) {
+  const item = DIFFICULTIES[Number((event.target as HTMLInputElement).value)]!
+  save('learning_difficulties', { learning_difficulties: item.value })
 }
 </script>
 
@@ -189,6 +220,42 @@ function chooseReviews(event: Event) {
         <p v-if="saved === 'daily_reviews'" class="settings__saved" role="status">Zapisano</p>
         <p v-if="problems.daily_reviews" class="settings__problem" role="alert">
           {{ problems.daily_reviews }}
+        </p>
+      </div>
+    </section>
+
+    <section class="settings__group" aria-labelledby="settings-difficulties">
+      <h2 id="settings-difficulties" class="settings__heading">Ocena rozwiązań</h2>
+      <div class="settings__field">
+        <label class="settings__label" for="learning-difficulties">
+          Opinia poradni o trudnościach w uczeniu się
+        </label>
+        <input
+          id="learning-difficulties"
+          class="settings__range"
+          type="range"
+          min="0"
+          max="2"
+          step="1"
+          :value="difficultyIndex"
+          :aria-valuetext="DIFFICULTIES[difficultyIndex]?.label"
+          @change="chooseDifficulties"
+        />
+        <div class="settings__ticks" aria-hidden="true">
+          <span
+            v-for="item in DIFFICULTIES"
+            :key="item.value"
+            :class="{ 'settings__tick--on': item.value === profile.learning_difficulties }"
+          >
+            {{ item.label }}
+          </span>
+        </div>
+        <p class="settings__hint">{{ DIFFICULTIES[difficultyIndex]?.hint }}</p>
+        <p v-if="saved === 'learning_difficulties'" class="settings__saved" role="status">
+          Zapisano
+        </p>
+        <p v-if="problems.learning_difficulties" class="settings__problem" role="alert">
+          {{ problems.learning_difficulties }}
         </p>
       </div>
     </section>

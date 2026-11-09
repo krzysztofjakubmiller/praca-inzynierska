@@ -81,9 +81,10 @@ function importTasks() {
 function importScoring() {
   notice.value = ''
   return run(async () => {
-    const { ids } = await panelApi.importScoring(importText.value)
+    const { ids, skipped } = await panelApi.importScoring(importText.value)
     importText.value = ''
     notice.value = `Zapisano zasady oceniania zadań: ${ids.length}.`
+    if (skipped.length) notice.value += ` Pominięte, bo nie ma ich w bazie: ${skipped.join(', ')}.`
     await refreshTasks()
   })
 }

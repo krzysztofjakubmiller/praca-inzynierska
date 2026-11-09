@@ -46,6 +46,7 @@ def put_profile(client, **changes):
         "theme": "dark",
         "dark_shade": "black",
         "daily_reviews": "duzo",
+        "learning_difficulties": "brak",
     } | changes
     return client.put("/api/profile", json=profile, headers={"Cookie": f"session={KEY}"})
 
@@ -76,6 +77,7 @@ def test_new_account_gets_the_default_profile(client, account):
         "theme": "light",
         "dark_shade": "grey",
         "daily_reviews": "srednio",
+        "learning_difficulties": "brak",
         "exam_years": [year, year + 1, year + 2],
         "exam_dates": {
             "podstawowa": exam_date(year, "podstawowa").isoformat(),
@@ -123,10 +125,11 @@ def test_profile_lists_all_problems_at_once(client, account):
         theme="niebieski",
         dark_shade="granatowy",
         daily_reviews="bardzo-duzo",
+        learning_difficulties="wszystko",
     )
 
     assert response.status_code == 422
-    assert len(response.json()["detail"]) == 6
+    assert len(response.json()["detail"]) == 7
 
 
 def test_target_above_100_is_rejected(client, account):
@@ -160,3 +163,11 @@ def test_missing_exam_date_falls_back_to_the_third_of_may():
 )
 def test_default_exam_year_is_the_next_matura(today, year):
     assert default_exam_year(today) == year
+
+
+def test_learning_difficulties_are_saved(client, account):
+    assert put_profile(client, learning_difficulties="dyskalkulia").status_code == 200
+
+    read = client.get("/api/profile", headers={"Cookie": f"session={KEY}"})
+
+    assert read.json()["learning_difficulties"] == "dyskalkulia"

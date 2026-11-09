@@ -20,6 +20,9 @@ EDITABLE = [
     "figures",
     "answer",
     "scoring",
+    "solutions",
+    "specific_difficulties",
+    "dyscalculia",
     "review_status",
 ]
 
@@ -105,17 +108,20 @@ def test_tasks_are_filtered_by_figure(client, session):
 
 
 SCORING = {"results": [{"expected": "$3$", "kind": "liczba"}], "rules": "1 pkt – $3$."}
+SECTIONS = {
+    "solutions": [{"name": "Sposób I", "content": "Liczymy $3$."}],
+    "specific_difficulties": "Zapis $3=x$ też jest dobry.",
+    "dyscalculia": {"rules": "1 pkt – poprawna metoda."},
+}
 
 
 def import_scoring(client, *numbers):
     data = {
         "exam": "matura-podstawowa",
-        "read_method": "gemini",
-        "tasks": [
-            {"source": "maj", "year": 2024, "month": 5, "number": number, "max_points": 1}
-            | SCORING
-            for number in numbers
-        ],
+        "source": "maj",
+        "year": 2024,
+        "month": 5,
+        "tasks": [{"number": number, "max_points": 1, "scoring": SCORING} for number in numbers],
     }
     return client.post("/api/panel/import-scoring", json={"text": json.dumps(data)})
 
@@ -126,17 +132,26 @@ def test_scoring_is_added_by_source_without_changing_status(client, session):
 
     response = import_scoring(client, 1)
 
-    assert response.json() == {"ids": [task_id]}
+    assert response.json() == {"ids": [task_id], "skipped": []}
     task = session.get(Task, task_id)
     assert task.scoring == SCORING
     assert task.review_status == "sprawdzone"
 
 
 def test_scoring_import_problems_are_returned(client):
-    response = import_scoring(client, 7)
+    response = client.post("/api/panel/import-scoring", json={"text": "{"})
 
     assert response.status_code == 422
-    assert response.json()["detail"] == ["zadanie 1 (maj 2024, nr 7): nie ma takiego zadania w bazie"]
+    assert "niepoprawny JSON" in response.json()["detail"][0]
+
+
+def test_tasks_missing_from_the_database_are_skipped(client):
+    [task_id] = import_tasks(client, 1)
+
+    response = import_scoring(client, 1, 7)
+
+    assert response.status_code == 200
+    assert response.json() == {"ids": [task_id], "skipped": ["7"]}
 
 
 def test_open_tasks_without_scoring_are_listed(client):
@@ -154,6 +169,25 @@ def test_edit_saves_scoring(client):
     edit(client, task_id, scoring=SCORING)
 
     assert client.get(f"/api/panel/tasks/{task_id}").json()["scoring"] == SCORING
+
+
+def test_edit_keeps_all_cke_sections(client):
+    [task_id] = import_tasks(client, 1)
+
+    edit(client, task_id, scoring=SCORING, **SECTIONS)
+    edit(client, task_id, content="Nowa treść $x$")
+
+    task = client.get(f"/api/panel/tasks/{task_id}").json()
+    assert {key: task[key] for key in SECTIONS} == SECTIONS
+
+
+def test_exported_task_keeps_cke_sections(client):
+    [task_id] = import_tasks(client, 1)
+    edit(client, task_id, scoring=SCORING, **SECTIONS)
+
+    [task] = client.post("/api/panel/export", json={"ids": [task_id]}).json()["tasks"]
+
+    assert {key: task[key] for key in SECTIONS} == SECTIONS
 
 
 def test_import_problems_are_returned(client):

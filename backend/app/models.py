@@ -100,6 +100,11 @@ class Task(Base):
         CheckConstraint(
             "scoring is null or answer_format = 'otwarte'", name="task_scoring_only_open"
         ),
+        CheckConstraint(
+            "answer_format = 'otwarte' or "
+            "(solutions is null and specific_difficulties is null and dyscalculia is null)",
+            name="task_cke_sections_only_open",
+        ),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -127,6 +132,12 @@ class Task(Base):
     # Zadanie otwarte: wyniki końcowe dla programu i zasady oceniania CKE dla AI, format w
     # Scoring (import_tasks.py). Uczeń dostaje zadanie otwarte dopiero wtedy, gdy są.
     scoring: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
+    # Przykładowe rozwiązania CKE dla modelu, lista {"name", "content"}. Uczeń ich nie dostaje.
+    solutions: Mapped[list | None] = mapped_column(JSONB(none_as_null=True))
+    # Osobno od scoring, żeby do modelu trafiały tylko przy uczniu, którego dotyczą
+    # (practice.grading_text).
+    specific_difficulties: Mapped[str | None]
+    dyscalculia: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
 
     review_status: Mapped[str] = mapped_column(default="do-sprawdzenia")
     read_method: Mapped[str]
@@ -240,6 +251,10 @@ class Profile(Base):
         CheckConstraint(
             "daily_reviews in ('malo', 'srednio', 'duzo')", name="profile_daily_reviews_valid"
         ),
+        CheckConstraint(
+            "learning_difficulties in ('brak', 'specyficzne', 'dyskalkulia')",
+            name="profile_learning_difficulties_valid",
+        ),
     )
 
     account_id: Mapped[int] = mapped_column(
@@ -252,6 +267,9 @@ class Profile(Base):
     dark_shade: Mapped[str]
     # Ile powtórek może przyjść jednego dnia: mało, średnio albo dużo. Liczby ustala frontend.
     daily_reviews: Mapped[str]
+    # Opinia poradni, według której AI ocenia rozwiązania. Rośnie narastająco: dyskalkulia
+    # obejmuje też zasady dla specyficznych trudności.
+    learning_difficulties: Mapped[str] = mapped_column(default="brak", server_default="brak")
 
 
 # Każda próba rozwiązania zadania przez ucznia, w każdym trybie. Z tych wierszy liczy się

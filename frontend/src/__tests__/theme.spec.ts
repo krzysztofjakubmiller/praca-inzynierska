@@ -8,6 +8,7 @@ const PROFILE = {
   theme: 'dark',
   dark_shade: 'black',
   daily_reviews: 'srednio',
+  learning_difficulties: 'brak',
   exam_years: [2027, 2028, 2029],
   exam_dates: { podstawowa: '2027-05-05', rozszerzona: '2027-05-11' },
   daily_review_limit: 20,

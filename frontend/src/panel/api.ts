@@ -36,7 +36,15 @@ export interface Scoring {
   notes?: string | null
 }
 
-export interface TaskUpdate {
+/** Sekcje z dokumentu CKE przy zadaniu otwartym; czyta je model, nie uczeń. */
+export interface CkeSections {
+  scoring: Scoring | null
+  solutions: { name: string; content: string }[] | null
+  specific_difficulties: string | null
+  dyscalculia: { rules?: string; notes?: string } | null
+}
+
+export interface TaskUpdate extends CkeSections {
   topic: string
   source: string
   year: number
@@ -52,8 +60,6 @@ export interface TaskUpdate {
   connector: string | null
   figures: Figures | null
   answer: string | null
-  /** Tylko przy zadaniu otwartym; bez zasad zadanie nie trafia do ucznia. */
-  scoring: Scoring | null
   review_status: ReviewStatus
 }
 
@@ -168,7 +174,7 @@ export const panelApi = {
     request<{ exam: string; topic: string }>('/export', json('POST', { ids })),
   importText: (text: string) => request<{ ids: number[] }>('/import', json('POST', { text })),
   importScoring: (text: string) =>
-    request<{ ids: number[] }>('/import-scoring', json('POST', { text })),
+    request<{ ids: number[]; skipped: string[] }>('/import-scoring', json('POST', { text })),
   // null, gdy zadanie nie ma jeszcze szablonu.
   template: (id: number) => request<TemplateDetails | null>(`/tasks/${id}/template`),
   saveTemplate: (id: number, body: unknown) =>

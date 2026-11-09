@@ -9,9 +9,9 @@ import TemplateReview from '@/components/panel/TemplateReview.vue'
 import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {
   panelApi,
+  type CkeSections,
   type ExamOptions,
   type ReviewStatus,
-  type Scoring,
   type TaskDetails,
   type TaskUpdate,
   Rejected,
@@ -29,7 +29,7 @@ const task = ref<TaskDetails | null>(null)
 const form = ref<TaskDetails | null>(null)
 const choices = ref<{ label: string; text: string }[]>([])
 const figuresText = ref('')
-const scoringText = ref('')
+const sectionsText = ref('')
 const saved = ref(false)
 
 const exam = computed(() => exams.value.find((exam) => exam.code === task.value?.exam))
@@ -51,12 +51,18 @@ const parsedFigures = computed((): { figures: Figures | null; error: string | nu
     return { figures: null, error: 'Rysunki: niepoprawny JSON' }
   }
 })
-const parsedScoring = computed((): { scoring: Scoring | null; error: string | null } => {
-  if (!scoringText.value.trim()) return { scoring: null, error: null }
+const NO_SECTIONS: CkeSections = {
+  scoring: null,
+  solutions: null,
+  specific_difficulties: null,
+  dyscalculia: null,
+}
+const parsedSections = computed((): { sections: CkeSections; error: string | null } => {
+  if (!sectionsText.value.trim()) return { sections: NO_SECTIONS, error: null }
   try {
-    return { scoring: JSON.parse(scoringText.value), error: null }
+    return { sections: { ...NO_SECTIONS, ...JSON.parse(sectionsText.value) }, error: null }
   } catch {
-    return { scoring: null, error: 'Zasady oceniania: niepoprawny JSON' }
+    return { sections: NO_SECTIONS, error: 'Sekcje CKE: niepoprawny JSON' }
   }
 })
 const allFigures = computed(() => Object.values(parsedFigures.value.figures ?? {}))
@@ -72,12 +78,19 @@ function figuresToText(figures: Figures | null): string {
   return `{\n${lines.join(',\n')}\n}`
 }
 
+// Te same cztery sekcje co w pliku od Gemini, bez tych, których zadanie nie ma.
+function sectionsToText({ scoring, solutions, specific_difficulties, dyscalculia }: CkeSections) {
+  const sections = { scoring, solutions, specific_difficulties, dyscalculia }
+  const present = Object.entries(sections).filter(([, value]) => value !== null)
+  return present.length ? JSON.stringify(Object.fromEntries(present), null, 2) : ''
+}
+
 function fill(details: TaskDetails) {
   task.value = details
   form.value = { ...details }
   choices.value = Object.entries(details.choices ?? {}).map(([label, text]) => ({ label, text }))
   figuresText.value = figuresToText(details.figures)
-  scoringText.value = details.scoring ? JSON.stringify(details.scoring, null, 2) : ''
+  sectionsText.value = sectionsToText(details)
 }
 
 watch(
@@ -94,7 +107,7 @@ watch(
 function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
   const { figures, error } = parsedFigures.value
   if (error) throw new Rejected([error])
-  if (parsedScoring.value.error) throw new Rejected([parsedScoring.value.error])
+  if (parsedSections.value.error) throw new Rejected([parsedSections.value.error])
   return {
     topic: edited.topic,
     source: edited.source,
@@ -113,7 +126,7 @@ function toUpdate(edited: TaskDetails, status: ReviewStatus): TaskUpdate {
     connector: matching.value ? edited.connector?.trim() || null : null,
     figures,
     answer: edited.answer?.trim() || null,
-    scoring: closed.value ? null : parsedScoring.value.scoring,
+    ...(closed.value ? NO_SECTIONS : parsedSections.value.sections),
     review_status: status,
   }
 }
@@ -262,12 +275,12 @@ function remove() {
         </label>
 
         <label v-if="!closed">
-          Zasady oceniania (JSON)
+          Sekcje CKE (JSON)
           <textarea
-            v-model="scoringText"
+            v-model="sectionsText"
             rows="10"
             spellcheck="false"
-            placeholder='{"results": [{"expected": "$3$", "kind": "liczba"}], "rules": "...", "notes": null}'
+            placeholder='{"scoring": {"results": [{"expected": "$3$", "kind": "liczba"}], "rules": "..."}, "solutions": [], "specific_difficulties": null, "dyscalculia": null}'
           />
         </label>
 
@@ -318,14 +331,14 @@ function remove() {
         </ol>
         <p v-if="form.answer">Odpowiedź: <MathText :text="form.answer" /></p>
         <template v-if="!closed">
-          <p v-if="parsedScoring.error" class="review__figure">{{ parsedScoring.error }}</p>
-          <template v-else-if="parsedScoring.scoring">
+          <p v-if="parsedSections.error" class="review__figure">{{ parsedSections.error }}</p>
+          <template v-else-if="parsedSections.sections.scoring">
             <h3>Wyniki dla programu</h3>
-            <p v-if="!parsedScoring.scoring.results.length" class="review__meta">
+            <p v-if="!parsedSections.sections.scoring.results.length" class="review__meta">
               Brak, dowód ocenia AI.
             </p>
             <ul v-else class="review__scoring">
-              <li v-for="(result, index) in parsedScoring.scoring.results" :key="index">
+              <li v-for="(result, index) in parsedSections.sections.scoring.results" :key="index">
                 <span class="review__meta">
                   {{ result.part ? `część ${result.part}, ${result.points} pkt · ` : ''
                   }}{{ result.label ? `${result.label} · ` : '' }}{{ result.kind }}:
@@ -334,10 +347,23 @@ function remove() {
               </li>
             </ul>
             <h3>Zasady oceniania (dla AI)</h3>
-            <MathText :text="parsedScoring.scoring.rules" />
-            <template v-if="parsedScoring.scoring.notes">
+            <MathText :text="parsedSections.sections.scoring.rules" />
+            <template v-if="parsedSections.sections.scoring.notes">
               <h3>Uwagi (dla AI)</h3>
-              <MathText :text="parsedScoring.scoring.notes" />
+              <MathText :text="parsedSections.sections.scoring.notes" />
+            </template>
+            <template v-for="solution in parsedSections.sections.solutions" :key="solution.name">
+              <h3>{{ solution.name }} (dla AI)</h3>
+              <MathText :text="solution.content" />
+            </template>
+            <template v-if="parsedSections.sections.specific_difficulties">
+              <h3>Specyficzne trudności (dla AI, tylko przy tej opinii)</h3>
+              <MathText :text="parsedSections.sections.specific_difficulties" />
+            </template>
+            <template v-if="parsedSections.sections.dyscalculia">
+              <h3>Dyskalkulia (dla AI, tylko przy tej opinii)</h3>
+              <MathText :text="parsedSections.sections.dyscalculia.rules ?? ''" />
+              <MathText :text="parsedSections.sections.dyscalculia.notes ?? ''" />
             </template>
           </template>
           <p v-else class="review__figure">Brak zasad oceniania: zadanie nie trafia do ucznia.</p>

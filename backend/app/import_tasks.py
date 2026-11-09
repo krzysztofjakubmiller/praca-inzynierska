@@ -37,6 +37,22 @@ class Scoring(BaseModel):
     notes: str | None = None
 
 
+# Przykładowe rozwiązanie z PDF CKE: czyta je tylko model, uczeń nie.
+class SolutionMethod(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1)
+    content: str = Field(min_length=1)
+
+
+# Wpis o zadaniu z części PDF CKE o ocenie prac osób ze stwierdzoną dyskalkulią.
+class Dyscalculia(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    rules: str | None = None
+    notes: str | None = None
+
+
 class TaskIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -56,6 +72,9 @@ class TaskIn(BaseModel):
     figures: dict[str, Figure] | None = None
     answer: str | None = None
     scoring: Scoring | None = None
+    solutions: list[SolutionMethod] | None = None
+    specific_difficulties: str | None = None
+    dyscalculia: Dyscalculia | None = None
 
 
 class TaskFile(BaseModel):
@@ -168,6 +187,33 @@ def task_problems(task: TaskIn) -> list[str]:
             problems.append(f"odpowiedź {task.answer}: etykieta spoza wariantów")
     if task.scoring is not None:
         problems += scoring_problems(task.scoring, task.answer_format, task.max_points)
+    return problems + cke_sections_problems(
+        task.solutions, task.specific_difficulties, task.dyscalculia, task.answer_format
+    )
+
+
+def cke_sections_problems(
+    solutions: list[SolutionMethod] | None,
+    specific_difficulties: str | None,
+    dyscalculia: Dyscalculia | None,
+    answer_format: str,
+) -> list[str]:
+    if solutions is None and specific_difficulties is None and dyscalculia is None:
+        return []
+    if answer_format != "otwarte":
+        return ["rozwiązania, specyficzne trudności i dyskalkulia są tylko przy zadaniu otwartym"]
+    problems = []
+    for solution in solutions or []:
+        problems += [f"{solution.name}: {problem}" for problem in text_problems(solution.content)]
+    if specific_difficulties is not None:
+        problems += [
+            f"specyficzne trudności: {problem}" for problem in text_problems(specific_difficulties)
+        ]
+    if dyscalculia is not None:
+        if not dyscalculia.rules and not dyscalculia.notes:
+            problems.append("dyskalkulia: pusty wpis, usuń pole dyscalculia")
+        for text in (dyscalculia.rules or "", dyscalculia.notes or ""):
+            problems += [f"dyskalkulia: {problem}" for problem in text_problems(text)]
     return problems
 
 
@@ -211,6 +257,18 @@ def scoring_json(scoring: Scoring | None) -> dict | None:
     if scoring is None:
         return None
     return scoring.model_dump(exclude_none=True)
+
+
+def solutions_json(solutions: list[SolutionMethod] | None) -> list[dict] | None:
+    if not solutions:
+        return None
+    return [solution.model_dump() for solution in solutions]
+
+
+def dyscalculia_json(dyscalculia: Dyscalculia | None) -> dict | None:
+    if dyscalculia is None:
+        return None
+    return dyscalculia.model_dump(exclude_none=True)
 
 
 def task_label(index: int, task: TaskIn) -> str:
@@ -315,6 +373,9 @@ def import_tasks(session: Session, data) -> list[int]:
                 figures=figures_json(task.figures),
                 answer=task.answer,
                 scoring=scoring_json(task.scoring),
+                solutions=solutions_json(task.solutions),
+                specific_difficulties=task.specific_difficulties,
+                dyscalculia=dyscalculia_json(task.dyscalculia),
                 read_method=file.read_method,
                 read_model=file.read_model,
                 ai_content=task.content if file.read_method != "recznie" else None,

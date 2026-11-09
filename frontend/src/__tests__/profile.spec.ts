@@ -8,6 +8,7 @@ const SETTINGS: ProfileSettings = {
   theme: 'dark',
   dark_shade: 'black',
   daily_reviews: 'duzo',
+  learning_difficulties: 'brak',
 }
 
 const PROFILE = {

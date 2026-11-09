@@ -14,6 +14,8 @@ from app.accounts import current_account
 from app.db import get_session
 from app.equivalence import KINDS, equivalent, read_latex
 from app.grading import (
+    DYSCALCULIA_GENERAL_RULES,
+    GENERAL_NOTES,
     PROMPT_VERSION,
     GradingUnavailable,
     Reply,
@@ -23,7 +25,17 @@ from app.grading import (
     grade,
     show_solution,
 )
-from app.models import AiRequest, Account, Exam, ReviewCard, Solution, SourceKind, Task, Topic
+from app.models import (
+    AiRequest,
+    Account,
+    Exam,
+    Profile,
+    ReviewCard,
+    Solution,
+    SourceKind,
+    Task,
+    Topic,
+)
 from app.reviews import daily_limit, day_start, exam_start, tomorrow, update_card
 
 router = APIRouter(prefix="/api/practice", dependencies=[Depends(require_password)])
@@ -212,11 +224,57 @@ def scoring_text(task: Task) -> str:
     return scoring
 
 
+def solutions_text(task: Task) -> str:
+    return "".join(
+        f"\n\nPrzykładowe rozwiązanie CKE ({solution['name']}):\n{solution['content']}"
+        for solution in task.solutions or []
+    )
+
+
+def learning_difficulties(session: Session, account: Account) -> str:
+    profile = session.get(Profile, account.id)
+    return profile.learning_difficulties if profile else "brak"
+
+
+# Jedyne miejsce, z którego zasady dla specyficznych trudności i dyskalkulii trafiają do modelu.
+# Model widzi tylko wysłany tekst, więc bez opinii ucznia nie dowie się, że te zasady istnieją.
+def grading_text(task: Task, difficulties: str) -> str:
+    special = []
+    if difficulties == "dyskalkulia":
+        special.append(
+            "Ocena prac osób ze stwierdzoną dyskalkulią, zasady ogólne:\n"
+            + DYSCALCULIA_GENERAL_RULES
+        )
+        if task.dyscalculia:
+            entry = [task.dyscalculia.get("rules"), task.dyscalculia.get("notes")]
+            special.append(
+                "Ocena prac osób ze stwierdzoną dyskalkulią, to zadanie:\n"
+                + "\n".join(part for part in entry if part)
+            )
+    if difficulties in ("specyficzne", "dyskalkulia") and task.specific_difficulties:
+        special.append(
+            "Kryteria uwzględniające specyficzne trudności w uczeniu się matematyki:\n"
+            + task.specific_difficulties
+        )
+    standard = scoring_text(task) + "\n\nUwagi ogólne:\n" + GENERAL_NOTES
+    if not special:
+        return standard
+    return "\n\n".join(
+        [
+            "Ten uczeń ma opinię o trudnościach w uczeniu się. Poniższe zasady mają pierwszeństwo "
+            "przed zasadami standardowymi, które obowiązują we wszystkim, czego te zasady "
+            "nie zmieniają.",
+            *special,
+            "Zasady standardowe:\n" + standard,
+        ]
+    )
+
+
 # Zadanie z poprawną odpowiedzią jako tekst dla modelu: otwarte z zasadami oceniania CKE,
 # zamknięte z odpowiedziami do wyboru (zasad oceniania nie mają).
 def task_for_model(task: Task) -> str:
     if task.answer_format == "otwarte":
-        return describe_task(task.content, scoring_text(task), task.answer)
+        return describe_task(task.content, scoring_text(task), task.answer, solutions_text(task))
     choices = "\n".join(f"{label}. {text}" for label, text in task.choices.items())
     text = f"Treść zadania:\n{task.content}\n\nOdpowiedzi do wyboru:\n{choices}"
     if task.connector:
@@ -283,12 +341,13 @@ def grade_solution(
     try:
         result = grade(
             task.content,
-            scoring_text(task),
+            grading_text(task, learning_difficulties(session, account)),
             task.answer,
             task.max_points,
             image=image,
             image_type=body.image_type,
             text=body.text,
+            solutions=solutions_text(task),
         )
     except GradingUnavailable:
         raise HTTPException(status_code=503, detail=["Ocena chwilowo niedostępna."]) from None

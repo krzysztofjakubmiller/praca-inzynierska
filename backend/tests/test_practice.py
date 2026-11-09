@@ -4,10 +4,10 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from app import practice
+from app import grading, practice
 from app.accounts import token_hash
 from app.grading import Grade, Reply, UnreadableSolution
-from app.models import Account, AiRequest, LoginSession, ReviewCard, Solution
+from app.models import Account, AiRequest, LoginSession, Profile, ReviewCard, Solution
 from tests.test_task import make_task
 
 KEY = "klucz-sesji-testowej"
@@ -510,8 +510,9 @@ def model_reply(text):
 def test_ai_grade_is_saved_with_the_photo_kept_for_analysis(
     client, account, proof, session, monkeypatch
 ):
-    def fake_grade(content, scoring, answer, max_points, image=None, image_type=None, text=None):
-        assert scoring == "2 pkt – pełny dowód."
+    def fake_grade(content, scoring, answer, max_points, **details):
+        image, image_type = details["image"], details["image_type"]
+        assert scoring.startswith("2 pkt – pełny dowód.")
         assert image == b"hej" and image_type == "image/png"
         return Grade(
             points=1,
@@ -630,3 +631,140 @@ def test_preview_shows_what_was_read(client):
 
     assert read["latex"] == "\\frac{1}{4}"
     assert unreadable == {"latex": None}
+
+
+@pytest.fixture
+def full_task(session):
+    return make_task(
+        session,
+        number=23,
+        answer_format="otwarte",
+        choices=None,
+        answer="$x = 3$",
+        max_points=2,
+        review_status="sprawdzone",
+        scoring={
+            "results": [{"expected": "$x = 3$", "kind": "liczba"}],
+            "rules": "2 pkt – rozwiązanie równania.",
+            "notes": "Uwaga standardowa.",
+        },
+        solutions=[{"name": "Sposób I", "content": "Sposób-z-CKE."}],
+        specific_difficulties="Kryterium-S.",
+        dyscalculia={"rules": "Kryterium-D.", "notes": "Uwaga-D."},
+    )
+
+
+def set_difficulties(session, account, difficulties):
+    session.add(
+        Profile(
+            account_id=account.id,
+            level="podstawowa",
+            exam_year=2027,
+            theme="light",
+            dark_shade="grey",
+            daily_reviews="srednio",
+            learning_difficulties=difficulties,
+        )
+    )
+    session.flush()
+
+
+# Cały tekst, który dostaje model: przechwycony na samym końcu, tuż przed wysłaniem.
+def text_sent_to_model(client, monkeypatch, task, path, body):
+    sent = []
+
+    def fake_ask(system, messages, *args, **kwargs):
+        sent.append(system + str(messages))
+        return Reply(
+            text="{}",
+            model="model",
+            failed=[],
+            input_tokens=1,
+            output_tokens=1,
+            cost=None,
+            seconds=0.1,
+            data={"reading": "x", "readable": True, "points": 1, "explanation": "Dobrze."},
+        )
+
+    monkeypatch.setattr(grading, "ask", fake_ask)
+    response = client.post(f"/api/practice/tasks/{task.id}/{path}", json=body, headers=COOKIE)
+    assert response.status_code == 200
+    return sent[0]
+
+
+GRADE_BODY = {"mode": "cwiczenie", "text": "Moje rozwiązanie."}
+SPECIAL_WORDS = ("Kryterium-S", "Kryterium-D", "Uwaga-D", "dyskalkul", "specyficzn", "opinię")
+
+
+def assert_no_special_rules(text):
+    for word in SPECIAL_WORDS:
+        assert word.lower() not in text.lower(), word
+
+
+@pytest.mark.parametrize("with_profile", [False, True])
+def test_without_difficulties_model_knows_nothing_about_special_rules(
+    client, account, full_task, session, monkeypatch, with_profile
+):
+    if with_profile:
+        set_difficulties(session, account, "brak")
+
+    text = text_sent_to_model(client, monkeypatch, full_task, "grade", GRADE_BODY)
+
+    assert_no_special_rules(text)
+    assert "2 pkt – rozwiązanie równania." in text
+    assert "Uwaga standardowa." in text
+    assert "Uwagi ogólne:" in text
+    assert "Sposób-z-CKE." in text
+
+
+def test_specific_difficulties_come_first_and_dyscalculia_stays_hidden(
+    client, account, full_task, session, monkeypatch
+):
+    set_difficulties(session, account, "specyficzne")
+
+    text = text_sent_to_model(client, monkeypatch, full_task, "grade", GRADE_BODY)
+
+    assert text.index("Kryterium-S.") < text.index("2 pkt – rozwiązanie równania.")
+    assert "pierwszeństwo" in text
+    for word in ("Kryterium-D", "Uwaga-D", "dyskalkul"):
+        assert word.lower() not in text.lower(), word
+
+
+def test_dyscalculia_comes_first_and_standard_rules_stay(
+    client, account, full_task, session, monkeypatch
+):
+    set_difficulties(session, account, "dyskalkulia")
+
+    text = text_sent_to_model(client, monkeypatch, full_task, "grade", GRADE_BODY)
+
+    assert (
+        text.index("Nie należy traktować jako błędy merytoryczne")
+        < text.index("Kryterium-D.")
+        < text.index("Kryterium-S.")
+        < text.index("2 pkt – rozwiązanie równania.")
+    )
+    assert "Uwaga-D." in text
+
+
+@pytest.mark.parametrize(
+    "path, body",
+    [("ai-solution", {}), ("question", {"messages": [{"role": "user", "content": "Jak?"}], "checked": True})],
+)
+def test_tutor_never_gets_special_rules_but_gets_solutions(
+    client, account, full_task, session, monkeypatch, path, body
+):
+    set_difficulties(session, account, "dyskalkulia")
+
+    text = text_sent_to_model(client, monkeypatch, full_task, path, body)
+
+    assert_no_special_rules(text)
+    assert "Sposób-z-CKE." in text
+
+
+def test_student_never_gets_cke_sections(client, account, full_task, session):
+    set_difficulties(session, account, "dyskalkulia")
+
+    shown = client.get(f"/api/practice/tasks/{full_task.id}", headers=COOKIE).text
+
+    for word in ("Sposób-z-CKE", "Kryterium-S", "Kryterium-D", "Uwaga standardowa"):
+        assert word not in shown

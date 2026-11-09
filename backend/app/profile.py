@@ -23,6 +23,8 @@ LEVELS = ("podstawowa", "rozszerzona")
 # liczbami: kolejka powtórek liczy z nich limit, a frontend dostaje liczbę razem z profilem.
 DAILY_REVIEW_LIMITS = {"malo": 10, "srednio": 20, "duzo": 40}
 
+LEARNING_DIFFICULTIES = ("brak", "specyficzne", "dyskalkulia")
+
 
 class ProfileData(BaseModel):
     level: str
@@ -31,6 +33,7 @@ class ProfileData(BaseModel):
     theme: str
     dark_shade: str
     daily_reviews: str
+    learning_difficulties: str
 
 
 def default_exam_year(today: date) -> int:
@@ -63,6 +66,8 @@ def problems(data: ProfileData) -> list[str]:
         found.append("Wybierz odcień ciemnego motywu: szary albo czarny.")
     if data.daily_reviews not in DAILY_REVIEW_LIMITS:
         found.append("Wybierz liczbę powtórek na dzień: mało, średnio albo dużo.")
+    if data.learning_difficulties not in LEARNING_DIFFICULTIES:
+        found.append("Wybierz opinię o trudnościach w uczeniu się z listy.")
     return found
 
 
@@ -87,6 +92,7 @@ def read_profile(
             theme="light",
             dark_shade="grey",
             daily_reviews="srednio",
+            learning_difficulties="brak",
         )
     else:
         data = ProfileData.model_validate(profile, from_attributes=True)
