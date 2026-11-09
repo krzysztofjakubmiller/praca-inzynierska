@@ -328,7 +328,7 @@ function remove() {
               <li v-for="(result, index) in parsedScoring.scoring.results" :key="index">
                 <span class="review__meta">
                   {{ result.part ? `część ${result.part}, ${result.points} pkt · ` : ''
-                  }}{{ result.kind }}:
+                  }}{{ result.label ? `${result.label} · ` : '' }}{{ result.kind }}:
                 </span>
                 <MathText :text="result.expected" />
               </li>

@@ -337,6 +337,37 @@ def test_parts_with_points_adding_up_are_accepted(session):
     assert import_tasks(session, task_file(data))
 
 
+def labeled(*labels):
+    return [{"label": label, "expected": "$1$", "kind": "liczba"} for label in labels]
+
+
+@pytest.mark.parametrize(
+    "results, problem",
+    [
+        (labeled(None, None), "przy kilku wynikach bez part każdy potrzebuje label"),
+        (labeled("Objętość", None), "przy kilku wynikach bez part każdy potrzebuje label"),
+        (labeled("Objętość"), "label jest tylko przy kilku wynikach bez part"),
+        (
+            [{**result, "label": "Luka"} for result in parts(1, 1)],
+            "label jest tylko przy kilku wynikach bez part",
+        ),
+        (labeled("Pole $P$", "Objętość"), "label to zwykły tekst, bez $"),
+    ],
+)
+def test_several_results_without_parts_need_labels(session, results, problem):
+    data = open_task()
+    data["scoring"]["results"] = results
+
+    assert rejected(session, task_file(data)) == [f"zadanie 1 (maj 2024, nr 3): {problem}"]
+
+
+def test_labeled_results_are_accepted(session):
+    data = open_task()
+    data["scoring"]["results"] = labeled("Objętość", "Pole powierzchni całkowitej")
+
+    assert import_tasks(session, task_file(data))
+
+
 def test_proof_has_no_results(session):
     data = open_task()
     data["scoring"]["results"] = []

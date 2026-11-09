@@ -31,7 +31,7 @@ export interface TaskSummary {
 
 /** Zasady oceniania zadania otwartego: wyniki dla programu, zasady i uwagi CKE dla AI. */
 export interface Scoring {
-  results: { part?: string; expected: string; kind: ResultKind; points?: number }[]
+  results: { part?: string; label?: string; expected: string; kind: ResultKind; points?: number }[]
   rules: string
   notes?: string | null
 }

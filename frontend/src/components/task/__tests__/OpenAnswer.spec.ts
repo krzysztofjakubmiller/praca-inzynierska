@@ -68,6 +68,19 @@ describe('OpenAnswer', () => {
     expect(wrapper.emitted('done')![0]).toEqual([{ answers: ['6,38', '(-3; 1)'] }])
   })
 
+  it('names the fields of several results without parts', () => {
+    const results: Task['results'] = [
+      { label: 'Objętość', kind: 'liczba' },
+      { label: 'Pole powierzchni całkowitej', kind: 'liczba' },
+    ]
+    const wrapper = mount(OpenAnswer, { props: { task: { ...TASK, results } } })
+
+    expect(wrapper.findAll('label').map((found) => found.text())).toEqual([
+      'Objętość',
+      'Pole powierzchni całkowitej',
+    ])
+  })
+
   it('inserts a sign where the cursor is', async () => {
     serverReads('2 \\sqrt{3}')
     const wrapper = mount(OpenAnswer, {

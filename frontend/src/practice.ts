@@ -11,6 +11,7 @@ export type ResultKind = 'liczba' | 'wartosci' | 'przedzial' | 'punkt' | 'rownan
 /** Pole na wynik końcowy zadania otwartego; part i points tylko przy kilku częściach. */
 export interface ResultField {
   part?: string
+  label?: string
   kind: ResultKind
   points?: number
 }

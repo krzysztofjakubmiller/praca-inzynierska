@@ -18,8 +18,8 @@ const ready = computed(() => readable.value.every((ok) => ok === true))
 
 function label(index: number): string {
   const result = results.value[index]!
-  if (!result.part) return results.value.length === 1 ? 'Twój wynik' : `Wynik ${index + 1}`
-  return `Część ${result.part} (${result.points} pkt)`
+  if (result.part) return `Część ${result.part} (${result.points} pkt)`
+  return result.label ?? 'Twój wynik'
 }
 
 function send() {

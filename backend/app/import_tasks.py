@@ -20,6 +20,8 @@ class Result(BaseModel):
 
     # Numer zdania albo luki, tylko przy kilku wynikach z osobnymi punktami.
     part: str | None = None
+    # Opis pola dla ucznia, tylko przy kilku wynikach bez punktów za części, np. "Objętość".
+    label: str | None = None
     expected: str
     kind: Literal["liczba", "wartosci", "przedzial", "punkt", "rownanie", "wyrazenie"]
     points: int | None = Field(default=None, ge=1)
@@ -184,6 +186,14 @@ def scoring_problems(scoring: Scoring, answer_format: str, max_points: int) -> l
     # Części z własnymi punktami (np. dwa zdania w 12.1) albo jedna odpowiedź za komplet.
     with_part = [result for result in scoring.results if result.part is not None]
     with_points = [result for result in scoring.results if result.points is not None]
+    with_label = [result for result in scoring.results if result.label is not None]
+    if any("$" in result.label for result in with_label):
+        problems.append("label to zwykły tekst, bez $")
+    several_without_part = not with_part and len(scoring.results) > 1
+    if several_without_part and len(with_label) != len(scoring.results):
+        problems.append("przy kilku wynikach bez part każdy potrzebuje label")
+    if with_label and not several_without_part:
+        problems.append("label jest tylko przy kilku wynikach bez part")
     if not with_part:
         if with_points:
             problems.append("points jest tylko przy wynikach z part")
