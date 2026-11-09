@@ -178,7 +178,7 @@ export function numberLineRange(figures: Figure[]): Range {
 /** Odcinek na ekranie; odcinek o równych końcach to pojedynczy punkt, np. inny napis. */
 export type Line = [Point, Point]
 
-export function distanceToLine(point: Point, [from, to]: Line): number {
+export function closestPoint(point: Point, [from, to]: Line): Point {
   const dx = to[0] - from[0]
   const dy = to[1] - from[1]
   const lengthSquared = dx * dx + dy * dy
@@ -186,11 +186,46 @@ export function distanceToLine(point: Point, [from, to]: Line): number {
     ? ((point[0] - from[0]) * dx + (point[1] - from[1]) * dy) / lengthSquared
     : 0
   const t = Math.max(0, Math.min(1, along))
-  return Math.hypot(point[0] - (from[0] + t * dx), point[1] - (from[1] + t * dy))
+  return [from[0] + t * dx, from[1] + t * dy]
+}
+
+export function distanceToLine(point: Point, line: Line): number {
+  const [x, y] = closestPoint(point, line)
+  return Math.hypot(point[0] - x, point[1] - y)
 }
 
 export const clearance = (point: Point, lines: Line[]) =>
   Math.min(...lines.map((line) => distanceToLine(point, line)))
+
+/** Prostokąt zajęty przez napis: środek i połowy wymiarów. */
+export type Box = { at: Point; halfWidth: number; halfHeight: number }
+
+// Znak mówi, po której stronie prostej przez odcinek leży punkt.
+const sideOf = (point: Point, [from, to]: Line) =>
+  Math.sign((to[0] - from[0]) * (point[1] - from[1]) - (to[1] - from[1]) * (point[0] - from[0]))
+
+export const linesCross = (first: Line, second: Line) =>
+  sideOf(first[0], second) * sideOf(first[1], second) < 0 &&
+  sideOf(second[0], first) * sideOf(second[1], first) < 0
+
+// Odległość odcinka od prostokąta napisu, równa 0, gdy odcinek go przecina albo leży w środku.
+export function distanceToBox(line: Line, { at, halfWidth, halfHeight }: Box): number {
+  const [left, right] = [at[0] - halfWidth, at[0] + halfWidth]
+  const [top, bottom] = [at[1] - halfHeight, at[1] + halfHeight]
+  const corners: Point[] = [
+    [left, top],
+    [right, top],
+    [right, bottom],
+    [left, bottom],
+  ]
+  const sides = corners.map((corner, index): Line => [corner, corners[(index + 1) % 4]!])
+  const inside = ([x, y]: Point) => x >= left && x <= right && y >= top && y <= bottom
+  if (line.some(inside) || sides.some((side) => linesCross(side, line))) return 0
+  return Math.min(
+    ...corners.map((corner) => distanceToLine(corner, line)),
+    ...sides.flatMap((side) => line.map((end) => distanceToLine(end, side))),
+  )
+}
 
 // Spośród miejsc na napis bierze to, które leży najdalej od wszystkich linii, żeby napis nie
 // wchodził na żadną z nich. Przy prawie równej odległości wygrywa wcześniejsze na liście.
@@ -225,7 +260,7 @@ export function spotsBeside(from: Point, to: Point, center: Point, distance: num
   const middle: Point = [(from[0] + to[0]) / 2, (from[1] + to[1]) / 2]
   const outward = (middle[0] - center[0]) * normal[0] + (middle[1] - center[1]) * normal[1]
   if (outward < 0) normal = [-normal[0], -normal[1]]
-  return [0.5, 0.35, 0.65].flatMap((t) => {
+  return [0.5, 0.35, 0.65, 0.2, 0.8].flatMap((t) => {
     const x = from[0] + (to[0] - from[0]) * t
     const y = from[1] + (to[1] - from[1]) * t
     return [1, -1].map((side): Point => [

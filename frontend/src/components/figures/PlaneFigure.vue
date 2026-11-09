@@ -4,6 +4,10 @@ import {
   centerOf,
   clearance,
   clearestSpot,
+  closestPoint,
+  distanceToBox,
+  distanceToLine,
+  linesCross,
   spotsAround,
   spotsBeside,
   type Line,
@@ -16,7 +20,7 @@ const props = defineProps<{ figure: PlaneFigure }>()
 
 // Jednostki z JSON-a są umowne, więc rysunek skalujemy do stałego rozmiaru.
 const MAX_WIDTH = 420
-const MAX_HEIGHT = 320
+const MAX_HEIGHT = 400
 const PAD = 40
 const LABEL_DISTANCE = 14
 // Tyle pikseli wolnego miejsca potrzebuje litera przy punkcie.
@@ -85,6 +89,8 @@ const LABEL_FARTHEST = 90
 const CHARACTER_WIDTH = 9
 const DEGREE_WIDTH = 5
 const LABEL_HALF_HEIGHT = 8
+// Najmniejszy odstęp napisu od linii.
+const LABEL_GAP = 4
 
 // Przybliżona połowa szerokości napisu: polecenie LaTeX-a, np. \alpha, liczy się jak jeden znak,
 // stopień jak pół znaku, a $, ^, spacje i nawiasy klamrowe nie zajmują miejsca.
@@ -106,59 +112,8 @@ const textLine = (at: Point, text: string): Line => [
   [at[0] + halfWidth(text), at[1]],
 ]
 
-const angles = computed(() =>
-  (props.figure.angles ?? []).map((angle) => {
-    const vertex = at(angle.vertex)
-    const [vx, vy] = vertex
-    const unit = (name: string): Point => {
-      const [x, y] = at(name)
-      const length = Math.hypot(x - vx, y - vy) || 1
-      return [(x - vx) / length, (y - vy) / length]
-    }
-    const a = unit(angle.from)
-    const b = unit(angle.to)
-    const length = Math.hypot(a[0] + b[0], a[1] + b[1]) || 1
-    const along = (distance: number): Point => [
-      vx + ((a[0] + b[0]) / length) * distance,
-      vy + ((a[1] + b[1]) / length) * distance,
-    ]
-    // Na ekranie oś y idzie w dół, więc znak iloczynu wektorowego wybiera kierunek łuku.
-    const sweep = a[0] * b[1] - a[1] * b[0] > 0 ? 1 : 0
-    // Napis stoi wewnątrz łuku: przy wąskim kącie trzeba go odsunąć od wierzchołka, żeby całe
-    // koło napisu zmieściło się między ramionami, a łuk idzie tuż za napisem.
-    const halfAngle = Math.acos(Math.min(1, length / 2))
-    const radius = angle.label ? labelRadius(angle.label) : 0
-    const labelDistance = Math.min(
-      LABEL_FARTHEST,
-      Math.max(radius + 6, (radius + 2) / Math.sin(halfAngle || 1)),
-    )
-    const r = angle.label ? Math.max(ANGLE_RADIUS, labelDistance + radius + 2) : ANGLE_RADIUS
-    const arcPoint = (t: number, size: number): Point => {
-      const x = a[0] * (1 - t) + b[0] * t
-      const y = a[1] * (1 - t) + b[1] * t
-      const norm = Math.hypot(x, y) || 1
-      return [vx + (x / norm) * size, vy + (y / norm) * size]
-    }
-    const arc = (size: number) =>
-      `M${vx + a[0] * size} ${vy + a[1] * size} A${size} ${size} 0 0 ${sweep} ${vx + b[0] * size} ${vy + b[1] * size}`
-    // Łuk i dwusieczna jako linie, żeby nazwa wierzchołka nie stanęła w środku kąta.
-    const obstacles: Line[] = [
-      [vertex, along(r)],
-      ...[0, 0.25, 0.5, 0.75].map((t): Line => [arcPoint(t, r), arcPoint(t + 0.25, r)]),
-    ]
-    return {
-      arcs: angle.arcs === 2 ? [arc(r), arc(r + SECOND_ARC)] : [arc(r)],
-      sector: `M${vx} ${vy} L${arc(r).slice(1)} Z`,
-      dot: angle.right ? along(r / 2) : null,
-      label: angle.label ? { text: angle.label, at: along(labelDistance) } : null,
-      obstacles,
-    }
-  }),
-)
-
-// Wszystkie linie rysunku, od których napisy trzymają się z daleka. Okrąg i elipsa są
-// przybliżone łamaną, a stały napis z texts jest punktem.
-const lines = computed((): Line[] => {
+// Linie samego rysunku, bez kątów i ich napisów. Okrąg i elipsa są przybliżone łamaną.
+const drawnLines = computed((): Line[] => {
   const edges = (props.figure.polygons ?? []).flatMap((polygon) =>
     polygon.points.map((name, index): Line => [
       at(name),
@@ -183,13 +138,116 @@ const lines = computed((): Line[] => {
       screen(dimension.to),
     ]),
     ...outlines,
-    ...angles.value.flatMap((angle) => angle.obstacles),
-    ...angles.value.flatMap((angle) =>
-      angle.label ? [textLine(angle.label.at, angle.label.text)] : [],
-    ),
     ...(props.figure.texts ?? []).map((text) => textLine(screen(text.at), text.text)),
   ]
 })
+
+// Najmniejsza odległość prostokąta napisu od linii.
+function textClearance(at: Point, text: string, lines: Line[]): number {
+  const box = { at, halfWidth: halfWidth(text), halfHeight: LABEL_HALF_HEIGHT }
+  return Math.min(...lines.map((line) => distanceToBox(line, box)))
+}
+
+const distancesFrom = (first: number, last: number) =>
+  Array.from({ length: Math.floor((last - first) / 4) + 1 }, (_, index) => first + index * 4)
+
+// Pierwsze miejsce z listy, w którym napis nie dotyka żadnej linii. Gdy takiego nie ma, napis
+// staje tam, gdzie najmniej na nie nachodzi.
+function freeSpot(candidates: Point[], text: string, lines: Line[]): Point {
+  let best = candidates[0]!
+  let bestClearance = -1
+  for (const candidate of candidates) {
+    const free = textClearance(candidate, text, lines)
+    if (free >= LABEL_GAP) return candidate
+    if (free > bestClearance) {
+      best = candidate
+      bestClearance = free
+    }
+  }
+  return best
+}
+
+const angles = computed(() =>
+  (props.figure.angles ?? []).map((angle) => {
+    const vertex = at(angle.vertex)
+    const [vx, vy] = vertex
+    const unit = (name: string): Point => {
+      const [x, y] = at(name)
+      const length = Math.hypot(x - vx, y - vy) || 1
+      return [(x - vx) / length, (y - vy) / length]
+    }
+    const a = unit(angle.from)
+    const b = unit(angle.to)
+    const length = Math.hypot(a[0] + b[0], a[1] + b[1]) || 1
+    const along = (distance: number): Point => [
+      vx + ((a[0] + b[0]) / length) * distance,
+      vy + ((a[1] + b[1]) / length) * distance,
+    ]
+    // Na ekranie oś y idzie w dół, więc znak iloczynu wektorowego wybiera kierunek łuku.
+    const sweep = a[0] * b[1] - a[1] * b[0] > 0 ? 1 : 0
+    // Napis stoi wewnątrz łuku: przy wąskim kącie trzeba go odsunąć od wierzchołka, żeby całe
+    // koło napisu zmieściło się między ramionami, a łuk idzie tuż za napisem.
+    const halfAngle = Math.acos(Math.min(1, length / 2))
+    const radius = angle.label ? labelRadius(angle.label) : 0
+    const nearest = Math.min(
+      LABEL_FARTHEST,
+      Math.max(radius + 6, (radius + 2) / Math.sin(halfAngle || 1)),
+    )
+    const arcPoint = (t: number, size: number): Point => {
+      const x = a[0] * (1 - t) + b[0] * t
+      const y = a[1] * (1 - t) + b[1] * t
+      const norm = Math.hypot(x, y) || 1
+      return [vx + (x / norm) * size, vy + (y / norm) * size]
+    }
+    // Inna linia przecinająca kąt (np. przerywana przekątna) nie może przejść przez napis, więc
+    // szukamy miejsca dalej od wierzchołka albo bliżej jednego z ramion. Gdy żadne miejsce nie
+    // jest wolne, napis staje tam, gdzie najmniej nachodzi na linie. Gdy linia wychodzi z
+    // wierzchołka i dzieli kąt (np. krawędź bryły), napis może trafić dalej niż zwykle.
+    const arms: Line[] = [
+      [vertex, [vx + a[0] * 1000, vy + a[1] * 1000]],
+      [vertex, [vx + b[0] * 1000, vy + b[1] * 1000]],
+    ]
+    const onArm = ([from, to]: Line) =>
+      arms.some((arm) => distanceToLine(from, arm) < 1 && distanceToLine(to, arm) < 1)
+    const crossing = drawnLines.value.filter((line) => !onArm(line))
+    const spots = angle.label
+      ? distancesFrom(radius + 6, 2 * LABEL_FARTHEST)
+          .flatMap((distance) =>
+            [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8, 0.1, 0.9].map((t) => arcPoint(t, distance)),
+          )
+          .filter((spot) => textClearance(spot, angle.label!, arms) >= LABEL_GAP)
+      : []
+    const labelAt = spots.length
+      ? freeSpot(spots, angle.label!, crossing)
+      : arcPoint(0.5, nearest)
+    const labelDistance = Math.hypot(labelAt[0] - vx, labelAt[1] - vy)
+    const r = angle.label ? Math.max(ANGLE_RADIUS, labelDistance + radius + 2) : ANGLE_RADIUS
+    const arc = (size: number) =>
+      `M${vx + a[0] * size} ${vy + a[1] * size} A${size} ${size} 0 0 ${sweep} ${vx + b[0] * size} ${vy + b[1] * size}`
+    // Łuk i dwusieczna jako linie, żeby nazwa wierzchołka nie stanęła w środku kąta.
+    const obstacles: Line[] = [
+      [vertex, along(r)],
+      ...[0, 0.25, 0.5, 0.75].map((t): Line => [arcPoint(t, r), arcPoint(t + 0.25, r)]),
+    ]
+    return {
+      arcs: angle.arcs === 2 ? [arc(r), arc(r + SECOND_ARC)] : [arc(r)],
+      sector: `M${vx} ${vy} L${arc(r).slice(1)} Z`,
+      dot: angle.right ? along(r / 2) : null,
+      label: angle.label ? { text: angle.label, at: labelAt } : null,
+      obstacles,
+    }
+  }),
+)
+
+// Wszystkie linie rysunku razem z łukami kątów i ich napisami, od których pozostałe napisy
+// trzymają się z daleka.
+const lines = computed((): Line[] => [
+  ...drawnLines.value,
+  ...angles.value.flatMap((angle) => angle.obstacles),
+  ...angles.value.flatMap((angle) =>
+    angle.label ? [textLine(angle.label.at, angle.label.text)] : [],
+  ),
+])
 
 // Napisy stawiane po kolei: każdy postawiony napis jest przeszkodą dla następnych.
 const labels = computed(() => {
@@ -199,25 +257,31 @@ const labels = computed(() => {
     taken.push(textLine(spot, text))
     return spot
   }
+  // Napis przy odcinku zaczyna tuż obok niego i odsuwa się, dopóki nie przestanie dotykać linii.
+  // Sam odcinek też jest w taken, więc szeroki napis nie wejdzie na niego bokiem. Między odcinkiem
+  // a napisem nie może leżeć inna linia, bo napis wyglądałby wtedy jak podpis tamtej.
+  const placeBeside = (from: Point, to: Point, text: string) => {
+    const spots = distancesFrom(6, 40).flatMap((distance) =>
+      spotsBeside(from, to, center.value, distance),
+    )
+    const visible = spots.filter(
+      (spot) =>
+        !drawnLines.value.some((line) =>
+          linesCross([closestPoint(spot, [from, to]), spot], line),
+        ),
+    )
+    const spot = freeSpot(visible.length ? visible : spots, text, taken)
+    taken.push(textLine(spot, text))
+    return spot
+  }
   const segments = (props.figure.segments ?? []).flatMap((segment) =>
     segment.label
-      ? [
-          {
-            text: segment.label,
-            at: place(
-              spotsBeside(at(segment.from), at(segment.to), center.value, LABEL_DISTANCE),
-              segment.label,
-            ),
-          },
-        ]
+      ? [{ text: segment.label, at: placeBeside(at(segment.from), at(segment.to), segment.label) }]
       : [],
   )
   const dimensions = (props.figure.dimensions ?? []).map((dimension) => ({
     text: dimension.label,
-    at: place(
-      spotsBeside(screen(dimension.from), screen(dimension.to), center.value, LABEL_DISTANCE),
-      dimension.label,
-    ),
+    at: placeBeside(screen(dimension.from), screen(dimension.to), dimension.label),
   }))
   // Gdy przez punkt przechodzi kilka linii, przy samym punkcie nie ma miejsca na literę, więc
   // dopiero wtedy odsuwamy ją dalej.

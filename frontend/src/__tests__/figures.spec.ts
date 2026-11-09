@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   clearestSpot,
   coordinatePlaneSpan,
+  distanceToBox,
   numberLineRange,
   spotsAround,
   spotsBeside,
@@ -82,6 +83,43 @@ describe('clearestSpot', () => {
     const [x] = clearestSpot(middle, [crossing])
 
     expect(Math.abs(x - 10)).toBeGreaterThan(2)
+  })
+})
+
+describe('distanceToBox', () => {
+  const box = { at: [0, 0] as [number, number], halfWidth: 10, halfHeight: 5 }
+
+  it('is zero for a line crossing the label, even with both ends far outside it', () => {
+    expect(
+      distanceToBox(
+        [
+          [-50, 1],
+          [50, -1],
+        ],
+        box,
+      ),
+    ).toBe(0)
+  })
+
+  it('measures from the label edge, not from its middle', () => {
+    expect(
+      distanceToBox(
+        [
+          [13, -20],
+          [13, 20],
+        ],
+        box,
+      ),
+    ).toBeCloseTo(3)
+    expect(
+      distanceToBox(
+        [
+          [-20, 9],
+          [20, 9],
+        ],
+        box,
+      ),
+    ).toBeCloseTo(4)
   })
 })
 
