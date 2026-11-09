@@ -54,6 +54,7 @@ METHOD_DOT = re.compile(r"(?<=[A-Za-z)\]])\.|\.(?!\d)")
 
 REPLACEMENTS = [
     ("^\\circ", ""),
+    ("^{\\circ}", ""),
     ("°", ""),
     ("\\left", ""),
     ("\\right", ""),
@@ -77,8 +78,13 @@ REPLACEMENTS = [
     ("√", "sqrt"),
 ]
 
-# Nazwa przed wynikiem, np. "x=", "V=", "x_1=", "x2=", "|BC|=". Pomijana przy liczbach i punktach.
-NAME_PREFIX = re.compile(r"^\s*(?:\|[A-Za-z]{1,3}\||[A-Za-z](?:_?\{?\w*\}?)?)\s*=\s*")
+# Nazwa przed wynikiem, np. "x=", "V=", "x_1=", "x2=", "|BC|=", "P(A)=". Pomijana przy liczbach
+# i punktach.
+NAME_PREFIX = re.compile(
+    r"^\s*(?:\|[A-Za-z]{1,3}\||[A-Za-z]\([^()=]*\)|[A-Za-z](?:_?\{?\w*\}?)?)\s*=\s*"
+)
+# Wzór funkcji przed wyrażeniem, np. "f(x)=". Samo "x=" zostaje, bo to nie jest wyrażenie.
+FUNCTION_PREFIX = re.compile(r"^\s*[A-Za-z]\([^()=]*\)\s*=\s*")
 # Jednostka po odstępie na końcu liczby, np. "51 kg", "750 zł", "10 000 m^2".
 UNIT = re.compile(r"\s+[^\W\d_]+(?:\s*\^?[23²³])?\.?\s*$")
 TEXT = re.compile(r"\\(?:text|mathrm)\{([^}]*)\}")
@@ -325,8 +331,8 @@ def read_set_piece(piece: str):
 def read_set(text: str):
     for old, new in SET_REPLACEMENTS:
         text = text.replace(old, new)
-    # "x \in (-3, 1)" i "x ∈ (-3, 1)" to sam przedział.
-    text = re.sub(r"^\s*[A-Za-z]\s*(?:\\in(?!fty)|∈)\s*", "", text)
+    # "x \in (-3, 1)", "x ∈ (-3, 1)" i dziedzina "D=(0, 11)" to sam przedział.
+    text = re.sub(r"^\s*[A-Za-z]\s*(?:\\in(?!fty)|∈|=(?![<>]))\s*", "", text)
     pieces = re.split(r"\s*U\s*|\s+lub\s+", text.strip())
     return Union(*(read_set_piece(piece) for piece in pieces))
 
@@ -382,7 +388,7 @@ def read(text: str, kind: str):
         return read_point(text)
     if kind == "rownanie":
         return read_equation(text)
-    return read_expression(text.replace("$", ""))
+    return read_expression(FUNCTION_PREFIX.sub("", text.replace("$", ""), count=1))
 
 
 def same(student, expected, kind: str) -> bool:
@@ -456,7 +462,7 @@ def read_latex(student: str, kind: str) -> str | None:
         if kind == "liczba" and not decimal:
             return typed_latex(number_text(text))
         if kind == "wyrazenie" and not decimal:
-            return typed_latex(text)
+            return typed_latex(FUNCTION_PREFIX.sub("", text, count=1))
     except Unreadable:
         return None
     if kind == "wartosci":
