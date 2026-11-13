@@ -136,12 +136,6 @@ const stations = {
     description:
       'Graniastosłupy, ostrosłupy, walec, stożek i kula. Liczysz objętości, pola powierzchni i kąty w bryłach.',
   },
-  'dowody-geometria': {
-    name: 'Dowody geometria',
-    difficulty: 3,
-    description:
-      'Zadania typu „wykaż, że” z geometrii: uzasadniasz własności figur, na przykład równość kątów albo podobieństwo trójkątów.',
-  },
 } satisfies Record<string, Station>
 
 export type BasicStationId = keyof typeof stations
@@ -187,7 +181,6 @@ const lines: Line<BasicStationId>[] = [
       'trygonometria',
       'planimetria',
       'stereometria',
-      'dowody-geometria',
     ],
   },
 ]

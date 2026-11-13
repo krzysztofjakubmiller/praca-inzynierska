@@ -46,7 +46,6 @@ TOPICS = {
         "trygonometria": "Trygonometria",
         "planimetria": "Planimetria",
         "stereometria": "Stereometria",
-        "dowody-geometria": "Dowody geometria",
     },
     "matura-rozszerzona": {
         "trygonometria": "Trygonometria",

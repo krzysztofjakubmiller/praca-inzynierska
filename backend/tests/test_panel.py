@@ -61,7 +61,7 @@ def edit(client, task_id, **changes):
 def test_options_list_topics_and_sources_of_each_exam(client):
     exams = {exam["code"]: exam for exam in client.get("/api/panel/options").json()}
 
-    assert len(exams["matura-podstawowa"]["topics"]) == 23
+    assert len(exams["matura-podstawowa"]["topics"]) == 22
     assert len(exams["matura-rozszerzona"]["topics"]) == 16
     assert [source["name"] for source in exams["matura-podstawowa"]["sources"]] == [
         "Maj",

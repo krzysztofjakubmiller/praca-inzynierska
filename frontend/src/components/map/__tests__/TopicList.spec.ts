@@ -34,7 +34,7 @@ describe('TopicList', () => {
       'Linia Statystyczna',
       'Linia Geometryczna',
     ])
-    expect(list.findAll('.topic-card')).toHaveLength(23)
+    expect(list.findAll('.topic-card')).toHaveLength(22)
     expect(list.findAll('.topic-list__pass').map((row) => row.text())).toEqual([
       'Algebra · przesiadka',
       'Potęgi · przesiadka',

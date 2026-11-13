@@ -46,7 +46,6 @@ describe('listOrder', () => {
       'Trygonometria',
       'Planimetria',
       'Stereometria',
-      'Dowody geometria',
     ])
   })
 })

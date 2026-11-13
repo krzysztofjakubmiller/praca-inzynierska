@@ -25,7 +25,6 @@ export const BASIC_LAYOUT: MapLayout<BasicStationId> = {
     optymalizacja: { x: 0, y: 14 },
     stereometria: { x: 2, y: 14 },
     'inne-funkcje': { x: 0, y: 15 },
-    'dowody-geometria': { x: 2, y: 15 },
   },
   labels: {
     'rachunek-prawdopodobienstwa': { landscape: 'right' },
@@ -38,6 +37,5 @@ export const BASIC_LAYOUT: MapLayout<BasicStationId> = {
     optymalizacja: { landscape: 'below' },
     'funkcja-liniowa': { portrait: 'right' },
     'inne-funkcje': { landscape: 'right' },
-    'dowody-geometria': { landscape: 'right' },
   },
 }
