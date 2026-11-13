@@ -24,13 +24,23 @@ export function project(
 ): Map<string, Point> {
   const maxX = Math.max(...Object.values(points).map((point) => point.x))
   return new Map(
-    Object.entries(points).map(([id, { x, y }]) => [
+    Object.entries(points).map(([id, point]) => [
       id,
-      orientation === 'portrait'
-        ? { x: x * steps.across, y: y * steps.along }
-        : { x: y * steps.along, y: (maxX - x) * steps.across },
+      projectPoint(point, orientation, steps, maxX),
     ]),
   )
+}
+
+/** Punkt może leżeć między punktami siatki; `maxX` to ostatnia kolumna mapy pionowej. */
+export function projectPoint(
+  { x, y }: GridPoint,
+  orientation: Orientation,
+  steps: Steps,
+  maxX: number,
+): Point {
+  return orientation === 'portrait'
+    ? { x: x * steps.across, y: y * steps.along }
+    : { x: y * steps.along, y: (maxX - x) * steps.across }
 }
 
 // Czy odcinek między dwiema stacjami biegnie prosto w poprzek osi pionowej albo poziomej.

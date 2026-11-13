@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 
-import { BASIC_MAP, TOPIC_MAPS } from '@/maps'
+import { BASIC_MAP, EXTENDED_MAP, TOPIC_MAPS } from '@/maps'
 import { BASIC_DEMO_PROGRESS } from '@/maps/basic/demoProgress'
+import { EXTENDED_DEMO_PROGRESS } from '@/maps/extended/demoProgress'
 import { drawMap, type MapDrawing } from '@/maps/drawing'
 import { measureLabel as measure } from './textWidth'
 
@@ -89,5 +90,74 @@ describe('drawing the demo student', () => {
     expect(ringed[0]!.ring).toBeGreaterThan(ringed[0]!.radius * 1.36 + drawing.strokeWidth)
     const label = drawing.labels.find((item) => item.id === progress.lastStation)
     expect(label?.note).toBe('Kontynuuj')
+  })
+})
+
+describe.each([
+  ['basic', BASIC_MAP, BASIC_DEMO_PROGRESS],
+  ['extended', EXTENDED_MAP, EXTENDED_DEMO_PROGRESS],
+] as const)('sketches on the %s map', (_, map, progress) => {
+  const plain = { ...map, sketches: undefined }
+  const inside = (drawing: MapDrawing) =>
+    drawing.sketches.every(
+      (sketch) =>
+        sketch.x >= drawing.viewBox.x &&
+        sketch.y >= drawing.viewBox.y &&
+        sketch.x + sketch.width <= drawing.viewBox.x + drawing.viewBox.width &&
+        sketch.y + sketch.height <= drawing.viewBox.y + drawing.viewBox.height,
+    )
+
+  it.each([
+    [1088, 812],
+    [1366, 650],
+    [1800, 950],
+    [857, 267],
+  ])('never force the sideways map to scale down at %i x %i px', (width, height) => {
+    const options = { width, height, measure, orientation: 'landscape' as const }
+    const drawing = drawMap(map, options)
+    expect(drawing.fit).toBeGreaterThanOrEqual(drawMap(plain, options).fit)
+    expect(drawing.viewBox.width * drawing.fit).toBeLessThanOrEqual(width + 0.01)
+    expect(drawing.viewBox.height * drawing.fit).toBeLessThanOrEqual(height + 0.01)
+    expect(inside(drawing)).toBe(true)
+  })
+
+  it.each([
+    [1088, 812],
+    [1600, 900],
+    [1900, 1000],
+  ])('all fit on a %i x %i px monitor', (width, height) => {
+    const drawing = drawMap(map, { width, height, measure })
+    expect(drawing.orientation).toBe('landscape')
+    expect(drawing.sketches).toHaveLength(map.sketches!.length)
+  })
+
+  it.each([
+    [320, 640],
+    [360, 740],
+    [412, 860],
+    [1088, 812],
+  ])('never cover a label or station with progress shown at %i x %i px', (width, height) => {
+    const drawing = drawMap(map, { width, height, measure, progress })
+    const covered = drawing.sketches.filter((sketch) =>
+      drawing.labels.some(
+        ({ box }) =>
+          sketch.x < box.x + box.width &&
+          box.x < sketch.x + sketch.width &&
+          sketch.y < box.y + box.height &&
+          box.y < sketch.y + sketch.height,
+      ),
+    )
+    expect(covered.map((sketch) => sketch.station)).toEqual([])
+  })
+
+  it('all fit on a typical phone', () => {
+    const drawing = drawMap(map, { width: 358, height: 680, measure })
+    expect(drawing.sketches).toHaveLength(map.sketches!.length)
+  })
+
+  it('stay within the width of a narrow phone', () => {
+    const drawing = drawMap(map, { width: 320, height: 640, measure })
+    expect(drawing.orientation).toBe('portrait')
+    expect(inside(drawing)).toBe(true)
   })
 })

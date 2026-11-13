@@ -1,5 +1,12 @@
-import { project, routeLine, type Orientation, type Point, type Steps } from './geometry'
-import { placeLabels, type Box, type MainSide, type PlacedLabel } from './labels'
+import {
+  project,
+  projectPoint,
+  routeLine,
+  type Orientation,
+  type Point,
+  type Steps,
+} from './geometry'
+import { inside, overlap, placeLabels, type Box, type MainSide, type PlacedLabel } from './labels'
 import { passengerCount } from './progress'
 import type { Difficulty, LineColor, MapProgress, TopicMap } from './types'
 
@@ -30,6 +37,20 @@ export interface DrawnStation {
   ring?: number
 }
 
+export interface DrawnSketch {
+  station: string
+  drawing: string
+  color: LineColor
+  /** Lewy górny róg przed obrotem. */
+  x: number
+  y: number
+  width: number
+  height: number
+  /** Powiększenie rysunku z jego własnych jednostek. */
+  scale: number
+  tilt: number
+}
+
 export interface MapDrawing {
   orientation: Orientation
   viewBox: Box
@@ -45,6 +66,7 @@ export interface MapDrawing {
   lines: DrawnLine[]
   stations: DrawnStation[]
   labels: PlacedLabel[]
+  sketches: DrawnSketch[]
 }
 
 // Wymiary na telefonie; na większych ekranach rosną razem ze skalą.
@@ -78,6 +100,8 @@ const LANDSCAPE_STEPS = { along: { min: 58, max: 110 }, across: { min: 80, max: 
 const MAX_ACROSS_PER_ALONG = 2.4
 // Mapa pozioma pomniejszona bardziej niż do 80% ma za mały tekst; wtedy lepszy jest pion.
 const MIN_LANDSCAPE_FIT = 0.8
+// Rysunki w tle są o tyle większe od skali napisów, żeby było je widać z daleka.
+const SKETCH_SCALE = 1.4
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max)
@@ -103,6 +127,8 @@ interface Composition {
   options: DrawOptions
   /** Etykiety na zmianę nad i pod linią (tylko w poziomie). */
   alternate?: boolean
+  /** Czy rysunki w tle liczą się do rozmiaru mapy; inaczej dokłada je addSketches. */
+  sketchesInside?: boolean
 }
 
 function compose({
@@ -114,6 +140,7 @@ function compose({
   bounds,
   options,
   alternate = false,
+  sketchesInside = true,
 }: Composition): MapDrawing {
   const fontSize = Math.round(BASE.fontSize * scale * 2) / 2
   const lineHeight = Math.round(fontSize * 1.2)
@@ -209,17 +236,59 @@ function compose({
     },
   )
 
+  const maxX = gridSize(map).columns - 1
+  // Mapa pionowa przestaje rosnąć powyżej szerokości dużego telefonu, więc na tablecie rysunki
+  // rozsuwają się na boki w wolne miejsce, zamiast tłoczyć się przy liniach.
+  const spread =
+    orientation === 'portrait' ? Math.max(1, options.width / (PHONE_WIDTH * scale)) : 1
+  const sketches = (map.sketches ?? []).map((sketch) => {
+    const point = projectPoint(sketch[orientation], orientation, steps, maxX)
+    const width = sketch.width * SKETCH_SCALE * scale
+    const height = sketch.height * SKETCH_SCALE * scale
+    const middle = center.x + (point.x + offset.x - center.x) * spread
+    // W pionie szerokość jest twarda, więc na wąskim ekranie rysunek dosuwa się do krawędzi.
+    const x = clamp(middle - width / 2, bounds.x, bounds.x + bounds.width - width)
+    const color = map.graph.lines.find((line) => line.stations.includes(sketch.station))!.color
+    return {
+      station: sketch.station,
+      drawing: sketch.drawing,
+      color,
+      x,
+      y: point.y + offset.y - height / 2,
+      width,
+      height,
+      scale: SKETCH_SCALE * scale,
+      tilt: sketch.tilt,
+    }
+  })
+
+  const stationBoxes = stations.map((station) => {
+    const reach = (station.ring ?? station.radius * SHAPE_REACH) + strokeWidth
+    return {
+      x: station.at.x - reach,
+      y: station.at.y - reach,
+      width: 2 * reach,
+      height: 2 * reach,
+    }
+  })
+  // Etykiety zmieniają stronę i rosną razem z liczbą pasażerów, więc ręczne miejsce
+  // rysunku bywa zajęte. Wtedy rysunek przesuwa się do najbliższego wolnego miejsca.
+  const taken: Box[] = [...labels.map((label) => label.box), ...stationBoxes]
+  const linePoints = lines.flatMap((line) => alongLine(line.points))
+  const isFree = (box: Box) =>
+    inside(box, bounds) &&
+    !taken.some((other) => overlap(box, other)) &&
+    !linePoints.some((point) => pointNear(point, box, lineWidth))
+  const freeSketches = sketches.flatMap((sketch) => {
+    const moved = nudge(sketch, scale, isFree)
+    if (moved) taken.push(moved)
+    return moved ? [moved] : []
+  })
+
   const boxes = [
     ...labels.map((label) => label.box),
-    ...stations.map((station) => {
-      const reach = (station.ring ?? station.radius * SHAPE_REACH) + strokeWidth
-      return {
-        x: station.at.x - reach,
-        y: station.at.y - reach,
-        width: 2 * reach,
-        height: 2 * reach,
-      }
-    }),
+    ...stationBoxes,
+    ...(sketchesInside ? freeSketches : []),
   ]
   const left = Math.min(...boxes.map((box) => box.x)) - PADDING
   const top = Math.min(...boxes.map((box) => box.y)) - PADDING
@@ -244,7 +313,60 @@ function compose({
     lines,
     stations,
     labels,
+    sketches: freeSketches,
   }
+}
+
+// Przesunięcia rysunku od najbliższego, co 6 px do 30 px w każdą stronę.
+const NUDGES = [0, 6, -6, 12, -12, 18, -18, 24, -24, 30, -30]
+  .flatMap((dy) => [0, 6, -6, 12, -12, 18, -18, 24, -24, 30, -30].map((dx) => ({ dx, dy })))
+  .sort((a, b) => Math.hypot(a.dx, a.dy) - Math.hypot(b.dx, b.dy))
+
+function nudge(
+  sketch: DrawnSketch,
+  scale: number,
+  isFree: (box: Box) => boolean,
+): DrawnSketch | undefined {
+  // Gdy w pełnym rozmiarze nie ma miejsca, rysunek próbuje jeszcze w 80%, wokół tego samego środka.
+  for (const shrink of [1, 0.8]) {
+    const width = sketch.width * shrink
+    const height = sketch.height * shrink
+    const x = sketch.x + (sketch.width - width) / 2
+    const y = sketch.y + (sketch.height - height) / 2
+    for (const { dx, dy } of NUDGES) {
+      const moved = {
+        ...sketch,
+        x: x + dx * scale,
+        y: y + dy * scale,
+        width,
+        height,
+        scale: sketch.scale * shrink,
+      }
+      if (isFree(moved)) return moved
+    }
+  }
+  return undefined
+}
+
+// Punkty co kilka pikseli wzdłuż łamanej, żeby sprawdzić, czy linia przecina rysunek.
+function alongLine(points: Point[]): Point[] {
+  return points.slice(1).flatMap((to, index) => {
+    const from = points[index]!
+    const count = Math.ceil(Math.hypot(to.x - from.x, to.y - from.y) / 4)
+    return Array.from({ length: count + 1 }, (_, step) => ({
+      x: from.x + ((to.x - from.x) * step) / count,
+      y: from.y + ((to.y - from.y) * step) / count,
+    }))
+  })
+}
+
+function pointNear(point: Point, box: Box, distance: number): boolean {
+  return (
+    point.x > box.x - distance &&
+    point.x < box.x + box.width + distance &&
+    point.y > box.y - distance &&
+    point.y < box.y + box.height + distance
+  )
 }
 
 function failures(drawing: MapDrawing): number {
@@ -294,6 +416,18 @@ function drawPortrait(map: TopicMap, options: DrawOptions): MapDrawing {
 // najmniejszym kroku mapa się nie mieści, cały rysunek jest pomniejszany razem z napisami,
 // zamiast ściskać etykiety.
 function drawLandscape(map: TopicMap, options: DrawOptions): MapDrawing {
+  // Na dużym ekranie krok siatki zostawia miejsce na rysunki. Gdy przez nie mapa musiałaby
+  // się zmniejszyć, pierwszeństwo ma mapa, a rysunki wchodzą tylko w wolne miejsce.
+  const roomy = arrangeLandscape(map, options, true)
+  if (roomy.fit === 1 || !map.sketches) return roomy
+  return addSketches(arrangeLandscape(map, options, false), options)
+}
+
+function arrangeLandscape(
+  map: TopicMap,
+  options: DrawOptions,
+  sketchesInside: boolean,
+): MapDrawing {
   const { columns, rows } = gridSize(map)
   const bounds = { x: -UNBOUNDED, y: -UNBOUNDED, width: 2 * UNBOUNDED, height: 2 * UNBOUNDED }
   const { along: alongLimits, across: acrossLimits } = LANDSCAPE_STEPS
@@ -318,6 +452,7 @@ function drawLandscape(map: TopicMap, options: DrawOptions): MapDrawing {
         bounds,
         options,
         alternate,
+        sketchesInside,
       })
     const outward = place(false)
     if (failures(outward) === 0) return outward
@@ -346,6 +481,44 @@ function drawLandscape(map: TopicMap, options: DrawOptions): MapDrawing {
     options.height / drawing.viewBox.height,
   )
   return { ...drawing, fit }
+}
+
+// Ile z wolnego miejsca dać przed i za mapą, gdy rysunki wystają o `before` i `after`.
+function grow(before: number, after: number, room: number): [number, number] {
+  const first = Math.min(before, room / 2)
+  const second = Math.min(after, room - first)
+  return [Math.min(before, room - second), second]
+}
+
+// Rysunki zajmują tylko miejsce, które na ekranie i tak zostaje wolne wokół mapy.
+// Te, które się nie mieszczą, nie są rysowane.
+function addSketches(drawing: MapDrawing, options: DrawOptions): MapDrawing {
+  const box = drawing.viewBox
+  const sketches = drawing.sketches
+  const overhang = (values: number[]) => Math.max(0, ...values)
+  const left = overhang(sketches.map((sketch) => box.x - sketch.x))
+  const right = overhang(sketches.map((sketch) => sketch.x + sketch.width - box.x - box.width))
+  const top = overhang(sketches.map((sketch) => box.y - sketch.y))
+  const bottom = overhang(sketches.map((sketch) => sketch.y + sketch.height - box.y - box.height))
+  const [addLeft, addRight] = grow(left, right, options.width / drawing.fit - box.width)
+  const [addTop, addBottom] = grow(top, bottom, options.height / drawing.fit - box.height)
+  const viewBox = {
+    x: box.x - addLeft,
+    y: box.y - addTop,
+    width: box.width + addLeft + addRight,
+    height: box.height + addTop + addBottom,
+  }
+  return {
+    ...drawing,
+    viewBox,
+    sketches: sketches.filter(
+      (sketch) =>
+        sketch.x >= viewBox.x &&
+        sketch.y >= viewBox.y &&
+        sketch.x + sketch.width <= viewBox.x + viewBox.width &&
+        sketch.y + sketch.height <= viewBox.y + viewBox.height,
+    ),
+  }
 }
 
 export function drawMap(map: TopicMap, options: DrawOptions): MapDrawing {

@@ -143,11 +143,11 @@ function grow(box: Box, by: number): Box {
   return { x: box.x - by, y: box.y - by, width: box.width + 2 * by, height: box.height + 2 * by }
 }
 
-function overlap(a: Box, b: Box): boolean {
+export function overlap(a: Box, b: Box): boolean {
   return a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
 }
 
-function inside(box: Box, bounds: Box): boolean {
+export function inside(box: Box, bounds: Box): boolean {
   return (
     box.x >= bounds.x &&
     box.y >= bounds.y &&
@@ -266,8 +266,7 @@ export function placeLabels(
 
   // Miejsce wolne od granic, linii i innych stacji; etykiety sprawdza osobno `blocking`.
   const free = (request: LabelRequest, { box, side }: Option) => {
-    const clearance =
-      side === request.side ? settings.manualLineClearance : settings.lineClearance
+    const clearance = side === request.side ? settings.manualLineClearance : settings.lineClearance
     return (
       inside(box, settings.bounds) &&
       !markers.some((marker) => marker.id !== request.id && overlap(grow(box, 1), marker.box)) &&

@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  useTemplateRef,
+  watch,
+} from 'vue'
+import MapSketch from './MapSketch.vue'
 import { drawMap, type MapDrawing } from '@/maps/drawing'
 import type { Orientation } from '@/maps/geometry'
 import type { PlacedLabel } from '@/maps/labels'
@@ -167,7 +176,12 @@ function resize(width: number, height: number) {
 onMounted(async () => {
   if (!frame.value) return
   // Pierwszy pomiar od razu, bo obserwator zgłasza się dopiero przy najbliższym rysowaniu strony.
-  resize(frame.value.clientWidth, frame.value.clientHeight)
+  // Bez odstępu wewnętrznego, tak jak mierzy obserwator.
+  const style = getComputedStyle(frame.value)
+  resize(
+    frame.value.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+    frame.value.clientHeight - parseFloat(style.paddingTop) - parseFloat(style.paddingBottom),
+  )
   observer = new ResizeObserver(([entry]) => {
     if (entry) resize(entry.contentRect.width, entry.contentRect.height)
   })
@@ -183,7 +197,7 @@ defineExpose({ drawing, focusStation })
 </script>
 
 <template>
-  <div ref="frame" class="metro-map">
+  <div ref="frame" class="metro-map" :class="{ 'metro-map--paper': map.sketches?.length }">
     <slot name="before" />
     <svg
       v-if="drawing"
@@ -195,6 +209,15 @@ defineExpose({ drawing, focusStation })
       aria-label="Mapa tematów"
       @click="emit('select', undefined)"
     >
+      <g class="metro-map__sketches" aria-hidden="true">
+        <MapSketch
+          v-for="sketch in drawing.sketches"
+          :key="sketch.station"
+          :drawing="sketch.drawing"
+          :transform="`translate(${sketch.x} ${sketch.y}) rotate(${sketch.tilt} ${sketch.width / 2} ${sketch.height / 2}) scale(${sketch.scale})`"
+          :style="{ '--sketch-color': `var(--line-${sketch.color})` }"
+        />
+      </g>
       <g class="metro-map__lines" :stroke-width="drawing.lineWidth" aria-hidden="true">
         <polyline
           v-for="line in drawing.lines"
@@ -287,6 +310,9 @@ defineExpose({ drawing, focusStation })
 
 <style scoped>
 .metro-map {
+  --paper-mm: rgb(40 120 110 / 0.07);
+  --paper-cm: rgb(40 120 110 / 0.13);
+
   position: relative;
   display: flex;
   flex-direction: column;
@@ -303,6 +329,30 @@ defineExpose({ drawing, focusStation })
 
 .metro-map__spacer {
   flex: none;
+}
+
+:global(:root[data-theme='dark']) .metro-map {
+  --paper-mm: rgb(160 220 210 / 0.045);
+  --paper-cm: rgb(160 220 210 / 0.09);
+}
+
+/* Papier milimetrowy pod mapą z rysunkami: kratka co 11 px i grubsza co 55 px. Odstęp od
+   krawędzi jest wewnątrz, żeby papier sięgał do brzegów ekranu. */
+.metro-map--paper {
+  box-sizing: border-box;
+  padding: 1rem var(--gutter);
+  background-image:
+    linear-gradient(var(--paper-cm) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-cm) 1px, transparent 1px),
+    linear-gradient(var(--paper-mm) 1px, transparent 1px),
+    linear-gradient(90deg, var(--paper-mm) 1px, transparent 1px);
+  background-size:
+    55px 55px,
+    55px 55px,
+    11px 11px,
+    11px 11px;
+  /* Kratka przewija się razem z mapą. */
+  background-attachment: local;
 }
 
 .metro-map__lines {

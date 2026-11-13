@@ -47,10 +47,29 @@ export interface MapLayout<Id extends string> {
   labels?: Partial<Record<Id, { portrait?: LabelSide; landscape?: LabelSide }>>
 }
 
+/** Odręczny rysunek w tle mapy, w kolorze linii swojego tematu. */
+export interface Sketch<Id extends string> {
+  station: Id
+  /** Nazwa rysunku w MapSketch.vue. Ten sam temat ma inny rysunek na każdej maturze. */
+  drawing: string
+  /** Wymiary w jednostkach rysunku, przed powiększeniem. */
+  width: number
+  height: number
+  /**
+   * Środek rysunku w punktach siatki mapy pionowej, osobno dla obu orientacji, bo po obrocie
+   * wolne miejsca są gdzie indziej. Ułamki wypadają między stacjami.
+   */
+  portrait: GridPoint
+  landscape: GridPoint
+  /** Lekki obrót w stopniach, żeby rysunki nie stały jak od linijki. */
+  tilt: number
+}
+
 export interface TopicMap<Id extends string = string> {
   examId: Exam['id']
   graph: MapGraph<Id>
   layout: MapLayout<Id>
+  sketches?: readonly Sketch<Id>[]
 }
 
 export interface TopicProgress {

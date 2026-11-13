@@ -263,7 +263,10 @@ function closeOutside(event: MouseEvent) {
           @select="selected = $event"
         />
       </Transition>
-      <main class="exam-page__map">
+      <main
+        class="exam-page__map"
+        :class="{ 'exam-page__map--paper': view === 'map' && map.sketches?.length }"
+      >
         <MetroMap
           v-if="view === 'map'"
           ref="metroMap"
@@ -377,6 +380,11 @@ function closeOutside(event: MouseEvent) {
   min-width: 0;
   height: calc(100svh - var(--page-top));
   padding: 1rem var(--gutter);
+}
+
+/* Mapa na papierze sama trzyma odstęp od krawędzi. */
+.exam-page__map--paper {
+  padding: 0;
 }
 
 .exam-page__tools {
