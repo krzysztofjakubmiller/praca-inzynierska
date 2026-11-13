@@ -1,10 +1,15 @@
 import base64
 import binascii
+import json
+import os
 import random
+from collections.abc import Iterator
 from datetime import UTC, datetime
+from itertools import chain
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import Select, and_, func, or_, select
 from sqlalchemy.orm import Session
@@ -19,6 +24,7 @@ from app.grading import (
     PROMPT_VERSION,
     GradingUnavailable,
     Reply,
+    StreamBroken,
     UnreadableSolution,
     answer_question,
     describe_task,
@@ -61,6 +67,8 @@ class SolutionIn(BaseModel):
 class GradeIn(BaseModel):
     mode: Literal["cwiczenie", "losowe", "powtorka"]
     answers: list[str] | None = None
+    # Złe rozwiązanie, które już jest: kolejna ocena do niego, a liczy się najlepsza.
+    solution_id: int | None = None
     # Zdjęcie albo obraz tablicy w base64, bez zapisu na dysku; albo opis rozwiązania tekstem.
     image: str | None = None
     image_type: Literal["image/jpeg", "image/png"] | None = None
@@ -77,6 +85,12 @@ class QuestionIn(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=20)
     # Przed sprawdzeniem odpowiedzi AI tylko podpowiada, bez zdradzania wyniku.
     checked: bool
+    # Zdjęcie albo obraz tablicy przy ostatniej wiadomości, tylko jako kontekst, bez oceny.
+    image: str | None = None
+    image_type: Literal["image/jpeg", "image/png"] | None = None
+    # Uczeń kliknął, że odczyt obrazu się nie zgadza: od tej chwili rozmowa idzie do
+    # mocniejszego modelu. Domyślnie tańszy, bo większość pytań to drobne dopytania.
+    strong: bool = False
 
 
 class FeedbackIn(BaseModel):
@@ -145,8 +159,9 @@ def scored_points(task: Task, body: SolutionIn) -> int:
         # Jak w arkuszu CKE: punkt tylko za całą odpowiedź, także w prawda-fałsz.
         return task.max_points if body.answer == answer_key(task) else 0
     results = task.scoring["results"]
+    # Dowód bez oceny AI (uczeń pominął zdjęcie albo AI nie działa) nie dostaje punktów.
     if not results:
-        raise HTTPException(status_code=422, detail=["Dowód oceni AI na podstawie rozwiązania."])
+        return 0
     if body.answers is None or len(body.answers) != len(results):
         raise HTTPException(status_code=422, detail=["Wpisz wszystkie wyniki."])
     correct = [
@@ -184,7 +199,10 @@ def save_solution(
         answer=body.answer if task.answer_format in CLOSED_FORMATS else None,
         points=scored_points(task, body),
         open_answer=(
-            {"answers": body.answers, "checked": "program"}
+            {
+                "answers": body.answers or [],
+                "checked": "program" if task.scoring["results"] else "bez-oceny",
+            }
             if task.answer_format == "otwarte"
             else None
         ),
@@ -199,18 +217,30 @@ def save_solution(
     }
 
 
-# Ile zapytań do AI (oceny, rozwiązania i pytania razem) ma uczeń na dzień.
-AI_DAILY_LIMIT = 30
+# Dzienny budżet ucznia na AI w dolarach, liczony z kosztu zapisanego przy każdym zapytaniu.
+# Koszt znamy dopiero po odpowiedzi, więc ostatnie zapytanie może budżet trochę przekroczyć.
+# Konta z AI_UNLIMITED_EMAILS (adresy po przecinku w zmiennej środowiskowej, bo repozytorium
+# jest publiczne) nie mają limitu.
+AI_DAILY_BUDGET = 0.10
+AI_UNAVAILABLE = "Usługi AI chwilowo nie działają. Możesz przejść dalej i ocenić trudność zadania."
+# Ile wersji tablicy dostaje Dyżurny, gdy przyszła nowa: obecną i poprzednie. W testach na
+# rozmowach z poprawianą tablicą więcej wersji nie poprawiło odpowiedzi.
+BOARD_VERSIONS = 2
 
 
 def task_for_ai(session: Session, task_id: int, account: Account) -> Task:
     task = load_task(session, task_id)
-    used = session.scalar(
-        select(func.count())
-        .select_from(AiRequest)
-        .where(AiRequest.account_id == account.id, AiRequest.created_at >= day_start())
+    unlimited = os.environ.get("AI_UNLIMITED_EMAILS", "").lower().split(",")
+    unlimited = [email.strip() for email in unlimited]
+    if account.email.lower() in unlimited:
+        return task
+    spent = session.scalar(
+        select(func.coalesce(func.sum(AiRequest.cost), 0)).where(
+            AiRequest.account_id == account.id,
+            AiRequest.created_at >= day_start(),
+        )
     )
-    if used >= AI_DAILY_LIMIT:
+    if spent >= AI_DAILY_BUDGET:
         raise HTTPException(
             status_code=429, detail=["Dzisiejszy limit pytań do AI się skończył. Wróć jutro."]
         )
@@ -332,12 +362,12 @@ def grade_solution(
         raise HTTPException(status_code=422, detail=["AI ocenia tylko zadania otwarte."])
     if (body.image is None) == (body.text is None):
         raise HTTPException(status_code=422, detail=["Wyślij zdjęcie albo opis rozwiązania."])
-    try:
-        image = base64.b64decode(body.image, validate=True) if body.image else None
-    except binascii.Error:
-        raise HTTPException(
-            status_code=422, detail=["Nie udało się odczytać zdjęcia."]
-        ) from None
+    image = decoded_image(body.image)
+    solution = None
+    if body.solution_id is not None:
+        solution = session.get(Solution, body.solution_id)
+        if solution is None or solution.account_id != account.id or solution.task_id != task.id:
+            raise HTTPException(status_code=404, detail=["Nie ma takiego rozwiązania."])
     try:
         result = grade(
             task.content,
@@ -350,29 +380,42 @@ def grade_solution(
             solutions=solutions_text(task),
         )
     except GradingUnavailable:
-        raise HTTPException(status_code=503, detail=["Ocena chwilowo niedostępna."]) from None
+        raise HTTPException(status_code=503, detail=[AI_UNAVAILABLE]) from None
     except UnreadableSolution as unreadable:
         save_ai_request(
-            session, account, task, "ocena", unreadable.reply, image, body.image_type, body.text
+            session,
+            account,
+            task,
+            "ocena",
+            unreadable.reply,
+            image,
+            body.image_type,
+            body.text,
+            solution,
         )
         session.commit()
         raise HTTPException(
             status_code=422,
             detail=["Nie da się odczytać rozwiązania. Wyślij wyraźniejsze zdjęcie."],
         ) from None
-    solution = Solution(
-        account_id=account.id,
-        task_id=task.id,
-        mode=body.mode,
-        points=min(result.points, task.max_points),
-        open_answer={
-            "answers": body.answers or [],
+    if solution is None:
+        solution = Solution(
+            account_id=account.id,
+            task_id=task.id,
+            mode=body.mode,
+            points=result.points,
+            open_answer={"answers": body.answers or []},
+        )
+        session.add(solution)
+    # Uczeń może wytłumaczyć się i wysłać lepsze zdjęcie po złej ocenie tablicy, więc kolejna
+    # ocena nie obniża punktów. W rozwiązaniu zostaje odczyt z najlepszej oceny.
+    if result.points >= solution.points:
+        solution.points = result.points
+        solution.open_answer = solution.open_answer | {
             "checked": "ai",
             "model": result.model,
             "reading": result.reading,
-        },
-    )
-    session.add(solution)
+        }
     session.flush()
     request = save_ai_request(
         session, account, task, "ocena", result.reply, image, body.image_type, body.text, solution
@@ -389,6 +432,86 @@ def grade_solution(
     }
 
 
+def decoded_image(image: str | None) -> bytes | None:
+    try:
+        return base64.b64decode(image, validate=True) if image else None
+    except binascii.Error:
+        raise HTTPException(status_code=422, detail=["Nie udało się odczytać zdjęcia."]) from None
+
+
+def sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# Odpowiedź AI kawałkami jako Server-Sent Events: zdarzenia delta z tekstem, na końcu done
+# z request_id albo error, gdy odpowiedź urwie się w trakcie. Pierwszy kawałek czeka się na
+# niego przed startem strumienia, żeby przy braku działającego modelu uczeń dostał zwykły
+# błąd HTTP, a nie strumień z samym błędem.
+def streamed_answer(
+    parts: Iterator[str | Reply],
+    session: Session,
+    account: Account,
+    task: Task,
+    kind: str,
+    text: str | None = None,
+    image: bytes | None = None,
+    image_type: str | None = None,
+) -> StreamingResponse:
+    try:
+        first = next(parts)
+    except GradingUnavailable:
+        raise HTTPException(status_code=503, detail=[AI_UNAVAILABLE]) from None
+
+    def events():
+        try:
+            for part in chain([first], parts):
+                if isinstance(part, Reply):
+                    # Wpis powstaje dopiero z pełną odpowiedzią; urwana nie zostawia śladu.
+                    request = save_ai_request(
+                        session, account, task, kind, part, image, image_type, text
+                    )
+                    session.commit()
+                    yield sse("done", {"request_id": request.id})
+                else:
+                    yield sse("delta", {"text": part})
+        except StreamBroken:
+            yield sse("error", {"message": "Odpowiedź urwała się w połowie. Spróbuj ponownie."})
+
+    # Bez tych nagłówków pośrednik (np. na Renderze) mógłby zebrać całą odpowiedź przed wysłaniem.
+    return StreamingResponse(
+        events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+# Odpowiedź ucznia, wynik sprawdzenia i ocena AI, jeśli była: bez tego Dyżurny nie wie, do
+# czego uczeń się odnosi, gdy pyta o swój wynik.
+def attempt_text(session: Session, task: Task, solution: Solution) -> str:
+    if solution.answer is not None:
+        given = f"Odpowiedź zaznaczona przez ucznia: {solution.answer}"
+    elif solution.open_answer and solution.open_answer["answers"]:
+        given = "Wyniki wpisane przez ucznia: " + "; ".join(solution.open_answer["answers"])
+    else:
+        given = "Uczeń nie wpisał wyniku końcowego."
+    text = f"\n\n{given}\nPunkty po sprawdzeniu: {solution.points} z {task.max_points}"
+    grades = session.scalars(
+        select(AiRequest)
+        .where(AiRequest.solution_id == solution.id, AiRequest.kind == "ocena")
+        .order_by(AiRequest.id)
+    )
+    # Każda ocena, także słabsza od najlepszej: uczeń może pytać o którąkolwiek.
+    for number, grade_request in enumerate(grades, 1):
+        graded = json.loads(grade_request.reply)
+        text += (
+            f"\n\nOcena rozwiązania przez AI według zasad CKE nr {number}"
+            f" ({graded['points']} pkt)."
+            f"\nOdczyt rozwiązania: {graded['reading']}"
+            f"\nWyjaśnienie oceny dla ucznia: {graded['explanation']}"
+        )
+    return text
+
+
 # Pełne rozwiązanie krok po kroku, gdy uczeń o nie poprosi.
 @router.post("/tasks/{task_id}/ai-solution")
 def ai_solution(
@@ -397,15 +520,8 @@ def ai_solution(
     session: Session = Depends(get_session),
 ):
     task = task_for_ai(session, task_id, account)
-    try:
-        reply = show_solution(task_for_model(task))
-    except GradingUnavailable:
-        raise HTTPException(
-            status_code=503, detail=["Rozwiązanie chwilowo niedostępne."]
-        ) from None
-    request = save_ai_request(session, account, task, "rozwiazanie", reply)
-    session.commit()
-    return {"solution": reply.text, "request_id": request.id}
+    parts = show_solution(task_for_model(task))
+    return streamed_answer(parts, session, account, task, "rozwiazanie")
 
 
 # „Dopytaj się”: pytanie ucznia o zadanie, z całą dotychczasową rozmową.
@@ -420,17 +536,55 @@ def ask_about_task(
     if body.messages[-1].role != "user":
         raise HTTPException(status_code=422, detail=["Wpisz pytanie."])
     messages = [message.model_dump() for message in body.messages]
-    try:
-        reply = answer_question(task_for_model(task), messages, body.checked)
-    except GradingUnavailable:
-        raise HTTPException(
-            status_code=503, detail=["Odpowiedź chwilowo niedostępna."]
-        ) from None
-    request = save_ai_request(
-        session, account, task, "pytanie", reply, text=body.messages[-1].content
+    described = task_for_model(task)
+    latest = session.scalar(
+        select(Solution)
+        .where(Solution.account_id == account.id, Solution.task_id == task.id)
+        .order_by(Solution.id.desc())
+        .limit(1)
     )
-    session.commit()
-    return {"answer": reply.text, "request_id": request.id}
+    if body.checked and latest:
+        described += attempt_text(session, task, latest)
+    attached = decoded_image(body.image)
+    image, image_type, previous = attached, body.image_type, None
+    earlier = recent_images(session, account, task, latest, BOARD_VERSIONS - 1)
+    if attached is None and earlier:
+        image, image_type = earlier[0].image, earlier[0].image_type
+        last = messages[-1]
+        last["content"] = "(Obraz dołączony wcześniej, bez zmian.)\n" + last["content"]
+    elif earlier:
+        previous = [(request.image, request.image_type) for request in reversed(earlier)]
+    parts = answer_question(
+        described, messages, body.checked, image, image_type, previous, body.strong
+    )
+    # Zapisuje się tylko obraz dołączony do tej wiadomości, a nie powtórzony.
+    return streamed_answer(
+        parts, session, account, task, "pytanie", body.messages[-1].content,
+        attached, body.image_type,
+    )
+
+
+# Ostatnie obrazy tej próby zadania, z pytań i ocen, od najnowszego. Najnowszy idzie z każdym
+# pytaniem, żeby Dyżurny mógł spojrzeć na tablicę zawsze, a nie tylko po zmianie. Przy nowej
+# tablicy idą też poprzednie, żeby poprawkę ucznia odróżnił od swojej pomyłki. Próbę kończy
+# ocena trudności, która przypisuje pytania do rozwiązania.
+def recent_images(
+    session: Session, account: Account, task: Task, solution: Solution | None, count: int
+) -> list[AiRequest]:
+    attempt = AiRequest.solution_id.is_(None)
+    if solution is not None and solution.rating is None:
+        attempt = attempt | (AiRequest.solution_id == solution.id)
+    return session.scalars(
+        select(AiRequest)
+        .where(
+            AiRequest.account_id == account.id,
+            AiRequest.task_id == task.id,
+            AiRequest.image.is_not(None),
+            attempt,
+        )
+        .order_by(AiRequest.id.desc())
+        .limit(count)
+    ).all()
 
 
 # Reakcja ucznia na ocenę, rozwiązanie albo odpowiedź AI, do analizy w pracy. Druga reakcja

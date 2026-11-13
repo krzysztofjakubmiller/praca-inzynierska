@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { defineComponent } from 'vue'
+import AiTutor from '../AiTutor.vue'
 import PracticeTask from '../PracticeTask.vue'
 import type { PracticeTask as Task } from '@/practice'
 
 // MathLive potrzebuje prawdziwej przeglądarki; tu wystarczą wiersze tekstu w edytorze.
-vi.mock('@/mathKeyboard', () => ({ loadMathLive: () => Promise.resolve() }))
+vi.mock('@/mathKeyboard', () => ({
+  loadMathLive: () => Promise.resolve(),
+  keyboardInside: () => Promise.resolve(),
+}))
 
 const TASK: Task = {
   id: 7,
@@ -62,14 +67,14 @@ describe('PracticeTask', () => {
     expect(sentBody(fetch, 0)).toEqual({ mode: 'cwiczenie', answer: 'C' })
     expect(wrapper.find('[role="status"]').text()).toBe('Dobrze')
     expect(wrapper.findAll('.practice-task__rate').map((found) => found.text())).toEqual([
-      'łatwy',
-      'średni',
-      'trudny',
-      'bardzo trudny',
+      'Łatwe',
+      'Średnie',
+      'Trudne',
+      'Bardzo trudne',
     ])
   })
 
-  it('shows the key and hides "easy" after a wrong answer', async () => {
+  it('shows the key and greys out "easy" after a wrong answer', async () => {
     serverAnswers({ id: 3, points: 0, max_points: 1, answer: 'C' })
     const wrapper = mount(PracticeTask, {
       global: { stubs },
@@ -81,7 +86,8 @@ describe('PracticeTask', () => {
     await flushPromises()
 
     expect(wrapper.find('[role="status"]').text()).toBe('Źle. Poprawna odpowiedź: C')
-    expect(wrapper.text()).not.toContain('łatwy')
+    expect(button(wrapper, 'Łatwe').attributes('disabled')).toBeDefined()
+    expect(button(wrapper, 'Średnie').attributes('disabled')).toBeUndefined()
     expect(button(wrapper, 'C.').classes()).toContain('practice-task__choice--correct')
     expect(button(wrapper, 'C.').find('.practice-task__sign').text()).toBe('✓')
     expect(button(wrapper, 'A.').classes()).toContain('practice-task__choice--wrong')
@@ -102,7 +108,7 @@ describe('PracticeTask', () => {
     await button(wrapper, 'C.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
     await flushPromises()
-    await button(wrapper, 'trudny').trigger('click')
+    await button(wrapper, 'Trudne').trigger('click')
     await flushPromises()
 
     expect(fetch.mock.calls[1]![0]).toBe('/api/practice/solutions/3/rating')
@@ -123,7 +129,7 @@ describe('PracticeTask', () => {
     await button(wrapper, 'C.').trigger('click')
     await button(wrapper, 'Sprawdź').trigger('click')
     await flushPromises()
-    await button(wrapper, 'łatwy').trigger('click')
+    await button(wrapper, 'Łatwe').trigger('click')
     await flushPromises()
 
     expect(wrapper.text()).toContain('nie wróci już przed maturą')
@@ -208,20 +214,52 @@ describe('PracticeTask', () => {
     expect(sentBody(fetch, 0)).toEqual({ kind: 'liczba', text: '4' })
     expect(sentBody(fetch, 1)).toEqual({ mode: 'cwiczenie', answers: ['4'] })
     expect(wrapper.find('.practice-task__result').text()).toContain('0 z 2 pkt. Poprawny wynik:')
-    expect(wrapper.text()).toContain('Oceń rozwiązanie')
+    expect(wrapper.text()).toContain('Wyślij je dyżurnemu')
     expect(wrapper.find('math-field').attributes('disabled')).toBeDefined()
-    expect(wrapper.text()).not.toContain('łatwy')
+    expect(button(wrapper, 'Łatwe').attributes('disabled')).toBeDefined()
   })
 
-  it('sends a described proof to AI and shows the points with the explanation', async () => {
-    const fetch = serverAnswers({
-      id: 5,
-      points: 1,
-      max_points: 2,
-      answer: 'Szkic dowodu.',
-      explanation: 'Brakuje wniosku.',
-      reading: 'Wyłączam 2.',
+  it('sends an unchanged board for grading after a wrong result', async () => {
+    serverAnswers({ latex: '4' }, { id: 3, points: 0, max_points: 2, answer: '$x = 3$' })
+    const board = defineComponent({
+      setup(_, { expose }) {
+        expose({ version: () => 1, image: async () => new Blob(['kreski']) })
+        return () => null
+      },
     })
+    const task: Task = {
+      ...TASK,
+      answer_format: 'otwarte',
+      choices: null,
+      max_points: 2,
+      results: [{ kind: 'liczba' }],
+    }
+    const wrapper = mount(PracticeTask, {
+      global: { stubs: { TaskWhiteboard: board } },
+      props: { task, mode: 'cwiczenie' },
+    })
+    const boardFor = () => wrapper.findComponent(AiTutor).props('board')()
+
+    expect(await boardFor()).not.toBeNull()
+    expect(await boardFor()).toBeNull()
+
+    vi.useFakeTimers()
+    await flushPromises()
+    const field = wrapper.find('math-field')
+    ;(field.element as HTMLInputElement).value = '4'
+    await field.trigger('input')
+    await vi.advanceTimersByTimeAsync(400)
+    await flushPromises()
+    await button(wrapper, 'Wyślij wynik').trigger('click')
+    await flushPromises()
+    vi.useRealTimers()
+
+    expect(await boardFor()).not.toBeNull()
+    expect(await boardFor()).toBeNull()
+  })
+
+  it('sends a proof to the tutor instead of a form on the page', async () => {
+    serverAnswers()
     const task: Task = {
       ...TASK,
       answer_format: 'otwarte',
@@ -234,16 +272,8 @@ describe('PracticeTask', () => {
       props: { task, mode: 'cwiczenie' },
     })
 
-    await button(wrapper, 'Opis').trigger('click')
-    await wrapper.find('textarea').setValue('Wyłączam 2.')
-    await button(wrapper, 'Oceń rozwiązanie').trigger('click')
-    await flushPromises()
-
-    expect(fetch.mock.calls[0]![0]).toContain(`/tasks/${TASK.id}/grade`)
-    expect(sentBody(fetch, 0)).toEqual({ mode: 'cwiczenie', answers: [], text: 'Wyłączam 2.' })
-    expect(wrapper.find('.practice-task__result').text()).toBe('1 z 2 pkt')
-    expect(wrapper.text()).toContain('Brakuje wniosku.')
-    expect(wrapper.text()).toContain('Dopytaj się')
+    expect(wrapper.text()).toContain('Oddaj dowód dyżurnemu')
+    expect(wrapper.text()).not.toContain('Oceń rozwiązanie')
   })
 
   it('says only "Dobrze" when the open result is right', async () => {

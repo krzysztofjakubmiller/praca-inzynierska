@@ -16,7 +16,9 @@ import {
 } from '@/figures'
 import FigureLabel from './FigureLabel.vue'
 
-const props = defineProps<{ figure: PlaneFigure }>()
+// quiet: rysunek na tablicy, po którym uczeń pisze. Bez wypełnień figur; kolorem zostaje tylko
+// to, czego się szuka: kąt podpisany literą, a nie liczbą, i obszary w nazwanym kolorze.
+const props = defineProps<{ figure: PlaneFigure; quiet?: boolean }>()
 
 // Jednostki z JSON-a są umowne, więc rysunek skalujemy do stałego rozmiaru.
 const MAX_WIDTH = 420
@@ -86,11 +88,11 @@ const SECOND_ARC = 4
 // końca, więc napis wtedy lekko na nie wchodzi, jak w arkuszach.
 const LABEL_FARTHEST = 90
 // Wymiary napisu w pikselach przy czcionce 16 px z FigureLabel.vue.
-const CHARACTER_WIDTH = 9
+const CHARACTER_WIDTH = 10
 const DEGREE_WIDTH = 5
 const LABEL_HALF_HEIGHT = 8
 // Najmniejszy odstęp napisu od linii.
-const LABEL_GAP = 4
+const LABEL_GAP = 2
 
 // Przybliżona połowa szerokości napisu: polecenie LaTeX-a, np. \alpha, liczy się jak jeden znak,
 // stopień jak pół znaku, a $, ^, spacje i nawiasy klamrowe nie zajmują miejsca.
@@ -229,9 +231,10 @@ const angles = computed(() =>
       [vertex, along(r)],
       ...[0, 0.25, 0.5, 0.75].map((t): Line => [arcPoint(t, r), arcPoint(t + 0.25, r)]),
     ]
+    const sought = !!angle.label && !/\d/.test(angle.label)
     return {
       arcs: angle.arcs === 2 ? [arc(r), arc(r + SECOND_ARC)] : [arc(r)],
-      sector: `M${vx} ${vy} L${arc(r).slice(1)} Z`,
+      sector: props.quiet && !sought ? null : `M${vx} ${vy} L${arc(r).slice(1)} Z`,
       dot: angle.right ? along(r / 2) : null,
       label: angle.label ? { text: angle.label, at: labelAt } : null,
       obstacles,
@@ -325,7 +328,7 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
 
     <template v-for="(item, index) in circles" :key="`c${index}`">
       <ellipse
-        v-if="item.circle.fill"
+        v-if="item.circle.fill && !quiet"
         :cx="item.cx"
         :cy="item.cy"
         :rx="item.rx"
@@ -350,7 +353,7 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
       :d="polygonPath(polygon.points)"
       class="plane-figure__line"
       :class="{
-        'plane-figure__fill': polygon.fill,
+        'plane-figure__fill': polygon.fill && !(quiet && polygon.fill === true),
         [`plane-figure__fill--${polygon.fill}`]: typeof polygon.fill === 'string',
         'plane-figure__line--dashed': polygon.dashed,
         'plane-figure__line--none': polygon.outline === false,
@@ -374,7 +377,11 @@ const linePath = (from: Point, to: Point) => `M${from.join(' ')} L${to.join(' ')
     />
 
     <template v-for="(angle, index) in angles" :key="`a${index}`">
-      <path :d="angle.sector" class="plane-figure__fill plane-figure__line--none" />
+      <path
+        v-if="angle.sector"
+        :d="angle.sector"
+        class="plane-figure__fill plane-figure__line--none"
+      />
       <path v-for="arc in angle.arcs" :key="arc" :d="arc" class="plane-figure__angle" />
       <circle
         v-if="angle.dot"

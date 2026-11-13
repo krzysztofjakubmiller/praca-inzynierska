@@ -54,22 +54,49 @@ export class Rejected extends Error {
   }
 }
 
-async function request<T>(path: string, body?: object): Promise<T> {
-  const response = await fetch(`${API_URL}/api/practice${path}`, {
+// Przy niedziałającym AI albo skończonym limicie uczeń nie ma czekać: zadanie da się
+// skończyć bez AI. Ponowienie ma sens tylko przy chwilowej awarii, nie przy limicie.
+export function aiProblem(error: unknown, otherwise: string): { text: string; retry: boolean } {
+  if (error instanceof Rejected && error.status === 429) {
+    return {
+      text: 'Dzisiejszy limit pytań do AI się skończył, wróć jutro. Możesz przejść dalej i ocenić trudność zadania.',
+      retry: false,
+    }
+  }
+  if (error instanceof Rejected && error.status === 503) {
+    return {
+      text: 'Usługi AI chwilowo nie działają. Możesz przejść dalej i ocenić trudność zadania.',
+      retry: true,
+    }
+  }
+  if (error instanceof Rejected) return { text: error.problems.join(' '), retry: true }
+  return { text: otherwise, retry: true }
+}
+
+function send(path: string, body?: object): Promise<Response> {
+  return fetch(`${API_URL}/api/practice${path}`, {
     method: body ? 'POST' : 'GET',
     body: body ? JSON.stringify(body) : undefined,
     credentials: 'include',
     headers: { ...authorization('access'), 'Content-Type': 'application/json' },
   })
+}
+
+async function failure(response: Response): Promise<Error> {
   const data = await response.json().catch(() => null)
-  if (response.ok) return data as T
   if (
     Array.isArray(data?.detail) &&
     data.detail.every((item: unknown) => typeof item === 'string')
   ) {
-    throw new Rejected(response.status, data.detail)
+    return new Rejected(response.status, data.detail)
   }
-  throw new Error(`backend odpowiedział kodem ${response.status}`)
+  return new Error(`backend odpowiedział kodem ${response.status}`)
+}
+
+async function request<T>(path: string, body?: object): Promise<T> {
+  const response = await send(path, body)
+  if (!response.ok) throw await failure(response)
+  return (await response.json().catch(() => null)) as T
 }
 
 function query(params: Record<string, string | number | boolean | (string | number)[]>) {
@@ -133,20 +160,22 @@ export function sendFeedback(requestId: number, feedback: Feedback, comment = ''
   return request(`/ai-requests/${requestId}/feedback`, { feedback, comment })
 }
 
-/** Rozwiązanie do oceny przez AI: zdjęcie albo tablica w base64 albo opis z wzorami w $...$. */
-export type Attempt = { image: string; image_type: 'image/jpeg' | 'image/png' } | { text: string }
+/** Zdjęcie kartki albo obraz tablicy w base64, wysyłane do Dyżurnego. */
+export interface Picture {
+  image: string
+  image_type: 'image/jpeg' | 'image/png'
+}
 
+/** Ocena rozwiązania przez AI. Z solutionId ocenia się złe rozwiązanie, które już jest
+    zapisane, i zostaje najlepsza z ocen; bez niego (dowód) powstaje nowe rozwiązanie. */
 export function gradeSolution(
   id: number,
   mode: PracticeMode,
   answers: string[],
-  attempt: Attempt,
+  picture: Picture,
+  solutionId: number | null,
 ): Promise<Graded> {
-  return request(`/tasks/${id}/grade`, { mode, answers, ...attempt })
-}
-
-export function showAiSolution(id: number): Promise<{ solution: string; request_id: number }> {
-  return request(`/tasks/${id}/ai-solution`, {})
+  return request(`/tasks/${id}/grade`, { mode, answers, solution_id: solutionId, ...picture })
 }
 
 export interface ChatMessage {
@@ -154,13 +183,53 @@ export interface ChatMessage {
   content: string
 }
 
-/** „Dopytaj się”: cała rozmowa, ostatnia wiadomość to nowe pytanie ucznia. */
+// Odpowiedź AI przychodzi kawałkami jako zdarzenia SSE (delta, done, error) i trafia do onText;
+// wynikiem jest numer zapytania do reakcji ucznia. EventSource nie wysyła POST-a, dlatego
+// strumień czyta fetch.
+async function readStream(
+  path: string,
+  body: object,
+  onText: (text: string) => void,
+): Promise<number> {
+  const response = await send(path, body)
+  if (!response.ok || !response.body) throw await failure(response)
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
+    // Zdarzenia rozdziela pusta linia; ostatni kawałek bufora może być jeszcze niepełny.
+    const events = buffer.split('\n\n')
+    buffer = events.pop()!
+    for (const event of events) {
+      const name = event.match(/^event: (.*)$/m)?.[1]
+      const data = JSON.parse(event.match(/^data: (.*)$/m)?.[1] ?? 'null')
+      if (name === 'delta') onText(data.text)
+      if (name === 'done') return data.request_id
+      if (name === 'error') throw new Rejected(response.status, [data.message])
+    }
+  }
+  throw new Error('połączenie urwało się przed końcem odpowiedzi')
+}
+
+/** Pełne rozwiązanie od AI, dostępne dopiero po sprawdzeniu odpowiedzi. */
+export function showAiSolution(id: number, onText: (text: string) => void): Promise<number> {
+  return readStream(`/tasks/${id}/ai-solution`, {}, onText)
+}
+
+/** Rozmowa z Dyżurnym: cała rozmowa, ostatnia wiadomość to nowe pytanie ucznia, czasem
+    ze zdjęciem albo tablicą. strong: odpowiada mocniejszy model, który lepiej odczytuje obraz. */
 export function askAboutTask(
   id: number,
   messages: ChatMessage[],
   checked: boolean,
-): Promise<{ answer: string; request_id: number }> {
-  return request(`/tasks/${id}/question`, { messages, checked })
+  picture: Picture | null,
+  strong: boolean,
+  onText: (text: string) => void,
+): Promise<number> {
+  return readStream(`/tasks/${id}/question`, { messages, checked, strong, ...picture }, onText)
 }
 
 /** Jak serwer odczytał wpis, w LaTeX-u; null, gdy zapisu nie da się odczytać. */

@@ -63,9 +63,17 @@ async function sendComment() {
 
 .ai-feedback textarea {
   flex-basis: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--hairline);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
 }
 
 .ai-feedback [aria-pressed='true'] {
-  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ground);
 }
 </style>

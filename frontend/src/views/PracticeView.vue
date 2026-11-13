@@ -31,7 +31,6 @@ const title = computed(() => {
 
 const task = ref<Task | null>(null)
 const loaded = ref(false)
-const checked = ref(false)
 const problem = ref('')
 // Ostatnie 3 pominięte albo zrobione zadania nie wracają od razu.
 const recent = ref<number[]>([])
@@ -79,7 +78,6 @@ async function fetchNext(): Promise<Task | null> {
 
 async function loadNext() {
   problem.value = ''
-  checked.value = false
   try {
     task.value = await fetchNext()
     loaded.value = true
@@ -173,19 +171,15 @@ watch(topics, loadNext)
         </p>
         <PracticeTask
           :key="task.id"
+          class="practice__task"
           :task="task"
           :mode="mode"
-          @checked="checked = true"
           @next="done"
-        />
-        <button
-          v-if="!checked"
-          type="button"
-          class="button button--quiet practice__skip"
-          @click="skip"
         >
-          Pomiń
-        </button>
+          <template #actions>
+            <button type="button" class="button button--quiet" @click="skip">Pomiń</button>
+          </template>
+        </PracticeTask>
       </template>
 
       <section v-else-if="loaded" class="practice__empty">
@@ -268,21 +262,24 @@ watch(topics, loadNext)
 }
 
 .practice__main {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1.25rem;
+  min-height: calc(100svh - var(--header-h));
   max-width: 44rem;
   margin-inline: auto;
-  padding: 1.5rem var(--gutter) 3rem;
+  /* Bez odstępu na dole: pulpit zadania ma przylegać do krawędzi ekranu. */
+  padding: 1.5rem var(--gutter) 0;
+}
+
+.practice__task {
+  flex: 1;
 }
 
 .practice__count,
 .practice__note {
   color: var(--ink-soft);
   font-size: 0.875rem;
-}
-
-.practice__skip {
-  justify-self: start;
 }
 
 .practice__problem {
@@ -294,6 +291,7 @@ watch(topics, loadNext)
   display: grid;
   justify-items: start;
   gap: 1rem;
+  padding-bottom: 3rem;
 }
 
 .practice__empty h1 {

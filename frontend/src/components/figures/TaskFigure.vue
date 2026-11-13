@@ -8,8 +8,9 @@ import PlaneFigure from './PlaneFigure.vue'
 import SolidFigure from './SolidFigure.vue'
 import TableFigure from './TableFigure.vue'
 
-// range i span to wspólna skala wszystkich osi i układów jednego zadania.
-defineProps<{ figure: Figure; range?: Range; span?: PlaneSpan }>()
+// range i span to wspólna skala wszystkich osi i układów jednego zadania. quiet: spokojniejszy
+// rysunek figury na tablicy.
+defineProps<{ figure: Figure; range?: Range; span?: PlaneSpan; quiet?: boolean }>()
 </script>
 
 <template>
@@ -19,7 +20,7 @@ defineProps<{ figure: Figure; range?: Range; span?: PlaneSpan }>()
     :figure="figure"
     :span="span"
   />
-  <PlaneFigure v-else-if="figure.type === 'figura'" :figure="figure" />
+  <PlaneFigure v-else-if="figure.type === 'figura'" :figure="figure" :quiet="quiet" />
   <SolidFigure v-else-if="figure.type === 'bryla'" :figure="figure" />
   <BarChart v-else-if="figure.type === 'diagram-slupkowy'" :figure="figure" />
   <PieChart v-else-if="figure.type === 'diagram-kolowy'" :figure="figure" />

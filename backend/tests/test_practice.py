@@ -1,3 +1,4 @@
+import json
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -6,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app import grading, practice
 from app.accounts import token_hash
-from app.grading import Grade, Reply, UnreadableSolution
+from app.grading import Grade, GradingUnavailable, Reply, StreamBroken, UnreadableSolution
 from app.models import Account, AiRequest, LoginSession, Profile, ReviewCard, Solution
 from tests.test_task import make_task
 
@@ -220,6 +221,54 @@ def test_wrong_open_result_cannot_be_rated_easy(client, account, open_task):
     solution_id = solve(client, open_task.id, answers=["4"]).json()["id"]
 
     assert rate(client, solution_id, "latwy").status_code == 422
+
+
+def add_help(session, account, task, kind):
+    request = AiRequest(
+        account_id=account.id,
+        task_id=task.id,
+        kind=kind,
+        text="Jak zacząć?" if kind == "pytanie" else None,
+        reply="Zacznij od wzoru.",
+        model="model-rozmowy",
+        failed_models=[],
+        prompt_version=6,
+        input_tokens=1,
+        output_tokens=1,
+        seconds=1,
+    )
+    session.add(request)
+    session.flush()
+    return request
+
+
+def spend(session, account, task, cost):
+    add_help(session, account, task, "pytanie").cost = cost
+    session.flush()
+
+
+def test_ai_stops_when_the_day_costs_reach_the_budget(client, account, task, session):
+    spend(session, account, task, practice.AI_DAILY_BUDGET - 0.01)
+    assert client.post(f"/api/practice/tasks/{task.id}/ai-solution", headers=COOKIE).status_code == 503
+
+    spend(session, account, task, 0.01)
+    response = client.post(f"/api/practice/tasks/{task.id}/ai-solution", headers=COOKIE)
+
+    assert response.status_code == 429
+
+
+def test_listed_accounts_have_no_ai_budget(client, account, task, session, monkeypatch):
+    monkeypatch.setenv("AI_UNLIMITED_EMAILS", "admin@example.com, OLA@example.com")
+    spend(session, account, task, 5.0)
+
+    assert client.post(f"/api/practice/tasks/{task.id}/ai-solution", headers=COOKIE).status_code == 503
+
+
+def test_wrong_open_result_can_be_rated_without_ai_grading(client, account, open_task, session):
+    solution_id = solve(client, open_task.id, answers=["5"]).json()["id"]
+
+    assert rate(client, solution_id, "trudny").status_code == 200
+    assert session.get(Solution, solution_id).rating == "trudny"
 
 
 def test_student_cannot_rate_someone_elses_solution(client, account, task, session):
@@ -470,13 +519,17 @@ def proof(session):
     )
 
 
-def test_proof_has_no_answer_fields_and_goes_to_ai(client, account, proof):
+def test_proof_without_ai_grading_gets_no_points_and_can_be_rated(
+    client, account, proof, session
+):
     shown = client.get(f"/api/practice/tasks/{proof.id}", headers=COOKIE).json()
-    response = solve(client, proof.id, answers=[])
+    response = solve(client, proof.id)
 
     assert shown["results"] == []
-    assert response.status_code == 422
-    assert response.json()["detail"] == ["Dowód oceni AI na podstawie rozwiązania."]
+    assert response.json()["points"] == 0
+    saved = session.get(Solution, response.json()["id"])
+    assert saved.open_answer == {"answers": [], "checked": "bez-oceny"}
+    assert rate(client, saved.id, "bardzo-trudny").status_code == 200
 
 
 def grade(client, task_id, **body):
@@ -489,7 +542,7 @@ def test_grading_is_unavailable_until_ai_is_connected(client, account, proof, se
     response = grade(client, proof.id, text="Wyłączam 2 przed nawias.")
 
     assert response.status_code == 503
-    assert response.json()["detail"] == ["Ocena chwilowo niedostępna."]
+    assert response.json()["detail"] == [practice.AI_UNAVAILABLE]
     assert session.scalar(select(Solution)) is None
 
 
@@ -551,47 +604,233 @@ def test_unreadable_photo_is_kept_without_points(client, account, proof, session
     assert session.scalar(select(AiRequest.solution_id)) is None
 
 
-def test_question_gets_an_answer_and_is_saved(client, account, proof, session, monkeypatch):
-    def fake_answer(task, messages, checked):
-        assert "2 pkt – pełny dowód." in task and checked
-        assert messages[-1] == {"role": "user", "content": "Od czego zacząć?"}
-        return model_reply("Zacznij od wyłączenia wspólnego czynnika.")
-
-    monkeypatch.setattr(practice, "answer_question", fake_answer)
-    response = client.post(
-        f"/api/practice/tasks/{proof.id}/question",
-        json={"messages": [{"role": "user", "content": "Od czego zacząć?"}], "checked": True},
+def ask(client, task_id, checked=True):
+    return client.post(
+        f"/api/practice/tasks/{task_id}/question",
+        json={"messages": [{"role": "user", "content": "Od czego zacząć?"}], "checked": checked},
         headers=COOKIE,
     )
 
-    assert response.json()["answer"] == "Zacznij od wyłączenia wspólnego czynnika."
-    assert session.scalar(select(AiRequest.text)) == "Od czego zacząć?"
+
+def sse_events(response):
+    return [
+        (block.split("\n")[0].removeprefix("event: "), json.loads(block.split("\n")[1][6:]))
+        for block in response.text.strip().split("\n\n")
+    ]
+
+
+def test_question_answer_streams_in_parts_and_is_saved_at_the_end(
+    client, account, proof, session, monkeypatch
+):
+    def fake_answer(task, messages, checked, *image):
+        assert "2 pkt – pełny dowód." in task and checked
+        assert messages[-1] == {"role": "user", "content": "Od czego zacząć?"}
+        yield "Zacznij od "
+        yield "wyłączenia czynnika."
+        yield model_reply("Zacznij od wyłączenia czynnika.")
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    response = ask(client, proof.id)
+
+    request = session.scalar(select(AiRequest))
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert sse_events(response) == [
+        ("delta", {"text": "Zacznij od "}),
+        ("delta", {"text": "wyłączenia czynnika."}),
+        ("done", {"request_id": request.id}),
+    ]
+    assert (request.text, request.reply) == ("Od czego zacząć?", "Zacznij od wyłączenia czynnika.")
+
+
+def test_broken_answer_ends_with_an_error_and_saves_nothing(
+    client, account, proof, session, monkeypatch
+):
+    def fake_answer(task, messages, checked, *image):
+        yield "Zacznij od "
+        raise StreamBroken
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    response = ask(client, proof.id)
+
+    assert [event for event, data in sse_events(response)] == ["delta", "error"]
+    assert session.scalar(select(AiRequest)) is None
+
+
+def test_no_answering_model_is_a_plain_error_before_streaming(client, account, proof, monkeypatch):
+    def fake_answer(task, messages, checked, *image):
+        raise GradingUnavailable
+        yield
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    response = ask(client, proof.id)
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == [practice.AI_UNAVAILABLE]
 
 
 def test_closed_task_question_gets_choices_and_answer_for_a_hint(
     client, account, task, monkeypatch
 ):
-    def fake_answer(task_text, messages, checked):
+    def fake_answer(task_text, messages, checked, *image):
         assert "Odpowiedzi do wyboru:" in task_text and "Poprawna odpowiedź: C" in task_text
         assert not checked
-        return model_reply("Pomyśl, co dzieje się z wykładnikiem.")
+        yield model_reply("Pomyśl, co dzieje się z wykładnikiem.")
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+
+    assert sse_events(ask(client, task.id, checked=False))[0][0] == "done"
+
+
+def fake_grades(monkeypatch, *points):
+    replies = iter(points)
+
+    def fake_grade(*args, **details):
+        given = next(replies)
+        data = {"reading": f"odczyt {given}", "explanation": f"Za {given} pkt.", "points": given}
+        reply = model_reply(json.dumps(data))
+        return Grade(
+            points=given,
+            explanation=data["explanation"],
+            reading=data["reading"],
+            model="model",
+            reply=reply,
+        )
+
+    monkeypatch.setattr(practice, "grade", fake_grade)
+
+
+def test_regrading_a_wrong_solution_keeps_the_best_points(
+    client, account, open_task, session, monkeypatch
+):
+    fake_grades(monkeypatch, 0, 2, 1)
+    solution_id = solve(client, open_task.id, answers=["5"]).json()["id"]
+
+    responses = [
+        grade(client, open_task.id, solution_id=solution_id, image="aGVq", image_type="image/png")
+        for _ in range(3)
+    ]
+
+    assert [response.json()["points"] for response in responses] == [0, 2, 2]
+    assert responses[2].json()["explanation"] == "Za 1 pkt."
+    assert {response.json()["id"] for response in responses} == {solution_id}
+    saved = session.get(Solution, solution_id)
+    assert saved.open_answer == {
+        "answers": ["5"],
+        "checked": "ai",
+        "model": "model",
+        "reading": "odczyt 2",
+    }
+    requests = session.scalars(select(AiRequest)).all()
+    assert [request.solution_id for request in requests] == [solution_id] * 3
+
+
+def test_regrading_needs_the_students_own_solution(client, account, open_task, session):
+    other = Account(email="ala@example.com", password_hash="skrot")
+    session.add(other)
+    session.flush()
+    solution = Solution(account_id=other.id, task_id=open_task.id, mode="losowe", points=0)
+    session.add(solution)
+    session.flush()
+
+    response = grade(client, open_task.id, solution_id=solution.id, text="opis")
+
+    assert response.status_code == 404
+
+
+def test_checked_question_knows_the_student_answer_and_every_ai_grade(
+    client, account, open_task, session, monkeypatch
+):
+    seen = []
+
+    def fake_answer(task_text, messages, checked, image, image_type, previous, strong):
+        seen.append(task_text)
+        yield model_reply("Spójrz na przeniesienie.")
+
+    fake_grades(monkeypatch, 0, 1)
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    solution_id = solve(client, open_task.id, answers=["2"]).json()["id"]
+    grade(client, open_task.id, solution_id=solution_id, text="tablica")
+    grade(client, open_task.id, solution_id=solution_id, text="kartka")
+
+    sse_events(ask(client, open_task.id, checked=True))
+
+    assert "Wyniki wpisane przez ucznia: 2" in seen[0]
+    assert "Punkty po sprawdzeniu: 1 z 2" in seen[0]
+    assert "Wyjaśnienie oceny dla ucznia: Za 0 pkt." in seen[0]
+    assert "Wyjaśnienie oceny dla ucznia: Za 1 pkt." in seen[0]
+
+
+def test_photo_and_strong_model_request_go_to_the_model_and_the_photo_is_saved(
+    client, account, task, session, monkeypatch
+):
+    sent = []
+
+    def fake_answer(task_text, messages, checked, image, image_type, previous, strong):
+        sent.append((image, image_type, strong))
+        yield model_reply("Widzę, że zaczynasz od wzoru.")
 
     monkeypatch.setattr(practice, "answer_question", fake_answer)
     response = client.post(
         f"/api/practice/tasks/{task.id}/question",
-        json={"messages": [{"role": "user", "content": "Pomóż."}], "checked": False},
+        json={
+            "messages": [{"role": "user", "content": "Dobrze zaczynam?"}],
+            "checked": False,
+            "image": "aGVq",
+            "image_type": "image/png",
+            "strong": True,
+        },
         headers=COOKIE,
     )
 
-    assert response.json()["answer"] == "Pomyśl, co dzieje się z wykładnikiem."
+    assert sse_events(response)[-1][0] == "done"
+    assert sent == [(b"hej", "image/png", True)]
+    request = session.scalar(select(AiRequest))
+    assert (request.kind, request.image, request.image_type) == ("pytanie", b"hej", "image/png")
+
+
+def test_question_sees_the_latest_image_and_the_previous_one_when_it_changed(
+    client, account, task, session, monkeypatch
+):
+    sent = []
+
+    def fake_answer(task_text, messages, checked, image, image_type, previous, strong):
+        sent.append((messages[-1]["content"], image, previous))
+        yield model_reply("Widzę.")
+
+    monkeypatch.setattr(practice, "answer_question", fake_answer)
+    # "aGVq" to b"hej", "aW5uZQ==" to b"inne": pierwsza tablica, pytanie bez zmian, nowa tablica.
+    for image in ("aGVq", None, "aW5uZQ=="):
+        question = {"messages": [{"role": "user", "content": "Co dalej?"}], "checked": False}
+        if image:
+            question |= {"image": image, "image_type": "image/png"}
+        sse_events(
+            client.post(f"/api/practice/tasks/{task.id}/question", json=question, headers=COOKIE)
+        )
+
+    assert sent == [
+        ("Co dalej?", b"hej", None),
+        ("(Obraz dołączony wcześniej, bez zmian.)\nCo dalej?", b"hej", None),
+        ("Co dalej?", b"inne", [(b"hej", "image/png")]),
+    ]
+    saved = session.scalars(select(AiRequest).order_by(AiRequest.id)).all()
+    assert [(request.text, request.image) for request in saved] == [
+        ("Co dalej?", b"hej"),
+        ("Co dalej?", None),
+        ("Co dalej?", b"inne"),
+    ]
 
 
 def test_student_feedback_is_saved_with_a_comment(client, account, proof, session, monkeypatch):
-    monkeypatch.setattr(practice, "show_solution", lambda *args: model_reply("Krok 1."))
-    shown = client.post(f"/api/practice/tasks/{proof.id}/ai-solution", headers=COOKIE).json()
+    monkeypatch.setattr(
+        practice, "show_solution", lambda task: iter(["Krok 1.", model_reply("Krok 1.")])
+    )
+    shown = client.post(f"/api/practice/tasks/{proof.id}/ai-solution", headers=COOKIE)
+    (_, delta), (_, done) = sse_events(shown)
 
+    assert delta == {"text": "Krok 1."}
+    assert session.scalar(select(AiRequest.kind)) == "rozwiazanie"
     response = client.post(
-        f"/api/practice/ai-requests/{shown['request_id']}/feedback",
+        f"/api/practice/ai-requests/{done['request_id']}/feedback",
         json={"feedback": "nie-pomoglo", "comment": "Za krótko."},
         headers=COOKIE,
     )
@@ -599,30 +838,6 @@ def test_student_feedback_is_saved_with_a_comment(client, account, proof, sessio
     assert response.status_code == 204
     request = session.scalar(select(AiRequest))
     assert (request.feedback, request.feedback_comment) == ("nie-pomoglo", "Za krótko.")
-
-
-def test_ai_stops_at_the_daily_limit(client, account, proof, session, monkeypatch):
-    monkeypatch.setattr(practice, "show_solution", lambda *args: model_reply("Krok 1."))
-    for _ in range(practice.AI_DAILY_LIMIT):
-        session.add(
-            AiRequest(
-                account_id=account.id,
-                task_id=proof.id,
-                kind="rozwiazanie",
-                reply="Krok 1.",
-                model="model",
-                failed_models=[],
-                prompt_version=1,
-                input_tokens=1,
-                output_tokens=1,
-                seconds=1,
-            )
-        )
-    session.flush()
-
-    response = client.post(f"/api/practice/tasks/{proof.id}/ai-solution", headers=COOKIE)
-
-    assert response.status_code == 429
 
 
 def test_preview_shows_what_was_read(client):
@@ -687,6 +902,8 @@ def text_sent_to_model(client, monkeypatch, task, path, body):
         )
 
     monkeypatch.setattr(grading, "ask", fake_ask)
+    # „Dopytaj się” idzie strumieniem, a nie przez ask.
+    monkeypatch.setattr(grading, "stream", lambda system, messages, *image: iter([fake_ask(system, messages)]))
     response = client.post(f"/api/practice/tasks/{task.id}/{path}", json=body, headers=COOKIE)
     assert response.status_code == 200
     return sent[0]

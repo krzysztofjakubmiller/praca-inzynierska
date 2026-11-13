@@ -54,7 +54,8 @@ function send() {
     </template>
     <template v-else>
       <p class="open-answer__intro">
-        To zadanie na dowodzenie. Rozwiąż je w zeszycie albo na tablicy i wyślij do oceny przez AI.
+        To zadanie na dowodzenie. Rozwiąż je w zeszycie albo na tablicy i oddaj dyżurnemu
+        przyciskiem na dole.
       </p>
     </template>
   </div>
