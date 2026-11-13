@@ -73,7 +73,10 @@ describe('login page', () => {
 
     await fillAndSubmit(wrapper)
 
-    await vi.waitFor(() => expect(wrapper.text()).toContain('Zalogowano jako ola@example.com'))
+    // Strona konta ładuje się przy pierwszym wejściu dłużej niż domyślna sekunda czekania.
+    await vi.waitFor(() => expect(wrapper.text()).toContain('Zalogowano jako ola@example.com'), {
+      timeout: 5000,
+    })
     expect(router.currentRoute.value.name).toBe('account')
   })
 
