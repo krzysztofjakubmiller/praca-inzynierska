@@ -416,6 +416,24 @@ def expected_problem(expected: str, kind: str) -> str | None:
     return None
 
 
+def in_degrees(text: str) -> bool:
+    return "°" in text or "\\circ" in text
+
+
+def has_pi(text: str) -> bool:
+    return "pi" in text or "π" in text
+
+
+# Kąt wolno podać w radianach, gdy wzorzec jest w stopniach, i odwrotnie. Przelicza się tylko
+# zapis z pi bez znaku stopnia, żeby zwykła liczba nie stała się nagle kątem.
+def angle_scale(student: str, expected: str) -> Expr:
+    if in_degrees(expected) and not in_degrees(student) and has_pi(student):
+        return 180 / pi
+    if in_degrees(student) and not in_degrees(expected) and has_pi(expected):
+        return pi / 180
+    return S.One
+
+
 def equivalent(student: str, expected: str, kind: str) -> bool | None:
     try:
         correct = read(expected, kind)
@@ -427,6 +445,12 @@ def equivalent(student: str, expected: str, kind: str) -> bool | None:
         answer = read(student, kind)
     except Unreadable:
         return None
+    if kind in ("liczba", "wartosci"):
+        scale = angle_scale(student, expected)
+        if kind == "liczba":
+            answer = answer * scale
+        else:
+            answer = {value * scale for value in answer}
     return same(answer, correct, kind)
 
 
