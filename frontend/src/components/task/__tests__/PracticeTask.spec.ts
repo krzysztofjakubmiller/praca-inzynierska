@@ -195,7 +195,10 @@ describe('PracticeTask', () => {
     })
 
     expect(button(wrapper, 'Wyślij wynik').attributes('disabled')).toBeDefined()
-    await wrapper.find('input').setValue('4')
+    await flushPromises()
+    const field = wrapper.find('math-field')
+    ;(field.element as HTMLInputElement).value = '4'
+    await field.trigger('input')
     await vi.advanceTimersByTimeAsync(400)
     await flushPromises()
     await button(wrapper, 'Wyślij wynik').trigger('click')
@@ -206,7 +209,7 @@ describe('PracticeTask', () => {
     expect(sentBody(fetch, 1)).toEqual({ mode: 'cwiczenie', answers: ['4'] })
     expect(wrapper.find('.practice-task__result').text()).toContain('0 z 2 pkt. Poprawny wynik:')
     expect(wrapper.text()).toContain('Oceń rozwiązanie')
-    expect(wrapper.find('input').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('math-field').attributes('disabled')).toBeDefined()
     expect(wrapper.text()).not.toContain('łatwy')
   })
 
@@ -258,7 +261,10 @@ describe('PracticeTask', () => {
       props: { task, mode: 'cwiczenie' },
     })
 
-    await wrapper.find('input').setValue('3')
+    await flushPromises()
+    const field = wrapper.find('math-field')
+    ;(field.element as HTMLInputElement).value = '3'
+    await field.trigger('input')
     await vi.advanceTimersByTimeAsync(400)
     await flushPromises()
     await button(wrapper, 'Wyślij wynik').trigger('click')

@@ -3,6 +3,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import OpenAnswer from '../OpenAnswer.vue'
 import type { PracticeTask as Task } from '@/practice'
 
+vi.mock('@/mathKeyboard', () => ({ loadMathLive: () => Promise.resolve() }))
+
 const TASK: Task = {
   id: 9,
   exam: 'matura-podstawowa',
@@ -33,8 +35,11 @@ function serverReads(...latex: (string | null)[]) {
   return fetch
 }
 
-async function type(input: ReturnType<ReturnType<typeof mount>['find']>, text: string) {
-  await input.setValue(text)
+// W jsdom math-field to zwykły element bez MathLive, więc wpis to ustawienie value i zdarzenie
+// input, jak przy pisaniu w edytorze.
+async function type(field: ReturnType<ReturnType<typeof mount>['find']>, text: string) {
+  ;(field.element as HTMLInputElement).value = text
+  await field.trigger('input')
   await vi.advanceTimersByTimeAsync(400)
   await flushPromises()
 }
@@ -50,22 +55,25 @@ describe('OpenAnswer', () => {
   it('has one field per part and sends only when every entry was read', async () => {
     serverReads('6{,}38', null, '\\left(-3, 1\\right)')
     const wrapper = mount(OpenAnswer, { props: { task: TASK } })
-    const [first, second] = wrapper.findAll('input')
+    await flushPromises()
+    const [first, second] = wrapper.findAll('math-field')
     const send = wrapper.findAll('button').find((found) => found.text() === 'Wyślij wynik')!
 
     expect(wrapper.findAll('label').map((found) => found.text())).toEqual([
       'Część 1 (1 pkt)',
       'Część 2 (1 pkt)',
     ])
-    await type(first!, '6,38')
-    await type(second!, '(-3; 1')
+    await type(first!, '6{,}38')
+    await type(second!, '(-3;1')
     expect(wrapper.text()).toContain('Nie rozumiem tego zapisu')
     expect(send.attributes('disabled')).toBeDefined()
 
-    await type(second!, '(-3; 1)')
+    await type(second!, '\\left(-3;1\\right)')
     await send.trigger('click')
 
-    expect(wrapper.emitted('done')![0]).toEqual([{ answers: ['6,38', '(-3; 1)'] }])
+    expect(wrapper.emitted('done')![0]).toEqual([
+      { answers: ['6{,}38', '(-3;1)'] },
+    ])
   })
 
   it('names the fields of several results without parts', () => {
@@ -81,26 +89,10 @@ describe('OpenAnswer', () => {
     ])
   })
 
-  it('inserts a sign where the cursor is', async () => {
-    serverReads('2 \\sqrt{3}')
-    const wrapper = mount(OpenAnswer, {
-      props: { task: { ...TASK, results: [{ kind: 'liczba' }] } },
-      attachTo: document.body,
-    })
-    const input = wrapper.find('input')
-    await input.setValue('23')
-    ;(input.element as HTMLInputElement).setSelectionRange(1, 1)
-
-    await wrapper.find('[aria-label="Wstaw √"]').trigger('click')
-
-    expect((input.element as HTMLInputElement).value).toBe('2√3')
-    wrapper.unmount()
-  })
-
   it('has no field for a proof, which goes to AI', () => {
     const wrapper = mount(OpenAnswer, { props: { task: { ...TASK, results: [] } } })
 
-    expect(wrapper.find('input').exists()).toBe(false)
+    expect(wrapper.find('math-field').exists()).toBe(false)
     expect(wrapper.find('button').exists()).toBe(false)
   })
 })

@@ -218,3 +218,51 @@ canvas {
 .icon-button:hover {
   background: var(--hairline);
 }
+
+/* Klawiatura wzorów (MathLive) w kolorach aplikacji. Bez tego bierze jasny albo ciemny wygląd
+   z ustawień systemu, a nie z motywu wybranego w profilu. :root podnosi pierwszeństwo nad
+   regułami ciemnego motywu biblioteki. */
+:root .ML__keyboard {
+  --keyboard-background: var(--ground);
+  --keyboard-border: var(--hairline);
+  --keyboard-accent-color: var(--ink);
+  --keyboard-toolbar-text: var(--ink-soft);
+  --keyboard-toolbar-text-active: var(--ink);
+  --keyboard-toolbar-background-hover: var(--hairline);
+  --keyboard-horizontal-rule: 1px solid var(--hairline);
+  --keycap-background: var(--surface);
+  --keycap-background-hover: var(--surface);
+  --keycap-border: var(--hairline);
+  --keycap-border-bottom: var(--hairline);
+  --keycap-text: var(--ink);
+  --keycap-text-active: var(--ground);
+  --keycap-text-pressed: var(--ground);
+  --keycap-shift-color: var(--ink-soft);
+  --keycap-primary-background: var(--ink);
+  --keycap-primary-text: var(--ground);
+  --keycap-secondary-background: var(--track);
+  --keycap-secondary-background-hover: var(--track);
+  --keycap-secondary-text: var(--ink);
+  /* Klawisze akcji (usuń) z tą samą obwódką co reszta, bo bez niej stały krzywo w rzędzie. */
+  --keycap-secondary-border: var(--hairline);
+  --keycap-secondary-border-bottom: var(--hairline);
+  /* Odstęp od dolnej krawędzi: na Androidzie pasek gestów leży na stronie i zasłaniał
+     dolny rząd. */
+  --keyboard-padding-bottom: 1rem;
+  --box-placeholder-color: var(--ink-soft);
+  --variant-panel-background: var(--surface);
+}
+
+/* Klawisze akcji MathLive (usuń) nie dostają zwykłej klasy klawisza: mają własny odstęp
+   i niższą linię, więc ikona stała wyżej niż znaki na sąsiednich klawiszach. */
+:root .ML__keyboard .MLK__rows > .MLK__row .action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+:root .ML__keyboard .MLK__keycap.fraction > .ML__latex {
+  font-size: 80%;
+}
