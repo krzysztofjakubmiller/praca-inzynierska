@@ -1,8 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { flushPromises } from '@vue/test-utils'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS } from '@/maps/basic/demoProgress'
 import { dueTotal } from '@/maps/nextStep'
 import type { TopicMap } from '@/maps/types'
+import { profile, type Profile } from '@/profile'
 import { demoProgressStats } from '@/stats/demoStats'
 import {
   currentStreak,
@@ -12,6 +14,7 @@ import {
   plural,
   shiftDay,
   topicStates,
+  useStudentStats,
   weakestTopics,
 } from '@/stats/stats'
 
@@ -125,5 +128,72 @@ describe('demo statistics', () => {
     expect(stats.days).toHaveLength(140)
     expect(stats.reviewsAhead).toHaveLength(14)
     expect(stats.lines).toHaveLength(EXTENDED_MAP.graph.lines.length)
+  })
+})
+
+describe('student statistics', () => {
+  const topic = { total: 10, done: 4, due: 2, recent: { attempts: 6, correct: 3 } }
+
+  function backend(recentScore: number | null) {
+    const answers: Record<string, unknown> = {
+      '/api/profile/stats/matura-podstawowa': {
+        today: '2026-11-09',
+        days: [0, 3, 5],
+        recent_score: recentScore,
+        reviews_ahead: [2, 1],
+        overdue: 1,
+      },
+      '/api/practice/progress/matura-podstawowa': {
+        topics: { logarytmy: topic },
+        last_station: 'logarytmy',
+      },
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => new Response(JSON.stringify(answers[url]), { status: 200 })),
+    )
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    profile.value = null
+  })
+
+  it('combine the backend numbers with the map progress', async () => {
+    backend(0.75)
+    profile.value = {
+      exam_year: 2027,
+      exam_dates: { podstawowa: '2027-05-05', rozszerzona: '2027-05-11' },
+    } as Profile
+
+    const { stats, loaded } = useStudentStats(() => 'matura-podstawowa')
+    await flushPromises()
+
+    expect(loaded.value).toBe(true)
+    expect(stats.value).toMatchObject({
+      today: '2026-11-09',
+      examDate: '2027-05-05',
+      days: [0, 3, 5],
+      recentScore: 0.75,
+      reviewsAhead: [2, 1],
+      overdue: 1,
+      sheets: [],
+    })
+    expect(stats.value!.forecast).toBeUndefined()
+    expect(stats.value!.states.learning).toBe(1)
+  })
+
+  it('stay empty before the first solved task', async () => {
+    backend(null)
+    profile.value = {
+      exam_year: 2027,
+      exam_dates: { podstawowa: '2027-05-05', rozszerzona: '2027-05-11' },
+    } as Profile
+
+    const { stats, loaded } = useStudentStats(() => 'matura-podstawowa')
+    await flushPromises()
+
+    expect(loaded.value).toBe(true)
+    expect(stats.value).toBeNull()
   })
 })

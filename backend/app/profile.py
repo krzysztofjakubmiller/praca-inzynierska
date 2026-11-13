@@ -1,13 +1,14 @@
-from datetime import date
+from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import Date, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.access import require_password
 from app.accounts import current_account
 from app.db import get_session
-from app.models import Account, Profile
+from app.models import Account, Exam, Profile, ReviewCard, Solution, Task
 
 router = APIRouter(prefix="/api/profile", dependencies=[Depends(require_password)])
 
@@ -111,3 +112,89 @@ def save_profile(
     session.merge(Profile(account_id=account.id, **data.model_dump()))
     session.commit()
     return response(data)
+
+
+# Ile dni wstecz pokazuje kalendarz nauki i ile dni naprzód wykres powtórek.
+HISTORY_DAYS = 140
+REVIEW_DAYS = 14
+# Tyle ostatnich rozwiązań liczy się do skuteczności, tak jak na mapie.
+RECENT_SOLUTIONS = 20
+
+
+# Dzień w Polsce, bo uczeń liczy dni nauki od swojej północy, a nie od północy UTC.
+def polish_day(moment):
+    return cast(func.timezone("Europe/Warsaw", moment), Date)
+
+
+# Dane do wykresów postępu, które nie wynikają z samej mapy: dni nauki, skuteczność ostatnich
+# zadań i powtórki na najbliższe dni. Linie i stany tematów frontend liczy z postępu na mapie.
+@router.get("/stats/{exam}")
+def read_stats(
+    exam: str,
+    account: Account = Depends(current_account),
+    session: Session = Depends(get_session),
+):
+    today = session.scalar(select(polish_day(func.now())))
+    first = today - timedelta(days=HISTORY_DAYS - 1)
+    day = polish_day(Solution.created_at)
+    per_day = dict(
+        session.execute(
+            select(day, func.count())
+            .join(Task, Task.id == Solution.task_id)
+            .join(Exam, Exam.id == Task.exam_id)
+            .where(Solution.account_id == account.id, Exam.code == exam, day >= first)
+            .group_by(day)
+        ).all()
+    )
+    days = [per_day.get(first + timedelta(days=offset), 0) for offset in range(HISTORY_DAYS)]
+
+    recent = session.execute(
+        select(Solution.points, Task.max_points)
+        .join(Task, Task.id == Solution.task_id)
+        .join(Exam, Exam.id == Task.exam_id)
+        .where(Solution.account_id == account.id, Exam.code == exam)
+        .order_by(Solution.created_at.desc())
+        .limit(RECENT_SOLUTIONS)
+    ).all()
+
+    # Zaległe powtórki wliczają się do dzisiejszych, a osobno podaje się, ile ich jest.
+    due_day = func.greatest(polish_day(ReviewCard.due), today)
+    due = dict(
+        session.execute(
+            select(due_day, func.count())
+            .join(Task, Task.id == ReviewCard.task_id)
+            .join(Exam, Exam.id == Task.exam_id)
+            .where(
+                ReviewCard.account_id == account.id,
+                Exam.code == exam,
+                Task.review_status == "sprawdzone",
+                polish_day(ReviewCard.due) < today + timedelta(days=REVIEW_DAYS),
+            )
+            .group_by(due_day)
+        ).all()
+    )
+    overdue = session.scalar(
+        select(func.count())
+        .select_from(ReviewCard)
+        .join(Task, Task.id == ReviewCard.task_id)
+        .join(Exam, Exam.id == Task.exam_id)
+        .where(
+            ReviewCard.account_id == account.id,
+            Exam.code == exam,
+            Task.review_status == "sprawdzone",
+            polish_day(ReviewCard.due) < today,
+        )
+    )
+    return {
+        "today": today.isoformat(),
+        "days": days,
+        "recent_score": (
+            sum(points == max_points for points, max_points in recent) / len(recent)
+            if recent
+            else None
+        ),
+        "reviews_ahead": [
+            due.get(today + timedelta(days=offset), 0) for offset in range(REVIEW_DAYS)
+        ],
+        "overdue": overdue,
+    }

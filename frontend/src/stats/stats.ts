@@ -1,7 +1,11 @@
+import { ref, watch, type Ref } from 'vue'
 import type { Exam } from '@/config/exams'
+import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { listGroups } from '@/maps/order'
 import { effectiveness, topicState, type TopicState } from '@/maps/progress'
 import type { Difficulty, LineColor, MapProgress, TopicMap } from '@/maps/types'
+import { loadProgress } from '@/practice'
+import { loadStats, profile } from '@/profile'
 
 export interface LineStats {
   name: string
@@ -47,8 +51,8 @@ export interface ProgressStats {
   overdue: number
   /** Arkusze po kolei, zrobione i zaplanowane, razem z próbną maturą. */
   sheets: Sheet[]
-  /** Prognoza wyniku matury jako przedział w procentach. */
-  forecast: { low: number; high: number }
+  /** Prognoza wyniku matury jako przedział w procentach; bez arkuszy nie ma z czego jej liczyć. */
+  forecast?: { low: number; high: number }
 }
 
 // Przesiadka liczy się raz, na pierwszej linii, tak jak jej karta w widoku listy, więc suma linii
@@ -179,8 +183,46 @@ export function plural(count: number, one: string, few: string, many: string): s
   return many
 }
 
-// Dane ucznia przyjdą z modułu nauki (powtórki i arkusze). Do tego czasu każdy zalogowany
-// zaczyna bez danych i dostaje zaproszenie do obejrzenia przykładu.
-export function studentStats(): ProgressStats | null {
-  return null
+// Arkuszy i prognozy jeszcze nie ma w aplikacji, więc uczeń ich nie dostaje. Reszta wykresów
+// liczy się z jego rozwiązań: dni nauki i powtórki z backendu, linie i tematy z postępu na mapie.
+async function loadStudentStats(examId: Exam['id']): Promise<ProgressStats | null> {
+  const [loaded, progress] = await Promise.all([loadStats(examId), loadProgress(examId)])
+  if (!progress || loaded.recent_score === null) return null
+  const map = examId === 'matura-rozszerzona' ? EXTENDED_MAP : BASIC_MAP
+  const taskCounts = Object.fromEntries(
+    Object.entries(progress.topics).map(([id, topic]) => [id, topic?.total ?? 0]),
+  )
+  const level = examId === 'matura-rozszerzona' ? 'rozszerzona' : 'podstawowa'
+  return {
+    examId,
+    today: loaded.today,
+    examDate: profile.value!.exam_dates[level],
+    days: loaded.days,
+    recentScore: loaded.recent_score,
+    lines: lineStats(map, progress, taskCounts),
+    states: topicStates(map, progress),
+    weakest: weakestTopics(map, progress),
+    reviewsAhead: loaded.reviews_ahead,
+    overdue: loaded.overdue,
+    sheets: [],
+  }
+}
+
+/**
+ * Statystyki zalogowanego ucznia dla wybranego egzaminu. stats zostaje null, gdy uczeń nie zrobił
+ * jeszcze żadnego zadania; loaded mówi, czy odpowiedź już przyszła.
+ */
+export function useStudentStats(examId: () => Exam['id']) {
+  const stats: Ref<ProgressStats | null> = ref(null)
+  const loaded = ref(false)
+  watch(
+    [examId, () => profile.value?.exam_year],
+    async ([exam, year]) => {
+      if (year === undefined) return
+      stats.value = await loadStudentStats(exam).catch(() => null)
+      loaded.value = true
+    },
+    { immediate: true },
+  )
+  return { stats, loaded }
 }

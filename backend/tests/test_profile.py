@@ -4,8 +4,9 @@ import pytest
 from sqlalchemy import select
 
 from app.accounts import token_hash
-from app.models import Account, LoginSession, Profile
-from app.profile import default_exam_year, exam_date
+from app.models import Account, LoginSession, Profile, ReviewCard, Solution
+from app.profile import HISTORY_DAYS, REVIEW_DAYS, default_exam_year, exam_date
+from tests.test_task import make_task
 
 KEY = "klucz-sesji-testowej"
 
@@ -171,3 +172,51 @@ def test_learning_difficulties_are_saved(client, account):
     read = client.get("/api/profile", headers={"Cookie": f"session={KEY}"})
 
     assert read.json()["learning_difficulties"] == "dyskalkulia"
+
+
+def get_stats(client):
+    return client.get("/api/profile/stats/matura-podstawowa", headers={"Cookie": f"session={KEY}"})
+
+
+def test_stats_count_days_score_and_reviews(client, account, session):
+    now = datetime.now(UTC)
+    tasks = [make_task(session, number=n, review_status="sprawdzone") for n in (1, 2, 3)]
+    for task, points, ago in ((tasks[0], 1, 0), (tasks[1], 0, 0), (tasks[2], 1, 3)):
+        session.add(
+            Solution(
+                account_id=account.id,
+                task_id=task.id,
+                mode="cwiczenie",
+                points=points,
+                created_at=now - timedelta(days=ago),
+            )
+        )
+    for task, days in ((tasks[0], -2), (tasks[1], 3), (tasks[2], 20)):
+        session.add(
+            ReviewCard(
+                account_id=account.id,
+                task_id=task.id,
+                state="powtorka",
+                due=now + timedelta(days=days),
+            )
+        )
+    session.flush()
+
+    stats = get_stats(client).json()
+
+    assert len(stats["days"]) == HISTORY_DAYS
+    assert stats["days"][-1] == 2
+    assert stats["days"][-4] == 1
+    assert stats["recent_score"] == pytest.approx(2 / 3)
+    assert len(stats["reviews_ahead"]) == REVIEW_DAYS
+    assert stats["reviews_ahead"][0] == 1
+    assert stats["reviews_ahead"][3] == 1
+    assert sum(stats["reviews_ahead"]) == 2
+    assert stats["overdue"] == 1
+
+
+def test_stats_without_solutions_have_no_score(client, account):
+    stats = get_stats(client).json()
+
+    assert sum(stats["days"]) == 0
+    assert stats["recent_score"] is None

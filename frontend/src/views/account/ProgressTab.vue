@@ -5,13 +5,13 @@ import ExamHeading from '@/components/stats/ExamHeading.vue'
 import ProgressCharts from '@/components/stats/ProgressCharts.vue'
 import type { Exam } from '@/config/exams'
 import { profile } from '@/profile'
-import { studentStats } from '@/stats/stats'
+import { useStudentStats } from '@/stats/stats'
 
-defineProps<{ exam: Exam['id'] }>()
+const props = defineProps<{ exam: Exam['id'] }>()
 
 // Postęp drugiego egzaminu widzi tylko uczeń rozszerzenia, bo uczy się obu poziomów.
 const both = computed(() => profile.value?.level === 'rozszerzona')
-const stats = studentStats()
+const { stats, loaded } = useStudentStats(() => props.exam)
 </script>
 
 <template>
@@ -23,7 +23,7 @@ const stats = studentStats()
       :target="profile?.target_percent ?? null"
       :limit="profile?.daily_review_limit ?? 20"
     />
-    <NoDataYet v-else :exam-id="exam" />
+    <NoDataYet v-else-if="loaded" :exam-id="exam" />
   </div>
 </template>
 

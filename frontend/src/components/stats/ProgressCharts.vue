@@ -118,6 +118,7 @@ const lastSheet = computed(() => {
       <h2 id="group-sheets" class="progress-charts__heading">Arkusze i matura</h2>
       <div class="progress-charts__grid">
         <StatCard
+          v-if="stats.sheets.length"
           v-slot="{ width }"
           title="Wyniki arkuszy"
           note="Kolejne arkusze na tle progu zdania i twojego celu."
@@ -126,6 +127,7 @@ const lastSheet = computed(() => {
           <SheetResults :sheets="stats.sheets" :target="target" :width="width" />
         </StatCard>
         <StatCard
+          v-if="stats.forecast"
           v-slot="{ width }"
           title="Prognoza wyniku"
           note="Szacunek na dzień matury, liczony z powtórek i wag działów."

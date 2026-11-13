@@ -49,6 +49,25 @@ export async function saveProfile(settings: ProfileSettings): Promise<Profile | 
   return body.detail
 }
 
+/** Dane do wykresów postępu z backendu; dni i powtórki liczone od dziś w strefie ucznia. */
+export interface StatsIn {
+  today: string
+  days: number[]
+  /** null, gdy uczeń nie ma jeszcze rozwiązań z tego egzaminu. */
+  recent_score: number | null
+  reviews_ahead: number[]
+  overdue: number
+}
+
+export async function loadStats(exam: string): Promise<StatsIn> {
+  const response = await fetch(`${API_URL}/api/profile/stats/${exam}`, {
+    credentials: 'include',
+    headers: authorization('access'),
+  })
+  if (!response.ok) throw new Error(`backend odpowiedział kodem ${response.status}`)
+  return response.json()
+}
+
 // Profil zalogowanego ucznia, wspólny dla całej aplikacji: motyw, ustawienia i strony konta
 // czytają i zmieniają ten sam obiekt. null, gdy nikt nie jest zalogowany.
 export const profile = ref<Profile | null>(null)

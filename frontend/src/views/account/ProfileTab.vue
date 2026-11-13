@@ -11,7 +11,7 @@ import LineProgress from '@/components/stats/LineProgress.vue'
 import StatCard from '@/components/stats/StatCard.vue'
 import WeekNumbers from '@/components/stats/WeekNumbers.vue'
 import { profile } from '@/profile'
-import { localToday, studentStats } from '@/stats/stats'
+import { localToday, useStudentStats } from '@/stats/stats'
 
 defineProps<{ account: Account }>()
 
@@ -22,9 +22,11 @@ const level = computed(() => profile.value?.level ?? 'podstawowa')
 const examId = computed(() =>
   level.value === 'rozszerzona' ? 'matura-rozszerzona' : 'matura-podstawowa',
 )
-const stats = studentStats()
-const doneSheets = stats?.sheets.filter((sheet) => sheet.percent !== undefined) ?? []
-const lastSheet = doneSheets[doneSheets.length - 1]?.percent
+const { stats, loaded } = useStudentStats(() => examId.value)
+const lastSheet = computed(() => {
+  const done = stats.value?.sheets.filter((sheet) => sheet.percent !== undefined) ?? []
+  return done[done.length - 1]?.percent
+})
 
 async function logOutAndGoToLogin() {
   try {
@@ -63,6 +65,7 @@ async function logOutAndGoToLogin() {
         />
       </StatCard>
       <StatCard
+        v-if="stats.forecast"
         v-slot="{ width }"
         title="Prognoza wyniku"
         note="Szacunek na dzień matury, liczony z powtórek i wag działów."
@@ -87,7 +90,7 @@ async function logOutAndGoToLogin() {
         Cały postęp
       </RouterLink>
     </div>
-    <NoDataYet v-else :exam-id="examId" />
+    <NoDataYet v-else-if="loaded" :exam-id="examId" />
 
     <section class="profile-tab__account" aria-labelledby="account-heading">
       <h2 id="account-heading" class="profile-tab__heading">Konto</h2>
