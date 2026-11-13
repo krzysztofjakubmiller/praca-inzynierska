@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { drawStroke, drawStrokes, lineWidth, THICK, THIN, type Stroke } from '@/whiteboard'
+import { drawStroke, drawStrokes, insideLasso, lineWidth, touches, type Stroke } from '@/whiteboard'
 
 // Atrapa kontekstu płótna, która zapisuje wywołania; jsdom nie ma prawdziwego płótna.
 function recordingContext() {
@@ -11,10 +11,18 @@ function recordingContext() {
     lineCap: '',
     lineJoin: '',
     lineWidth: 0,
+    lineDashOffset: 0,
+    dash: [] as number[],
+    setLineDash: (dash: number[]) => (context.dash = dash),
     beginPath: () => calls.push('beginPath'),
     moveTo: (x: number, y: number) => calls.push(`moveTo ${x} ${y}`),
     lineTo: (x: number, y: number) => calls.push(`lineTo ${x} ${y}`),
-    stroke: () => calls.push(`stroke ${context.lineWidth}`),
+    stroke: () =>
+      calls.push(
+        context.dash.length
+          ? `stroke ${context.lineWidth} dash ${context.lineDashOffset}`
+          : `stroke ${context.lineWidth}`,
+      ),
     arc: (x: number, y: number, radius: number) => calls.push(`arc ${x} ${y} ${radius}`),
     fill: () => calls.push('fill'),
   }
@@ -23,16 +31,12 @@ function recordingContext() {
 
 describe('lineWidth', () => {
   it('keeps an even line for a finger and a mouse', () => {
-    expect(lineWidth(THIN, 'pen', 'touch', 0.5)).toBe(THIN)
-    expect(lineWidth(THICK, 'pen', 'mouse', 0)).toBe(THICK)
+    expect(lineWidth(2, 'touch', 0.5)).toBe(2)
+    expect(lineWidth(6, 'mouse', 0)).toBe(6)
   })
 
   it('makes the line thicker when the stylus presses harder', () => {
-    expect(lineWidth(THIN, 'pen', 'pen', 1)).toBeGreaterThan(lineWidth(THIN, 'pen', 'pen', 0.2))
-  })
-
-  it('gives the eraser a wider tip than the pen', () => {
-    expect(lineWidth(THIN, 'eraser', 'touch', 0.5)).toBeGreaterThan(THIN)
+    expect(lineWidth(2, 'pen', 1)).toBeGreaterThan(lineWidth(2, 'pen', 0.2))
   })
 })
 
@@ -63,12 +67,49 @@ describe('drawStroke', () => {
     expect(context.strokeStyle).toBe('#1d1f22')
   })
 
+  it('continues the dash pattern from one segment to the next', () => {
+    const { context, calls } = recordingContext()
+    const points = [
+      { x: 0, y: 0, width: 2 },
+      { x: 3, y: 4, width: 2 },
+      { x: 9, y: 12, width: 2 },
+    ]
+
+    drawStroke(context, { tool: 'line', dashed: true, points }, '#000')
+
+    expect(calls.filter((call) => call.startsWith('stroke'))).toEqual([
+      'stroke 2 dash 0',
+      'stroke 2 dash 5',
+    ])
+  })
+
+  it('draws only the new segments while writing', () => {
+    const { context, calls } = recordingContext()
+    const points = [
+      { x: 0, y: 0, width: 2 },
+      { x: 10, y: 0, width: 2 },
+      { x: 20, y: 0, width: 2 },
+    ]
+
+    drawStroke(context, { tool: 'pen', points }, '#000', 2)
+
+    expect(calls).toEqual(['beginPath', 'moveTo 10 0', 'lineTo 20 0', 'stroke 2'])
+  })
+
   it('draws a single tap as a dot', () => {
     const { context, calls } = recordingContext()
 
     drawStroke(context, { tool: 'pen', points: [{ x: 4, y: 6, width: 6 }] }, '#000')
 
     expect(calls).toEqual(['beginPath', 'arc 4 6 3', 'fill'])
+  })
+
+  it('draws with its own colour when the stroke has one', () => {
+    const { context } = recordingContext()
+
+    drawStroke(context, { tool: 'pen', color: '#d92d20', points: [{ x: 1, y: 1, width: 2 }] }, '#000')
+
+    expect(context.fillStyle).toBe('#d92d20')
   })
 
   it('erases pixels instead of painting with the eraser', () => {
@@ -87,5 +128,32 @@ describe('drawStroke', () => {
 
     expect(seen).toEqual(['destination-out'])
     expect(raw.globalCompositeOperation).toBe('source-over')
+  })
+})
+
+describe('touches', () => {
+  const line: Stroke = { tool: 'line', points: [{ x: 0, y: 0, width: 2 }, { x: 100, y: 0, width: 2 }] }
+
+  it('catches a straight line in the middle, far from its two points', () => {
+    expect(touches(line, 50, 8, 10)).toBe(true)
+    expect(touches(line, 50, 30, 10)).toBe(false)
+  })
+})
+
+describe('insideLasso', () => {
+  const square = [
+    { x: 0, y: 0, width: 1 },
+    { x: 100, y: 0, width: 1 },
+    { x: 100, y: 100, width: 1 },
+    { x: 0, y: 100, width: 1 },
+  ]
+  const stroke = (xs: number[]): Stroke => ({
+    tool: 'pen',
+    points: xs.map((x) => ({ x, y: 50, width: 2 })),
+  })
+
+  it('takes a stroke when at least half of it is inside', () => {
+    expect(insideLasso(stroke([10, 50, 150, 200]), square)).toBe(true)
+    expect(insideLasso(stroke([10, 150, 200]), square)).toBe(false)
   })
 })
