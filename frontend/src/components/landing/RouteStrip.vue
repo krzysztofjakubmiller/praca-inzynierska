@@ -118,14 +118,14 @@ defineProps<{ exams: readonly Exam[]; active: number }>()
   background: var(--ink);
 }
 
-@media (min-width: 48rem) {
+@media (min-width: 56rem) {
   .route__stop + .route__stop::before {
     margin-inline: 0.35rem;
   }
 }
 
 /* Na wąskim ekranie widać same znaczniki, nazwy zostają dla czytników ekranu. */
-@media (max-width: 47.99rem) {
+@media (max-width: 55.99rem) {
   .route__stop:not(.route__stop--tickets) .route__label {
     position: absolute;
     width: 1px;

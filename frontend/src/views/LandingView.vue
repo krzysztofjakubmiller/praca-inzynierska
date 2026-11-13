@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, useTemplateRef } from 'vue'
-import { EXAMS } from '@/config/exams'
+import { EXAMS, type Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 import { useStationProgress } from '@/composables/useStationProgress'
 import {
@@ -26,6 +26,12 @@ const validUntil = new Intl.DateTimeFormat('pl-PL', {
   year: 'numeric',
 }).format(annualEnd)
 const year = today.getFullYear()
+
+// E8 nie ma jeszcze mapy tematów.
+const MAP_ROUTES: Partial<Record<Exam['id'], string>> = {
+  'matura-podstawowa': 'basic-matura',
+  'matura-rozszerzona': 'extended-matura',
+}
 
 const STEPS = [
   {
@@ -86,6 +92,7 @@ function setSlot(index: number, element: unknown) {
     <header class="top">
       <a class="top__wordmark" href="#start">{{ PRODUCT_NAME }}</a>
       <RouteStrip :exams="EXAMS" :active="activeStop" />
+      <RouterLink class="top__login" :to="{ name: 'login' }">Zaloguj się</RouterLink>
     </header>
 
     <main>
@@ -107,10 +114,16 @@ function setSlot(index: number, element: unknown) {
             Każda powtórka ma nowe liczby, więc odpowiedzi nie da się zapamiętać. Aplikacja sama
             pilnuje, kiedy wrócić do danego zadania.
           </p>
-          <a v-if="cheapest" class="button start__action" href="#bilety">
-            Bilety już od {{ formatPrice(cheapest.price) }}
-            <ArrowIcon down />
-          </a>
+          <div class="start__actions">
+            <RouterLink class="button" :to="{ name: 'register' }">
+              Załóż konto
+              <ArrowIcon />
+            </RouterLink>
+            <a v-if="cheapest" class="button button--quiet" href="#bilety">
+              Bilety już od {{ formatPrice(cheapest.price) }}
+              <ArrowIcon down />
+            </a>
+          </div>
         </section>
 
         <section
@@ -133,6 +146,14 @@ function setSlot(index: number, element: unknown) {
               <h2 :id="`${exam.id}-title`" class="sign__name">{{ exam.name }}</h2>
             </div>
             <p class="station__text">{{ exam.description }}</p>
+            <RouterLink
+              v-if="MAP_ROUTES[exam.id]"
+              class="button button--quiet station__action"
+              :to="{ name: MAP_ROUTES[exam.id] }"
+            >
+              Mapa tematów
+              <ArrowIcon />
+            </RouterLink>
           </div>
         </section>
       </div>
@@ -164,10 +185,13 @@ function setSlot(index: number, element: unknown) {
 
         <div class="about__notes">
           <div class="about__note">
-            <h3 class="about__note-title">Gdy utkniesz</h3>
+            <h3 class="about__note-title">Sprawdzanie i podpowiedzi</h3>
             <p>
-              Asystent podpowiada następny krok, ale nie rozwiązuje zadania za ciebie. Odpowiedź
-              sprawdza zwykły program, który przelicza wynik, więc ocena nie zależy od modelu AI.
+              Zadania zamknięte i wynik końcowy sprawdza program, który porównuje odpowiedź z
+              kluczem, także gdy jest nią wyrażenie matematyczne. Gdy wynik zadania otwartego się
+              nie zgadza, AI ocenia tok rozwiązania ze zdjęcia, tablicy albo opisu według zasad
+              oceniania CKE. Gdy utkniesz, asystent podpowie następny krok, ale nie rozwiąże
+              zadania za ciebie.
             </p>
           </div>
           <div class="about__note">
@@ -241,12 +265,35 @@ function setSlot(index: number, element: unknown) {
   background: var(--ground);
 }
 
+/* Na telefonie nazwa nie mieści się obok paska trasy i logowania, a stoi zaraz pod nagłówkiem. */
 .top__wordmark {
+  display: none;
+  margin-right: auto;
   font-size: 1rem;
   font-weight: 750;
   letter-spacing: -0.01em;
   text-decoration: none;
   white-space: nowrap;
+}
+
+@media (min-width: 30rem) {
+  .top__wordmark {
+    display: block;
+  }
+}
+
+.top__login {
+  display: flex;
+  margin-left: clamp(0rem, 2vw - 0.5rem, 1.25rem);
+  align-items: center;
+  min-height: 2.75rem;
+  font-weight: 650;
+  text-underline-offset: 0.2em;
+  white-space: nowrap;
+}
+
+.top__login:hover {
+  text-decoration-thickness: 2px;
 }
 
 /* Ściana stacji z kratką. Leży pod płótnem z bryłami (z-index -1), a tekst nad nim. */
@@ -335,9 +382,15 @@ function setSlot(index: number, element: unknown) {
   color: var(--ink-soft);
 }
 
-.start__action {
-  align-self: flex-start;
+.start__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+.station__action {
+  align-self: flex-start;
 }
 
 .sign {
