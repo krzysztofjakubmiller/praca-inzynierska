@@ -4,7 +4,7 @@ import httpx2
 import pytest
 
 from app import grading
-from app.grading import GradingUnavailable, UnreadableSolution, grade
+from app.grading import GradingUnavailable, UnreadableSolution, grade, judge_difficulty
 
 
 def answer(data: dict) -> dict:
@@ -189,6 +189,25 @@ def test_no_answering_model_means_unavailable_before_streaming(streams):
 
     with pytest.raises(GradingUnavailable):
         next(grading.answer_question("Treść zadania", CONVERSATION, checked=True))
+
+
+def test_difficulty_goes_only_to_the_model_that_led_the_conversation(openrouter):
+    sent, replies = openrouter
+    replies["drugi"] = (500, {"error": "awaria"})
+    conversation = [
+        {"role": "user", "content": "Jak zacząć?"},
+        {"role": "assistant", "content": "Zacznij od wzoru."},
+    ]
+
+    with pytest.raises(GradingUnavailable):
+        judge_difficulty("Treść", conversation, "latwy", "drugi")
+
+    assert [body["model"] for body in sent] == ["drugi"]
+    system, *messages, question = sent[0]["messages"]
+    assert system["content"].startswith(grading.QUESTION_INSTRUCTIONS)
+    assert "Treść" in system["content"] and grading.HINT_ONLY not in system["content"]
+    assert messages == conversation
+    assert "ocenił jego trudność jako: latwy" in question["content"]
 
 
 def test_question_photo_goes_with_the_last_message(streams):

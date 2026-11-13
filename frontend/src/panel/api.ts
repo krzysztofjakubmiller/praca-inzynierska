@@ -1,6 +1,6 @@
 import { API_URL, authorization, forgetPassword } from '@/access'
 import type { Figures } from '@/figures'
-import type { ResultKind } from '@/practice'
+import type { Rating, ResultKind } from '@/practice'
 import router from '@/router'
 
 export type ReviewStatus = 'do-sprawdzenia' | 'sprawdzone'
@@ -189,6 +189,21 @@ export const panelApi = {
   aiGrades: () => request<AiGrade[]>('/ai/grades'),
   setTutorPoints: (id: number, points: number) =>
     request<void>(`/ai/grades/${id}/tutor-points`, json('PUT', { points })),
+  ratings: (changed: boolean) => request<DifficultyRating[]>(`/ai/ratings?changed=${changed}`),
+}
+
+/** Ocena trudności rozwiązania: wybór ucznia i ocena, która trafiła do FSRS. */
+export interface DifficultyRating {
+  solution_id: number
+  task_id: number
+  email: string
+  created_at: string
+  student_rating: Rating
+  rating: Rating
+  /** Uzasadnienie AI; null, gdy uczeń nie korzystał z pomocy AI albo model nie odpowiedział. */
+  reason: string | null
+  /** Najbliższa powtórka zadania u tego ucznia. */
+  due: string | null
 }
 
 /** Ocena rozwiązania przez AI w aplikacji, do porównania z oceną korepetytora. */

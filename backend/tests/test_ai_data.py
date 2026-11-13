@@ -1,5 +1,6 @@
 import csv
 import json
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -8,7 +9,8 @@ from app import compare_models
 from app.compare_models import compare
 from app.export_ai import export
 from app.grading import Grade, Reply
-from app.models import Account, AiRequest
+from app.models import Account, AiRequest, Solution
+from app.reviews import update_card
 from tests.test_task import make_task
 
 
@@ -60,6 +62,54 @@ def test_panel_lists_ai_grades_and_saves_tutor_points(client, ai_grade, session)
     assert too_many.status_code == 422
     assert saved.status_code == 204
     assert ai_grade.tutor_points == 2
+
+
+def test_panel_lists_difficulty_ratings_with_ai_reason(client, ai_grade, session):
+    def rated(student_rating, rating):
+        solution = Solution(
+            account_id=ai_grade.account_id,
+            task_id=ai_grade.task_id,
+            mode="cwiczenie",
+            points=0,
+            student_rating=student_rating,
+            rating=rating,
+        )
+        session.add(solution)
+        session.flush()
+        return solution
+
+    rated("sredni", "sredni")
+    changed = rated("latwy", "trudny")
+    session.add(
+        AiRequest(
+            account_id=ai_grade.account_id,
+            task_id=ai_grade.task_id,
+            solution_id=changed.id,
+            kind="ocena-trudnosci",
+            reply=json.dumps({"rating": "trudny", "reason": "Bez podpowiedzi by nie doszedł."}),
+            model="anthropic/claude-haiku-5.5",
+            failed_models=[],
+            prompt_version=2,
+            input_tokens=900,
+            output_tokens=40,
+            cost=0.0002,
+            seconds=1.1,
+        )
+    )
+    card = update_card(session, ai_grade.account_id, ai_grade.task_id, "trudny", datetime.now(UTC))
+    session.flush()
+
+    every = client.get("/api/panel/ai/ratings").json()
+    only_changed = client.get("/api/panel/ai/ratings", params={"changed": "true"}).json()
+
+    assert len(every) == 2
+    assert [row["solution_id"] for row in only_changed] == [changed.id]
+    row = only_changed[0]
+    assert row["email"] == "ola@example.com"
+    assert (row["student_rating"], row["rating"]) == ("latwy", "trudny")
+    assert row["reason"] == "Bez podpowiedzi by nie doszedł."
+    assert row["due"] == card.due.isoformat()
+    assert next(r for r in every if r["solution_id"] != changed.id)["reason"] is None
 
 
 def test_export_moves_photos_to_disk_and_writes_all_requests(ai_grade, session, tmp_path):

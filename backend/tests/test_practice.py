@@ -242,8 +242,112 @@ def add_help(session, account, task, kind):
     return request
 
 
+@pytest.fixture
+def judge(monkeypatch):
+    calls = []
+    verdict = {"rating": "bardzo-trudny", "reason": "Uczeń nie znał wzoru."}
+
+    def fake_judge(task, conversation, rating, model):
+        calls.append({"task": task, "conversation": conversation, "rating": rating, "model": model})
+        if not verdict:
+            raise GradingUnavailable
+        reply = model_reply(json.dumps(verdict))
+        reply.data = verdict
+        return reply
+
+    monkeypatch.setattr(practice, "judge_difficulty", fake_judge)
+    return calls, verdict
+
+
+def difficulty_request(session):
+    return session.scalar(select(AiRequest).where(AiRequest.kind == "ocena-trudnosci"))
+
+
+def test_rating_without_ai_help_skips_the_model(client, account, task, session, judge):
+    calls, _ = judge
+    solution_id = solve(client, task.id, answer="C").json()["id"]
+
+    rate(client, solution_id, "latwy")
+
+    saved = session.get(Solution, solution_id)
+    assert (saved.rating, saved.student_rating) == ("latwy", "latwy")
+    assert calls == [] and difficulty_request(session) is None
+
+
+def test_model_after_a_conversation_can_make_the_rating_harder(
+    client, account, task, session, judge
+):
+    calls, _ = judge
+    question = add_help(session, account, task, "pytanie")
+    solution_id = solve(client, task.id, answer="A").json()["id"]
+
+    rate(client, solution_id, "sredni")
+
+    saved = session.get(Solution, solution_id)
+    assert (saved.rating, saved.student_rating) == ("bardzo-trudny", "sredni")
+    [call] = calls
+    assert "Odpowiedź zaznaczona przez ucznia: A" in call["task"]
+    assert call["conversation"] == [
+        {"role": "user", "content": "Jak zacząć?"},
+        {"role": "assistant", "content": "Zacznij od wzoru."},
+    ]
+    assert (call["rating"], call["model"]) == ("sredni", "model-rozmowy")
+    saved_reply = difficulty_request(session)
+    assert saved_reply.solution_id == solution_id
+    assert json.loads(saved_reply.reply)["reason"] == "Uczeń nie znał wzoru."
+    assert (saved_reply.input_tokens, saved_reply.cost) == (10, 0.001)
+    assert question.solution_id == solution_id
+
+
+def test_model_cannot_make_the_rating_easier(client, account, task, session, judge):
+    _, verdict = judge
+    verdict["rating"] = "latwy"
+    add_help(session, account, task, "pytanie")
+    solution_id = solve(client, task.id, answer="C").json()["id"]
+
+    rate(client, solution_id, "trudny")
+
+    assert session.get(Solution, solution_id).rating == "trudny"
+
+
+def test_shown_solution_makes_the_rating_at_least_hard_even_without_the_model(
+    client, account, task, session, judge
+):
+    judge[1].clear()
+    add_help(session, account, task, "rozwiazanie")
+    solution_id = solve(client, task.id, answer="C").json()["id"]
+
+    assert rate(client, solution_id, "latwy").status_code == 200
+
+    saved = session.get(Solution, solution_id)
+    assert (saved.rating, saved.student_rating) == ("trudny", "latwy")
+    assert difficulty_request(session) is None
+
+
+def test_student_rating_stays_when_the_model_does_not_answer(client, account, task, session, judge):
+    judge[1].clear()
+    add_help(session, account, task, "pytanie")
+    solution_id = solve(client, task.id, answer="C").json()["id"]
+
+    assert rate(client, solution_id, "sredni").status_code == 200
+
+    assert session.get(Solution, solution_id).rating == "sredni"
+
+
+def test_help_from_an_earlier_attempt_does_not_count(client, account, task, session, judge):
+    calls, _ = judge
+    add_help(session, account, task, "rozwiazanie")
+    rate(client, solve(client, task.id, answer="C").json()["id"], "trudny")
+    second_id = solve(client, task.id, answer="C").json()["id"]
+
+    rate(client, second_id, "latwy")
+
+    assert session.get(Solution, second_id).rating == "latwy"
+    assert len(calls) == 1
+
+
 def spend(session, account, task, cost):
-    add_help(session, account, task, "pytanie").cost = cost
+    add_help(session, account, task, "ocena-trudnosci").cost = cost
     session.flush()
 
 

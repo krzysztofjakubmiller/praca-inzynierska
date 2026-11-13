@@ -8,6 +8,7 @@ const TABS = [
   { label: 'Zadania', name: 'panel', pages: ['panel', 'panel-task'] },
   { label: 'Warianty', name: 'panel-templates', pages: ['panel-templates', 'panel-template'] },
   { label: 'Oceny AI', name: 'panel-ai-grades', pages: ['panel-ai-grades'] },
+  { label: 'Oceny trudności', name: 'panel-ratings', pages: ['panel-ratings'] },
 ]
 
 // Plan prac to osobna strona; jej adres jest w zmiennej środowiskowej.

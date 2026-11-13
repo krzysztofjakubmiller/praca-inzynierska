@@ -96,6 +96,24 @@ DYSCALCULIA_GENERAL_RULES = """1. Nie należy traktować jako błędy merytorycz
 11. W przypadku zadania z geometrii zdający może otrzymać przynajmniej 1 punkt, jeżeli podaje poprawną metodę wyznaczenia długości odcinka potrzebnej do znalezienia rozwiązania.
 12. W przypadku zadania wymagającego przeprowadzenia dowodu (z zakresu algebry lub geometrii), jeśli w przedstawionym rozwiązaniu zdający powoła się na własność, która wyznacza istotny postęp, prowadzący do przeprowadzenia dowodu, to może otrzymać 1 punkt."""
 
+# Ostatnia wiadomość w rozmowie z Dyżurnym, gdy uczeń oceni trudność zadania.
+DIFFICULTY_QUESTION = """To wiadomość od aplikacji, nie od ucznia. Uczeń skończył zadanie i ocenił jego trudność jako: {rating}. Od tej oceny zależy, kiedy zadanie wróci do powtórki: łatwy to dużo później, bardzo trudny to już jutro. Uczniowie po pomocy często oceniają zadanie jako łatwiejsze, niż było naprawdę.
+
+Na podstawie tej rozmowy wybierz ocenę końcową (latwy, sredni, trudny albo bardzo-trudny): tę samą co uczeń albo trudniejszą, jeśli uczeń sam nie doszedłby do rozwiązania bez twojej pomocy. Nigdy łatwiejszą. W polu reason napisz jedno krótkie zdanie, dlaczego. Uczeń tej odpowiedzi nie zobaczy."""
+
+DIFFICULTY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "rating": {"type": "string", "enum": ["latwy", "sredni", "trudny", "bardzo-trudny"]},
+        "reason": {"type": "string"},
+    },
+    "required": ["rating", "reason"],
+    "additionalProperties": False,
+}
+
+# Uczeń czeka na zapis oceny, więc krócej niż przy ocenie rozwiązania.
+DIFFICULTY_TIMEOUT = 15
+
 GRADE_SCHEMA = {
     "type": "object",
     "properties": {
@@ -193,6 +211,7 @@ def ask(
     image_type: str | None = None,
     schema: dict | None = None,
     models: list[str] | None = None,
+    timeout: float = TIMEOUT,
     previous: list[tuple[bytes, str]] | None = None,
 ) -> Reply:
     key = os.environ.get("OPENROUTER_API_KEY")
@@ -213,7 +232,7 @@ def ask(
         start = time.monotonic()
         try:
             response = httpx2.post(
-                URL, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=TIMEOUT
+                URL, headers={"Authorization": f"Bearer {key}"}, json=body, timeout=timeout
             )
             response.raise_for_status()
             data = response.json()
@@ -378,3 +397,16 @@ def answer_question(
 ) -> Iterator[str | Reply]:
     return stream(tutor_system(task, checked), messages, image, image_type, previous, strong)
 
+
+# Ocena trudności po pomocy AI jako dalszy ciąg rozmowy z Dyżurnym: te same instrukcje i cała
+# rozmowa, bo modele przez API nie pamiętają wcześniejszych zapytań. Bez zapasowych modeli:
+# inny model tej rozmowy nie prowadził.
+def judge_difficulty(task: str, conversation: list[dict], rating: str, model: str) -> Reply:
+    question = {"role": "user", "content": DIFFICULTY_QUESTION.format(rating=rating)}
+    return ask(
+        tutor_system(task, checked=True),
+        [*conversation, question],
+        schema=DIFFICULTY_SCHEMA,
+        models=[model],
+        timeout=DIFFICULTY_TIMEOUT,
+    )

@@ -29,6 +29,7 @@ from app.grading import (
     answer_question,
     describe_task,
     grade,
+    judge_difficulty,
     show_solution,
 )
 from app.models import (
@@ -217,10 +218,10 @@ def save_solution(
     }
 
 
-# Dzienny budżet ucznia na AI w dolarach, liczony z kosztu zapisanego przy każdym zapytaniu.
-# Koszt znamy dopiero po odpowiedzi, więc ostatnie zapytanie może budżet trochę przekroczyć.
-# Konta z AI_UNLIMITED_EMAILS (adresy po przecinku w zmiennej środowiskowej, bo repozytorium
-# jest publiczne) nie mają limitu.
+# Dzienny budżet ucznia na AI w dolarach, liczony z kosztu zapisanego przy każdym zapytaniu,
+# także oceny trudności w tle, bo też kosztuje. Koszt znamy dopiero po odpowiedzi, więc ostatnie
+# zapytanie może budżet trochę przekroczyć. Konta z AI_UNLIMITED_EMAILS (adresy po przecinku
+# w zmiennej środowiskowej, bo repozytorium jest publiczne) nie mają limitu.
 AI_DAILY_BUDGET = 0.10
 AI_UNAVAILABLE = "Usługi AI chwilowo nie działają. Możesz przejść dalej i ocenić trudność zadania."
 # Ile wersji tablicy dostaje Dyżurny, gdy przyszła nowa: obecną i poprzednie. W testach na
@@ -639,6 +640,44 @@ def next_in_topic(
     return {"task": task_for_student(session, task), "left": len(unsolved), "total": total}
 
 
+RATING_ORDER = ["latwy", "sredni", "trudny", "bardzo-trudny"]
+
+
+# Model może ocenę tylko utrudnić, więc z dwóch ocen wygrywa trudniejsza.
+def harder(rating: str, other: str) -> str:
+    return max(rating, other, key=RATING_ORDER.index)
+
+
+# Pytania i pokazane rozwiązanie przy tej próbie zadania: te, których nie przypisano jeszcze
+# do ocenionego rozwiązania. Pytać można przed sprawdzeniem i po nim, więc czas powstania
+# rozwiązania nie wyznacza granicy.
+def ai_help(session: Session, solution: Solution) -> list[AiRequest]:
+    return session.scalars(
+        select(AiRequest)
+        .where(
+            AiRequest.account_id == solution.account_id,
+            AiRequest.task_id == solution.task_id,
+            AiRequest.kind.in_(["pytanie", "rozwiazanie"]),
+            AiRequest.solution_id.is_(None),
+        )
+        .order_by(AiRequest.id)
+    ).all()
+
+
+# Rozmowa odtworzona z zapisanych zapytań: przy pytaniu zapisuje się tylko ostatnia
+# wiadomość ucznia, a przy rozwiązaniu sama prośba.
+def conversation(requests: list[AiRequest]) -> list[dict]:
+    messages = []
+    for request in requests:
+        question = request.text if request.kind == "pytanie" else "Pokaż rozwiązanie krok po kroku."
+        # Obrazu nie wysyła się drugi raz, ale model ma wiedzieć, że był.
+        if request.image or request.image_file:
+            question += "\n[Do tej wiadomości uczeń dołączył obraz.]"
+        messages.append({"role": "user", "content": question})
+        messages.append({"role": "assistant", "content": request.reply})
+    return messages
+
+
 @router.post("/solutions/{solution_id}/rating")
 def rate_solution(
     solution_id: int,
@@ -656,9 +695,29 @@ def rate_solution(
         raise HTTPException(
             status_code=422, detail=["Po błędnej odpowiedzi zadanie nie może być łatwe."]
         )
-    solution.rating = body.rating
     task = session.get(Task, solution.task_id)
-    card = update_card(session, account.id, task.id, body.rating, datetime.now(UTC))
+    solution.student_rating = body.rating
+    solution.rating = body.rating
+    help_requests = ai_help(session, solution)
+    for request in help_requests:
+        request.solution_id = solution.id
+    if any(request.kind == "rozwiazanie" for request in help_requests):
+        solution.rating = harder(solution.rating, "trudny")
+    if help_requests:
+        try:
+            reply = judge_difficulty(
+                task_for_model(task) + attempt_text(session, task, solution),
+                conversation(help_requests),
+                body.rating,
+                help_requests[-1].model,
+            )
+            save_ai_request(session, account, task, "ocena-trudnosci", reply, solution=solution)
+            if reply.data["rating"] in RATING_ORDER:
+                solution.rating = harder(solution.rating, reply.data["rating"])
+        # Bez odpowiedzi modelu zostaje ocena ucznia, z minimum po pokazanym rozwiązaniu.
+        except GradingUnavailable:
+            pass
+    card = update_card(session, account.id, task.id, solution.rating, datetime.now(UTC))
     session.commit()
     exam = session.get(Exam, task.exam_id).code
     return {

@@ -157,6 +157,12 @@ const router = createRouter({
       meta: { title: 'Oceny AI', panel: true },
     },
     {
+      path: '/panel/oceny-trudnosci',
+      name: 'panel-ratings',
+      component: () => import('@/views/PanelRatingsView.vue'),
+      meta: { title: 'Oceny trudności', panel: true },
+    },
+    {
       path: '/wkrotce',
       name: 'coming-soon',
       component: () => import('@/views/ComingSoonView.vue'),

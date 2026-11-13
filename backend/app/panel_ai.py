@@ -2,14 +2,17 @@ import json
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import and_, select
 from sqlalchemy.orm import Session
 
 from app.access import require_panel_password
 from app.db import get_session
-from app.models import AiRequest, Task
+from app.models import Account, AiRequest, ReviewCard, Solution, Task
 
 router = APIRouter(prefix="/api/panel/ai", dependencies=[Depends(require_panel_password)])
+
+# Najnowsze oceny trudności; starsze nie są potrzebne do bieżącego sprawdzania.
+RATINGS_LIMIT = 300
 
 
 class TutorPoints(BaseModel):
@@ -74,3 +77,42 @@ def set_tutor_points(request_id: int, body: TutorPoints, session: Session = Depe
         raise HTTPException(status_code=422, detail=[f"punkty od 0 do {max_points}"])
     request.tutor_points = body.points
     session.commit()
+
+
+# Oceny trudności: co wybrał uczeń, co trafiło do FSRS i kiedy zadanie wróci. Ocena końcowa
+# różni się od oceny ucznia, gdy uczeń korzystał z pomocy AI (practice.rate_solution).
+@router.get("/ratings")
+def ratings(changed: bool = False, session: Session = Depends(get_session)):
+    query = (
+        select(Solution, Account.email, AiRequest.reply, ReviewCard.due)
+        .join(Account, Account.id == Solution.account_id)
+        .outerjoin(
+            AiRequest,
+            and_(AiRequest.solution_id == Solution.id, AiRequest.kind == "ocena-trudnosci"),
+        )
+        .outerjoin(
+            ReviewCard,
+            and_(
+                ReviewCard.account_id == Solution.account_id,
+                ReviewCard.task_id == Solution.task_id,
+            ),
+        )
+        .where(Solution.rating.is_not(None))
+        .order_by(Solution.created_at.desc())
+        .limit(RATINGS_LIMIT)
+    )
+    if changed:
+        query = query.where(Solution.rating != Solution.student_rating)
+    return [
+        {
+            "solution_id": solution.id,
+            "task_id": solution.task_id,
+            "email": email,
+            "created_at": solution.created_at.isoformat(),
+            "student_rating": solution.student_rating,
+            "rating": solution.rating,
+            "reason": json.loads(reply)["reason"] if reply else None,
+            "due": due.isoformat() if due else None,
+        }
+        for solution, email, reply, due in session.execute(query)
+    ]

@@ -282,6 +282,10 @@ class Solution(Base):
         CheckConstraint(
             "rating in ('latwy', 'sredni', 'trudny', 'bardzo-trudny')", name="solution_rating_valid"
         ),
+        CheckConstraint(
+            "student_rating in ('latwy', 'sredni', 'trudny', 'bardzo-trudny')",
+            name="solution_student_rating_valid",
+        ),
         Index("solution_by_day", "account_id", "created_at"),
         Index("solution_by_task", "account_id", "task_id"),
     )
@@ -301,8 +305,11 @@ class Solution(Base):
     # Liczby wariantu, który uczeń widział, np. {"k": 5, "b": 2}; puste przy oryginale.
     # Z liczb i szablonu wariant składa się od nowa (variants.py).
     variant: Mapped[dict | None] = mapped_column(JSONB(none_as_null=True))
-    # Ocena trudności wybrana przez ucznia po zadaniu; puste, dopóki jej nie wybierze.
+    # Ocena trudności, która trafiła do FSRS; puste, dopóki uczeń jej nie wybierze. Po pomocy AI
+    # może być trudniejsza niż ocena ucznia (student_rating); powód jest w ai_request
+    # rodzaju ocena-trudnosci.
     rating: Mapped[str | None]
+    student_rating: Mapped[str | None]
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
 
@@ -311,7 +318,10 @@ class Solution(Base):
 class AiRequest(Base):
     __tablename__ = "ai_request"
     __table_args__ = (
-        CheckConstraint("kind in ('ocena', 'rozwiazanie', 'pytanie')", name="ai_request_kind_valid"),
+        CheckConstraint(
+            "kind in ('ocena', 'rozwiazanie', 'pytanie', 'ocena-trudnosci')",
+            name="ai_request_kind_valid",
+        ),
         CheckConstraint(
             "feedback in ('zgadzam-sie', 'nie-zgadzam-sie', 'pomoglo', 'nie-pomoglo')",
             name="ai_request_feedback_valid",
@@ -322,7 +332,8 @@ class AiRequest(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("account.id", ondelete="CASCADE"))
     task_id: Mapped[int] = mapped_column(ForeignKey("task.id", ondelete="CASCADE"))
-    # Rozwiązanie z punktami od AI; puste przy nieczytelnym zdjęciu, rozwiązaniu i pytaniu.
+    # Rozwiązanie, którego dotyczy zapytanie: z punktami od AI przy ocenie, a przy pytaniach
+    # i pokazanym rozwiązaniu to, przy którym uczeń ocenił trudność. Puste, dopóki go nie ma.
     solution_id: Mapped[int | None] = mapped_column(ForeignKey("solution.id", ondelete="SET NULL"))
     kind: Mapped[str]
     image: Mapped[bytes | None]
