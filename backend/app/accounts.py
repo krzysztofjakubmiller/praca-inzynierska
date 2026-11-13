@@ -30,6 +30,9 @@ GOOGLE_CLIENT_ID = "991477956168-0mjjmbp7o2lgkq9iqjrv8v49e4g03b8k.apps.googleuse
 
 SESSION_LENGTH = timedelta(days=14)
 COOKIE = "session"
+# Przy testach na telefonie serwer lokalny działa po zwykłym http, a ciasteczka z Secure
+# przeglądarka zapisuje tylko przy https. Na produkcji tej zmiennej nie ma.
+SECURE_COOKIE = os.environ.get("LOCAL_HTTP_COOKIE") != "1"
 REGISTRATION_LENGTH = timedelta(hours=24)
 PASSWORD_LINK_LENGTH = timedelta(hours=1)
 
@@ -184,7 +187,7 @@ def set_session_cookie(response: Response, token: str):
         token,
         max_age=int(SESSION_LENGTH.total_seconds()),
         httponly=True,
-        secure=True,
+        secure=SECURE_COOKIE,
         samesite="lax",
     )
 
@@ -430,7 +433,7 @@ def log_out(
 ):
     end_session(session, token)
     session.commit()
-    response.delete_cookie(COOKIE, httponly=True, secure=True, samesite="lax")
+    response.delete_cookie(COOKIE, httponly=True, secure=SECURE_COOKIE, samesite="lax")
 
 
 @router.post("/change-password", status_code=204)
@@ -458,7 +461,7 @@ def log_out_everywhere(
 ):
     session.execute(delete(LoginSession).where(LoginSession.account_id == account.id))
     session.commit()
-    response.delete_cookie(COOKIE, httponly=True, secure=True, samesite="lax")
+    response.delete_cookie(COOKIE, httponly=True, secure=SECURE_COOKIE, samesite="lax")
 
 
 @router.post("/delete", status_code=204)
@@ -476,7 +479,7 @@ def delete_account(
     # Sesje i linki do hasła znikają razem z kontem (klucze obce z ondelete="CASCADE").
     session.delete(account)
     session.commit()
-    response.delete_cookie(COOKIE, httponly=True, secure=True, samesite="lax")
+    response.delete_cookie(COOKIE, httponly=True, secure=SECURE_COOKIE, samesite="lax")
 
 
 @router.get("")
