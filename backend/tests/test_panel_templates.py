@@ -86,3 +86,18 @@ def test_template_can_be_deleted(client, session):
     assert client.delete(f"/api/panel/tasks/{task.id}/template").status_code == 204
     assert session.get(TaskTemplate, task.id) is None
     assert client.delete(f"/api/panel/tasks/{task.id}/template").status_code == 404
+
+
+def test_task_list_shows_and_filters_template_status(client, session):
+    with_template = make_task(session, **POWERS)
+    without_template = make_task(session, number=6)
+    client.put(f"/api/panel/tasks/{with_template.id}/template", json={"body": powers_template()})
+
+    def listed(template):
+        tasks = client.get("/api/panel/tasks", params={"template": template}).json()
+        return [(task["id"], task["template_status"]) for task in tasks]
+
+    assert (with_template.id, "do-sprawdzenia") in listed("do-sprawdzenia")
+    assert (without_template.id, None) in listed("brak")
+    assert all(status is None for _, status in listed("brak"))
+    assert not listed("sprawdzone")

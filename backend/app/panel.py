@@ -21,7 +21,7 @@ from app.import_tasks import (
     solutions_json,
     task_problems,
 )
-from app.models import Exam, SourceKind, Task, Topic
+from app.models import Exam, SourceKind, Task, TaskTemplate, Topic
 
 router = APIRouter(prefix="/api/panel", dependencies=[Depends(require_panel_password)])
 
@@ -122,13 +122,16 @@ def list_tasks(
     has_figure: bool | None = None,
     # Zadania otwarte, którym brakuje zasad oceniania, więc nie trafiają jeszcze do ucznia.
     without_scoring: bool = False,
+    # Status szablonu wariantów albo „brak” dla zadań bez szablonu.
+    template: str | None = None,
     session: Session = Depends(get_session),
 ):
     query = (
-        select(Task, Exam.code, Topic.name, SourceKind.name)
+        select(Task, Exam.code, Topic.name, SourceKind.name, TaskTemplate.review_status)
         .join(Exam, Task.exam_id == Exam.id)
         .join(Topic, Task.topic_id == Topic.id)
         .join(SourceKind, Task.source_kind_id == SourceKind.id)
+        .outerjoin(TaskTemplate, TaskTemplate.task_id == Task.id)
         .order_by(Task.id)
     )
     if exam:
@@ -141,6 +144,10 @@ def list_tasks(
         query = query.where(Task.has_figure == has_figure)
     if without_scoring:
         query = query.where(Task.answer_format == "otwarte", Task.scoring.is_(None))
+    if template == "brak":
+        query = query.where(TaskTemplate.task_id.is_(None))
+    elif template:
+        query = query.where(TaskTemplate.review_status == template)
 
     return [
         {
@@ -153,8 +160,9 @@ def list_tasks(
             "subnumber": task.subnumber,
             "content": task.content,
             "review_status": task.review_status,
+            "template_status": template_status,
         }
-        for task, exam_code, topic_name, source_name in session.execute(query)
+        for task, exam_code, topic_name, source_name, template_status in session.execute(query)
     ]
 
 

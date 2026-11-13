@@ -27,6 +27,8 @@ export interface TaskSummary {
   subnumber: number | null
   content: string
   review_status: ReviewStatus
+  /** null, gdy zadanie nie ma szablonu wariantów. */
+  template_status: ReviewStatus | null
 }
 
 /** Zasady oceniania zadania otwartego: wyniki dla programu, zasady i uwagi CKE dla AI. */
@@ -109,6 +111,8 @@ export interface TaskFilters {
   has_figure?: string
   /** 'true': tylko zadania otwarte bez zasad oceniania. */
   without_scoring?: string
+  /** Status szablonu wariantów albo 'brak'. */
+  template?: string
 }
 
 // Backend odrzuca błędne dane kodem 422 z listą problemów po polsku.

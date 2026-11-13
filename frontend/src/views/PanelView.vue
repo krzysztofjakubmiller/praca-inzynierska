@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import PanelTabs from '@/components/panel/PanelTabs.vue'
 import MathText from '@/components/task/MathText.vue'
 import { panelApi, type ExamOptions, type TaskSummary } from '@/panel/api'
 import { STATUS_LABELS, taskNumber, useProblems } from '@/panel/format'
@@ -147,8 +148,8 @@ function startReview() {
     <header class="panel__header">
       <h1>Panel</h1>
       <RouterLink :to="{ name: 'home' }">Wszystkie strony</RouterLink>
-      <RouterLink :to="{ name: 'panel-ai-grades' }">Oceny AI</RouterLink>
     </header>
+    <PanelTabs />
 
     <section class="panel__card">
       <h2>Import z Gemini</h2>

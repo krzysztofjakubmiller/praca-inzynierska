@@ -5,7 +5,7 @@ import MatchingTable from '@/components/task/MatchingTable.vue'
 import MathText from '@/components/task/MathText.vue'
 import TrueFalseTable from '@/components/task/TrueFalseTable.vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
-import TemplateReview from '@/components/panel/TemplateReview.vue'
+import PanelTabs from '@/components/panel/PanelTabs.vue'
 import { coordinatePlaneSpan, numberLineRange, type Figures } from '@/figures'
 import {
   panelApi,
@@ -163,8 +163,8 @@ function remove() {
 
 <template>
   <main class="panel">
+    <PanelTabs />
     <header class="review__header">
-      <RouterLink :to="{ name: 'panel' }">Lista zadań</RouterLink>
       <template v-if="task && form">
         <!-- Opis z formularza, więc zmienia się na bieżąco przy poprawianiu źródła. -->
         <h1>{{ sourceName }} {{ form.year }}, zadanie {{ taskNumber(form) }}</h1>
@@ -173,6 +173,9 @@ function remove() {
           <span class="panel__status" :data-status="task.review_status">
             {{ STATUS_LABELS[task.review_status] }}
           </span>
+          <RouterLink :to="{ name: 'panel-template', params: { id: task.id } }">
+            Szablon wariantów
+          </RouterLink>
         </p>
       </template>
     </header>
@@ -370,8 +373,6 @@ function remove() {
         </template>
       </section>
     </div>
-
-    <TemplateReview v-if="task" :task-id="task.id" :exam="task.exam" />
   </main>
 </template>
 

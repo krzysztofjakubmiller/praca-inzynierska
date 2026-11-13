@@ -139,6 +139,18 @@ const router = createRouter({
       meta: { title: 'Zadanie', panel: true },
     },
     {
+      path: '/panel/warianty',
+      name: 'panel-templates',
+      component: () => import('@/views/PanelTemplatesView.vue'),
+      meta: { title: 'Warianty', panel: true },
+    },
+    {
+      path: '/panel/warianty/:id',
+      name: 'panel-template',
+      component: () => import('@/views/PanelTemplateView.vue'),
+      meta: { title: 'Szablon wariantów', panel: true },
+    },
+    {
       path: '/panel/oceny-ai',
       name: 'panel-ai-grades',
       component: () => import('@/views/PanelAiGradesView.vue'),

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import PanelTabs from '@/components/panel/PanelTabs.vue'
 import MathText from '@/components/task/MathText.vue'
 import { aiGradeImage, panelApi, Rejected, type AiGrade } from '@/panel/api'
 
@@ -33,8 +34,8 @@ async function savePoints(grade: AiGrade, value: string) {
 
 <template>
   <main class="ai-grades">
+    <PanelTabs />
     <h1>Oceny AI</h1>
-    <RouterLink :to="{ name: 'panel' }">Panel</RouterLink>
     <p v-for="problem in problems" :key="problem" role="alert">{{ problem }}</p>
     <p v-if="!grades.length">Brak ocen AI.</p>
 
@@ -55,7 +56,7 @@ async function savePoints(grade: AiGrade, value: string) {
       <p>
         Punkty AI: {{ grade.ai_points ?? 'nieczytelne' }} z {{ grade.max_points }}
         <template v-if="grade.feedback">
-          · uczeń: {{ grade.feedback }}
+          · uczeń: {{ grade.feedback === 'zgadzam-sie' ? 'zgadza się' : 'nie zgadza się' }}
           <template v-if="grade.feedback_comment">({{ grade.feedback_comment }})</template>
         </template>
       </p>
