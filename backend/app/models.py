@@ -381,3 +381,46 @@ class ReviewCard(Base):
     difficulty: Mapped[float | None]
     due: Mapped[datetime]
     last_review: Mapped[datetime | None]
+
+
+# Ocena jednej wizytówki z ankiety. Urządzenie rozpoznajemy po losowym identyfikatorze zapisanym
+# w przeglądarce: jedno urządzenie ma jedną ocenę na stronę, a kolejna ją zastępuje.
+class SurveyAnswer(Base):
+    __tablename__ = "survey_answer"
+    __table_args__ = (
+        UniqueConstraint("device_id", "page"),
+        CheckConstraint("looks between 1 and 10", name="survey_answer_looks_valid"),
+        CheckConstraint("expensive between 1 and 5", name="survey_answer_expensive_valid"),
+        CheckConstraint("buying between 1 and 5", name="survey_answer_buying_valid"),
+        CheckConstraint(
+            "device in ('telefon', 'tablet', 'komputer')", name="survey_answer_device_valid"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    device_id: Mapped[str]
+    # Litera wariantu wizytówki.
+    page: Mapped[str]
+    # Wygląd w skali 1–10. „Wygląda drogo” i „zachęca do zakupu” od 1 (zdecydowanie nie)
+    # do 5 (zdecydowanie tak).
+    looks: Mapped[int] = mapped_column(SmallInteger)
+    expensive: Mapped[int] = mapped_column(SmallInteger)
+    buying: Mapped[int] = mapped_column(SmallInteger)
+    comment: Mapped[str | None]
+    # Jaką część strony oceniający przewinął, w procentach, i ile sekund na niej spędził.
+    scrolled: Mapped[int] = mapped_column(SmallInteger)
+    seconds: Mapped[int]
+    device: Mapped[str]
+    # Reszta danych z przeglądarki: model, system, ekran, kolejność oglądania.
+    details: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+
+# Najlepsze wizytówki według jednego urządzenia, od pierwszego miejsca.
+class SurveyPodium(Base):
+    __tablename__ = "survey_podium"
+
+    device_id: Mapped[str] = mapped_column(primary_key=True)
+    pages: Mapped[list] = mapped_column(JSONB)
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())

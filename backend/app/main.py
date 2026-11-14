@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app import accounts, panel, panel_ai, panel_templates, practice, profile
+from app import accounts, panel, panel_ai, panel_templates, practice, profile, survey
 from app.access import require_password
 from app.db import get_session
 
@@ -16,6 +16,7 @@ app.include_router(panel_ai.router)
 app.include_router(accounts.router)
 app.include_router(profile.router)
 app.include_router(practice.router)
+app.include_router(survey.router)
 
 # Na serwerze frontend i API mają różne adresy, więc przeglądarka przyjmie odpowiedzi API tylko
 # dla stron z tej listy. Lokalnie lista jest pusta, bo Vite przekazuje /api pod tym samym adresem.
