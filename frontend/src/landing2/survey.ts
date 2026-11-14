@@ -18,9 +18,10 @@ export const PAGES = [
 export type PageId = (typeof PAGES)[number]['id']
 
 export const ROLES = [
-  { id: 'uczen', name: 'Uczeń' },
+  { id: 'uczen-podstawowka', name: 'Uczeń podstawówki' },
+  { id: 'uczen-srednia', name: 'Uczeń szkoły średniej' },
   { id: 'student', name: 'Student' },
-  { id: 'rodzic', name: 'Rodzic' },
+  { id: 'dorosly', name: 'Rodzic lub osoba dorosła' },
 ] as const
 
 export type Role = (typeof ROLES)[number]['id']
@@ -49,7 +50,7 @@ const KEYS = {
   answers: 'ankieta-oceny-2',
   order: 'ankieta-kolejnosc-2',
   podium: 'ankieta-podium-2',
-  role: 'ankieta-kim',
+  role: 'ankieta-kim-2',
 }
 
 function read<T>(key: string, fallback: T): T {

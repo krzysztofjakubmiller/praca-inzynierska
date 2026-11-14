@@ -33,7 +33,7 @@ class Details(BaseModel):
     # Kliknięcia w przyciski prowadzące do aplikacji, której oceniający nie może otworzyć.
     blocked_clicks: int = Field(ge=0, le=1000)
     # Kim jest oceniający. Pytanie pada raz na urządzenie, a odpowiedź idzie z każdą oceną.
-    role: Literal["uczen", "student", "rodzic"] | None = None
+    role: Literal["uczen-podstawowka", "uczen-srednia", "student", "dorosly"] | None = None
 
 
 class AnswerIn(BaseModel):

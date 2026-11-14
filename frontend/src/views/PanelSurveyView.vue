@@ -26,7 +26,7 @@ function average(values: number[]): string {
 
 // Rola jest cechą urządzenia: bierzemy ją z jego najnowszej oceny, w której jest podana.
 const roles = computed(() => {
-  const byDevice = new Map<string, Role>()
+  const byDevice = new Map<string, string>()
   for (const row of results.value.answers) {
     if (row.details.role && !byDevice.has(row.device_id)) {
       byDevice.set(row.device_id, row.details.role)
@@ -47,7 +47,7 @@ const devices = computed(() => new Set(answers.value.map((row) => row.device_id)
 
 function roleName(deviceId: string): string {
   const role = roles.value.get(deviceId)
-  return ROLES.find((item) => item.id === role)?.name.toLowerCase() ?? ''
+  return ROLES.find((item) => item.id === role)?.name.toLowerCase() ?? role ?? ''
 }
 
 // Jedna linia na wizytówkę, od najwyżej ocenianej.

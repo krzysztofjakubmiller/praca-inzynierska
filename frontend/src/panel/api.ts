@@ -254,7 +254,8 @@ export interface SurveyAnswerRow {
     opened_by: 'klik' | 'koniec-strony'
     tried_task: boolean
     blocked_clicks: number
-    role?: 'uczen' | 'student' | 'rodzic' | null
+    /** Starsze oceny mają tu odpowiedzi z pierwszej wersji pytania. */
+    role?: string | null
   }
   updated_at: string
 }
