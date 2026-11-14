@@ -30,7 +30,8 @@ export const LIKERT = ['Zdecydowanie nie', 'Nie', 'Średnio', 'Tak', 'Zdecydowan
 
 export interface Answer {
   looks: number
-  expensive: number
+  quality: number
+  trust: number
   buying: number
   comment: string
 }
@@ -189,7 +190,8 @@ export async function saveAnswer(page: PageId, answer: Answer, visit: Visit) {
   await send(`answers/${page}`, {
     device_id: deviceId(),
     looks: answer.looks,
-    expensive: answer.expensive,
+    quality: answer.quality,
+    trust: answer.trust,
     buying: answer.buying,
     comment: answer.comment,
     scrolled: visit.scrolled,

@@ -21,7 +21,8 @@ const QUESTIONS = [
     text: 'Ile na 10 wygląda ta strona?',
     hint: '1 to bardzo źle, 10 to bardzo dobrze.',
   },
-  { key: 'expensive', text: 'Czy ta strona wygląda drogo?', hint: '' },
+  { key: 'quality', text: 'Czy ta strona wygląda na produkt wysokiej jakości?', hint: '' },
+  { key: 'trust', text: 'Czy ta strona budzi zaufanie?', hint: '' },
   { key: 'buying', text: 'Czy ta strona zachęca do zakupu?', hint: '' },
 ] as const
 
@@ -105,7 +106,12 @@ function choose(index: number, value: number) {
 function change() {
   const current = saved.value
   if (current) {
-    draft.value = { looks: current.looks, expensive: current.expensive, buying: current.buying }
+    draft.value = {
+      looks: current.looks,
+      quality: current.quality,
+      trust: current.trust,
+      buying: current.buying,
+    }
     comment.value = current.comment
   }
   asked.value = 0
@@ -113,14 +119,15 @@ function change() {
 }
 
 async function submit() {
-  const { looks, expensive, buying } = draft.value
-  if (looks === undefined || expensive === undefined || buying === undefined) return
+  const { looks, quality, trust, buying } = draft.value
+  if (looks === undefined || quality === undefined || trust === undefined || buying === undefined)
+    return
   state.value = 'sending'
   const visibleNow = document.hidden ? 0 : (performance.now() - visibleSince) / 1000
   try {
     await saveAnswer(
       props.page,
-      { looks, expensive, buying, comment: comment.value.trim() },
+      { looks, quality, trust, buying, comment: comment.value.trim() },
       {
         scrolled: Math.round(deepest * 100),
         seconds: Math.round(seconds + visibleNow),
@@ -167,7 +174,7 @@ onBeforeUnmount(() => {
           <span class="survey__avatar" aria-hidden="true">M</span>
           <p class="survey__who">
             <strong>Matma po kolei</strong>
-            <span>3 krótkie pytania o tę stronę</span>
+            <span>4 krótkie pytania o tę stronę</span>
           </p>
           <button class="survey__close" type="button" aria-label="Zamknij ankietę" @click="toggle">
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" /></svg>

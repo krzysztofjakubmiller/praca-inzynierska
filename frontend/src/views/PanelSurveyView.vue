@@ -18,6 +18,10 @@ onMounted(() =>
   }),
 )
 
+function given(values: (number | null)[]): number[] {
+  return values.filter((value) => value !== null)
+}
+
 function average(values: number[]): string {
   if (!values.length) return ''
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length
@@ -64,7 +68,9 @@ const summary = computed(() =>
       count: rows.length,
       looksMean: looks.length ? looks.reduce((sum, value) => sum + value, 0) / looks.length : 0,
       looks: average(looks),
-      expensive: average(rows.map((row) => row.expensive)),
+      quality: average(given(rows.map((row) => row.quality))),
+      trust: average(given(rows.map((row) => row.trust))),
+      expensive: average(given(rows.map((row) => row.expensive))),
       buying: average(rows.map((row) => row.buying)),
       scrolled: average(rows.map((row) => row.scrolled)),
       seconds: average(rows.map((row) => row.seconds)),
@@ -76,6 +82,10 @@ const summary = computed(() =>
 function pageName(id: string): string {
   const page = PAGES.find((item) => item.id === id)
   return page ? `${id.toUpperCase()}. ${page.name}` : id.toUpperCase()
+}
+
+function likert(value: number | null): string {
+  return value === null ? '' : LIKERT[value - 1]!
 }
 
 function when(moment: string) {
@@ -105,8 +115,9 @@ function when(moment: string) {
         </label>
       </div>
       <p class="survey__note">
-        Wygląd w skali 1–10, „drogo” i „zakup” w skali 1–5 (1 to „zdecydowanie nie”). Podium: 3
-        punkty za pierwsze miejsce, 2 za drugie, 1 za trzecie.
+        Wygląd w skali 1–10, pozostałe pytania w skali 1–5 (1 to „zdecydowanie nie”). „Drogo” to
+        pytanie z pierwszej wersji ankiety, zastąpione przez jakość i zaufanie. Podium: 3 punkty za
+        pierwsze miejsce, 2 za drugie, 1 za trzecie.
       </p>
       <div class="survey__scroll">
         <table class="survey">
@@ -115,7 +126,9 @@ function when(moment: string) {
               <th>Strona</th>
               <th>Ocen</th>
               <th>Wygląd</th>
-              <th>Drogo</th>
+              <th>Jakość</th>
+              <th>Zaufanie</th>
+              <th>Drogo (stare)</th>
               <th>Zakup</th>
               <th>Podium</th>
               <th>Przewinięte %</th>
@@ -131,6 +144,8 @@ function when(moment: string) {
               </td>
               <td>{{ row.count }}</td>
               <td class="survey__main">{{ row.looks }}</td>
+              <td>{{ row.quality }}</td>
+              <td>{{ row.trust }}</td>
               <td>{{ row.expensive }}</td>
               <td>{{ row.buying }}</td>
               <td>{{ row.points || '' }}</td>
@@ -150,7 +165,9 @@ function when(moment: string) {
             <tr>
               <th>Strona</th>
               <th>Wygląd</th>
-              <th>Drogo</th>
+              <th>Jakość</th>
+              <th>Zaufanie</th>
+              <th>Drogo (stare)</th>
               <th>Zakup</th>
               <th>Komentarz</th>
               <th>Kto</th>
@@ -168,7 +185,9 @@ function when(moment: string) {
             <tr v-for="row in answers" :key="row.device_id + row.page">
               <td>{{ pageName(row.page) }}</td>
               <td class="survey__main">{{ row.looks }}</td>
-              <td>{{ LIKERT[row.expensive - 1] }}</td>
+              <td>{{ likert(row.quality) }}</td>
+              <td>{{ likert(row.trust) }}</td>
+              <td>{{ likert(row.expensive) }}</td>
               <td>{{ LIKERT[row.buying - 1] }}</td>
               <td class="survey__comment">{{ row.comment }}</td>
               <td>{{ roleName(row.device_id) }}</td>

@@ -391,6 +391,8 @@ class SurveyAnswer(Base):
         UniqueConstraint("device_id", "page"),
         CheckConstraint("looks between 1 and 10", name="survey_answer_looks_valid"),
         CheckConstraint("expensive between 1 and 5", name="survey_answer_expensive_valid"),
+        CheckConstraint("quality between 1 and 5", name="survey_answer_quality_valid"),
+        CheckConstraint("trust between 1 and 5", name="survey_answer_trust_valid"),
         CheckConstraint("buying between 1 and 5", name="survey_answer_buying_valid"),
         CheckConstraint(
             "device in ('telefon', 'tablet', 'komputer')", name="survey_answer_device_valid"
@@ -401,10 +403,14 @@ class SurveyAnswer(Base):
     device_id: Mapped[str]
     # Litera wariantu wizytówki.
     page: Mapped[str]
-    # Wygląd w skali 1–10. „Wygląda drogo” i „zachęca do zakupu” od 1 (zdecydowanie nie)
-    # do 5 (zdecydowanie tak).
+    # Wygląd w skali 1–10. Pozostałe pytania od 1 (zdecydowanie nie) do 5 (zdecydowanie tak).
     looks: Mapped[int] = mapped_column(SmallInteger)
-    expensive: Mapped[int] = mapped_column(SmallInteger)
+    # Pierwsza wersja ankiety pytała, czy strona „wygląda drogo”. Pytanie dało się rozumieć
+    # na dwa sposoby, więc zastąpiły je dwa: o jakość i o zaufanie. Stare oceny mają tylko
+    # „drogo”, nowe tylko te dwa.
+    expensive: Mapped[int | None] = mapped_column(SmallInteger)
+    quality: Mapped[int | None] = mapped_column(SmallInteger)
+    trust: Mapped[int | None] = mapped_column(SmallInteger)
     buying: Mapped[int] = mapped_column(SmallInteger)
     comment: Mapped[str | None]
     # Jaką część strony oceniający przewinął, w procentach, i ile sekund na niej spędził.

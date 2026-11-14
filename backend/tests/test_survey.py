@@ -18,7 +18,8 @@ def answer(**changes):
     body = {
         "device_id": DEVICE,
         "looks": 8,
-        "expensive": 4,
+        "quality": 4,
+        "trust": 5,
         "buying": 3,
         "comment": "Ładna, ale za dużo tekstu.",
         "scrolled": 62,
@@ -50,6 +51,7 @@ def test_saves_answer_without_password(client, session):
     assert (saved.device_id, saved.page, saved.looks, saved.scrolled) == (DEVICE, "a", 8, 62)
     assert saved.details["model"] == "SM-A546B"
     assert saved.details["role"] == "dorosly"
+    assert (saved.quality, saved.trust, saved.expensive) == (4, 5, None)
 
 
 def test_rejects_unknown_role(client):
@@ -81,7 +83,7 @@ def test_device_rates_each_page_separately(client, session):
 
 @pytest.mark.parametrize(
     "changes",
-    [{"looks": 11}, {"looks": 0}, {"expensive": 6}, {"buying": 0}, {"scrolled": 101}, {"device": "lodowka"}],
+    [{"looks": 11}, {"looks": 0}, {"quality": 6}, {"trust": 0}, {"buying": 0}, {"scrolled": 101}, {"device": "lodowka"}],
 )
 def test_rejects_values_out_of_range(client, changes):
     assert client.put("/api/survey/answers/a", json=answer(**changes)).status_code == 422

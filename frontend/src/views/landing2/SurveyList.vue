@@ -62,7 +62,7 @@ async function send() {
       <h1 class="list__title">Która strona jest najlepsza?</h1>
       <p class="list__lead">
         Szukamy wyglądu strony głównej. Najważniejsze jest {{ mainCount }} stron poniżej: obejrzyj
-        je w dowolnej kolejności i oceń każdą. Na każdej w prawym dolnym rogu czeka dymek z trzema
+        je w dowolnej kolejności i oceń każdą. Na każdej w prawym dolnym rogu czeka dymek z czterema
         krótkimi pytaniami.
       </p>
     </header>

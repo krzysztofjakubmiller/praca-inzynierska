@@ -39,7 +39,8 @@ class Details(BaseModel):
 class AnswerIn(BaseModel):
     device_id: UUID
     looks: int = Field(ge=1, le=10)
-    expensive: int = Field(ge=1, le=5)
+    quality: int = Field(ge=1, le=5)
+    trust: int = Field(ge=1, le=5)
     buying: int = Field(ge=1, le=5)
     comment: str | None = Field(default=None, max_length=2000)
     scrolled: int = Field(ge=0, le=100)
@@ -64,6 +65,8 @@ class PodiumIn(BaseModel):
 def save_answer(page: Page, body: AnswerIn, session: Session = Depends(get_session)):
     values = body.model_dump(exclude={"device_id"})
     values["comment"] = (body.comment or "").strip() or None
+    # Ponowna ocena odpowiada już na nowe pytania, więc stara odpowiedź o „drogo” znika.
+    values["expensive"] = None
     statement = insert(SurveyAnswer).values(device_id=str(body.device_id), page=page, **values)
     session.execute(
         statement.on_conflict_do_update(
@@ -95,6 +98,8 @@ def results(session: Session = Depends(get_session)):
                 "page": answer.page,
                 "looks": answer.looks,
                 "expensive": answer.expensive,
+                "quality": answer.quality,
+                "trust": answer.trust,
                 "buying": answer.buying,
                 "comment": answer.comment,
                 "scrolled": answer.scrolled,
