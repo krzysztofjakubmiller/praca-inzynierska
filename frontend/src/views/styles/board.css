@@ -1,0 +1,123 @@
+/* Styl „Tablica odjazdów” przeniesiony z wizytówki na ekrany aplikacji: ta sama matowa czerń,
+   bursztyn i wersaliki, ale bez ruchu w tle. Klapki zostają tylko na licznikach. */
+.bt {
+  --ground: #131210;
+  --surface: #1d1b18;
+  --card: #1d1b18;
+  --ink: #f3f0e8;
+  --ink-raised: #ffffff;
+  --ink-soft: #b4b0a5;
+  --hairline: rgb(243 240 232 / 0.16);
+  --danger: #ff8b7b;
+  --correct: #4fd58d;
+  --amber: #ffb224;
+  --duty: var(--amber);
+  --radius: 1rem;
+  --chat-task: #29261f;
+  --chat-duty: #29261f;
+
+  /* Linie mapy w jaśniejszych odcieniach, tak jak w ciemnym motywie aplikacji. */
+  --line-1: #dba840;
+  --line-2: #98b6fc;
+  --line-3: #6fcac2;
+  --line-4: #ff93a1;
+  --line-5: #ef8f50;
+  --line-6: #cba1fb;
+  --map-outline: #626460;
+  --map-last: #fe8e66;
+
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--ground);
+  color: var(--ink);
+  color-scheme: dark;
+  scrollbar-color: #5c584f var(--ground);
+}
+
+.bt ::selection {
+  background: var(--amber);
+  color: #1b1400;
+}
+
+.bt :focus-visible {
+  outline-color: var(--amber);
+}
+
+.bt-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 1rem;
+  height: var(--header-h);
+  padding-inline: var(--gutter);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.bt-top__mark {
+  margin-right: auto;
+  font-weight: 800;
+  font-stretch: 82%;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.bt-top__link {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.bt-top__link:hover {
+  color: var(--ink);
+}
+
+/* Główny przycisk ekranu jest bursztynowy, pozostałe zostają spokojne. */
+.bt-cta {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: #1b1400;
+}
+
+.bt-cta:hover {
+  border-color: #ffc552;
+  background: #ffc552;
+}
+
+/* Płyta tablicy: czarne pole z rzędami klapek. */
+.bt-board {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.8rem;
+  background: #0a0908;
+}
+
+.bt-board--amber {
+  --flap: #2a2416;
+  color: var(--amber);
+}
+
+.bt-label {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bt-title {
+  font-weight: 800;
+  font-stretch: 78%;
+  letter-spacing: 0.005em;
+  line-height: 0.98;
+  text-transform: uppercase;
+}

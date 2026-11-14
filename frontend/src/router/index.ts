@@ -143,6 +143,30 @@ const router = createRouter({
       meta: { public: true, survey: true },
     },
     {
+      path: '/style',
+      name: 'styles',
+      component: () => import('@/views/styles/StylesIndex.vue'),
+      meta: { title: 'Style stron' },
+    },
+    {
+      path: '/style/tablica/logowanie',
+      name: 'style-board-login',
+      component: () => import('@/views/styles/BoardLogin.vue'),
+      meta: { title: 'Tablica: logowanie' },
+    },
+    {
+      path: '/style/tablica/mapa',
+      name: 'style-board-map',
+      component: () => import('@/views/styles/BoardMap.vue'),
+      meta: { title: 'Tablica: mapa' },
+    },
+    {
+      path: '/style/tablica/zadanie',
+      name: 'style-board-task',
+      component: () => import('@/views/styles/BoardTask.vue'),
+      meta: { title: 'Tablica: zadanie' },
+    },
+    {
       path: '/panel',
       name: 'panel',
       component: () => import('@/views/PanelView.vue'),
