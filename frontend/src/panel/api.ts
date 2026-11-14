@@ -190,6 +190,7 @@ export const panelApi = {
   setTutorPoints: (id: number, points: number) =>
     request<void>(`/ai/grades/${id}/tutor-points`, json('PUT', { points })),
   ratings: (changed: boolean) => request<DifficultyRating[]>(`/ai/ratings?changed=${changed}`),
+  survey: () => request<SurveyResults>('/survey'),
 }
 
 /** Ocena trudności rozwiązania: wybór ucznia i ocena, która trafiła do FSRS. */
@@ -233,4 +234,31 @@ export async function aiGradeImage(id: number): Promise<string> {
   })
   if (!response.ok) throw new Rejected(['nie udało się pobrać zdjęcia'])
   return URL.createObjectURL(await response.blob())
+}
+
+export interface SurveyAnswerRow {
+  device_id: string
+  page: string
+  looks: number
+  expensive: number
+  buying: number
+  comment: string | null
+  scrolled: number
+  seconds: number
+  device: 'telefon' | 'tablet' | 'komputer'
+  details: {
+    model: string | null
+    system: string | null
+    screen: string
+    order: number
+    opened_by: 'klik' | 'koniec-strony'
+    tried_task: boolean
+    blocked_clicks: number
+  }
+  updated_at: string
+}
+
+export interface SurveyResults {
+  answers: SurveyAnswerRow[]
+  podiums: { device_id: string; pages: string[] }[]
 }

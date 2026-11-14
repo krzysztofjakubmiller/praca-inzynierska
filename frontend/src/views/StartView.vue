@@ -4,6 +4,7 @@ import type { RouteLocationRaw } from 'vue-router'
 // Strona tymczasowa na czas budowy aplikacji: szybkie przejście do każdej strony.
 const PAGES: { label: string; to: RouteLocationRaw }[] = [
   { label: 'Wizytówka', to: { name: 'landing' } },
+  { label: 'Ankieta wizytówek', to: { name: 'survey' } },
   { label: 'Matura podstawowa (mapa tematów)', to: { name: 'basic-matura' } },
   { label: 'Matura rozszerzona (mapa tematów)', to: { name: 'extended-matura' } },
   { label: 'Panel właściciela', to: { name: 'panel' } },

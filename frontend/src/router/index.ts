@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { savedPassword } from '@/access'
 import type { Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
+import { blockedClicks } from '@/landing2/survey'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
 import { EXTENDED_DEMO_PROGRESS, EXTENDED_DEMO_SHEETS } from '@/maps/extended/demoProgress'
@@ -13,6 +14,8 @@ declare module 'vue-router' {
     panel?: boolean
     exam?: Exam['id']
     public?: boolean
+    /** Strona z ankiety wizytówek, oglądana bez hasła dostępu. */
+    survey?: boolean
   }
 }
 
@@ -127,6 +130,19 @@ const router = createRouter({
       component: LandingView,
     },
     {
+      path: '/ankieta',
+      name: 'survey',
+      component: () => import('@/views/landing2/SurveyList.vue'),
+      meta: { title: 'Ankieta', public: true },
+    },
+    {
+      path: '/wizytowka/:page(a|b|c|d|e|f|g|h|i|j)',
+      name: 'survey-page',
+      component: () => import('@/views/landing2/SurveyPage.vue'),
+      props: true,
+      meta: { public: true, survey: true },
+    },
+    {
       path: '/panel',
       name: 'panel',
       component: () => import('@/views/PanelView.vue'),
@@ -161,6 +177,12 @@ const router = createRouter({
       name: 'panel-ratings',
       component: () => import('@/views/PanelRatingsView.vue'),
       meta: { title: 'Oceny trudności', panel: true },
+    },
+    {
+      path: '/panel/ankieta',
+      name: 'panel-survey',
+      component: () => import('@/views/PanelSurveyView.vue'),
+      meta: { title: 'Ankieta', panel: true },
     },
     {
       path: '/wkrotce',
@@ -224,8 +246,14 @@ const router = createRouter({
 // Do czasu logowania każda strona jest za hasłem, a panel za drugim. Tu sprawdzamy tylko, czy
 // jakieś zapamiętano; czy jest dobre, rozstrzyga backend przy wejściu i przy zapytaniach panelu.
 // Regulamin i polityka prywatności są publiczne, bo czyta się je przed założeniem konta.
-router.beforeEach((to) => {
+router.beforeEach((to, from) => {
   if (!to.meta.public && to.name !== 'access' && !savedPassword('access')) {
+    // Oceniający wizytówki nie ma hasła, więc przycisk do aplikacji zostawia go na stronie,
+    // a dymek ankiety wyjaśnia dlaczego.
+    if (from.meta.survey) {
+      blockedClicks.value++
+      return false
+    }
     return { name: 'access', query: { dalej: to.fullPath } }
   }
   if (to.meta.panel && !savedPassword('panel')) {
@@ -233,7 +261,9 @@ router.beforeEach((to) => {
   }
 })
 
-router.afterEach((to) => {
+router.afterEach((to, _from, failure) => {
+  // Zatrzymane przejście zostawia użytkownika na starej stronie, więc tytuł też zostaje.
+  if (failure) return
   document.title = to.meta.title ? `${to.meta.title} · ${PRODUCT_NAME}` : PRODUCT_NAME
   // Na stronie egzaminu ikona karty to kształt jego stacji z mapy, wszędzie indziej litera M.
   const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
