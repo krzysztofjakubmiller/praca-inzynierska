@@ -73,7 +73,8 @@ describe('App', () => {
     const wrapper = await renderAt('/wkrotce')
     localStorage.setItem('haslo-dostepu', 'sekret')
 
-    expect(wrapper.find('h1').text()).toBe('Wejście')
+    expect(wrapper.find('h2').text()).toBe('Wpisz hasło dostępu')
+    expect(wrapper.find('input[type="password"]').exists()).toBe(true)
     expect(router.currentRoute.value.query.dalej).toBe('/wkrotce')
   })
 

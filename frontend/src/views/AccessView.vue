@@ -37,8 +37,13 @@ async function enter() {
       <p>Panel ma osobne hasło.</p>
     </template>
     <template v-else>
-      <h1>Wejście</h1>
-      <p>Strona jest w budowie, wejście tylko z hasłem.</p>
+      <section class="access__survey">
+        <h1>Wypełnij ankietę</h1>
+        <p>Pomóż wybrać wygląd strony głównej. Bez hasła i bez zakładania konta.</p>
+        <RouterLink class="button" :to="{ name: 'survey' }">Wypełnij ankietę</RouterLink>
+      </section>
+      <h2>Wpisz hasło dostępu</h2>
+      <p>Aplikacja jest w budowie, reszta stron otwiera się tylko z hasłem.</p>
     </template>
     <form class="access__form" @submit.prevent="enter">
       <label>
@@ -64,6 +69,20 @@ async function enter() {
 .access h1 {
   font-size: 2rem;
   font-weight: 800;
+}
+
+.access h2 {
+  font-size: 1.35rem;
+  font-weight: 750;
+}
+
+.access__survey {
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+  margin-bottom: 1.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--hairline);
 }
 
 .access__form {
