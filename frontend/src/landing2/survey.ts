@@ -4,17 +4,15 @@ import { API_URL } from '@/access'
 // Ankieta wizytówek: jedno urządzenie ocenia każdą stronę raz, a kolejna ocena zastępuje poprzednią.
 // Urządzenie rozpoznajemy po losowym identyfikatorze zapisanym w przeglądarce.
 
+// Strony główne to te, między którymi zapada wybór. Dodatkowe są dla chętnych.
 export const PAGES = [
-  { id: 'a', name: 'Stacje w kolorze', colors: ['#16224f', '#ff7a69'] },
-  { id: 'b', name: 'Tablica odjazdów', colors: ['#131210', '#ffb224'] },
-  { id: 'c', name: 'Schemat sieci', colors: ['#f2f3f0', '#2e6fe0'] },
-  { id: 'd', name: 'Bilet', colors: ['#dff1e5', '#126b38'] },
-  { id: 'e', name: 'Peron', colors: ['#ffd026', '#17181a'] },
-  { id: 'f', name: 'Mapa tematów', colors: ['#111210', '#fe8e66'] },
-  { id: 'g', name: 'Jedno zadanie', colors: ['#ffffff', '#1d1f22'] },
-  { id: 'h', name: 'Rozkład jazdy', colors: ['#e6ecf5', '#0f1f47'] },
-  { id: 'i', name: 'List', colors: ['#dde4ee', '#23408e'] },
-  { id: 'j', name: 'Obecna strona', colors: ['#f2f3f0', '#1d1f22'] },
+  { id: 'a', name: 'Stacje w kolorze', main: true, colors: ['#16224f', '#ff7a69'] },
+  { id: 'b', name: 'Tablica odjazdów', main: true, colors: ['#131210', '#ffb224'] },
+  { id: 'c', name: 'Bilet', main: true, colors: ['#dff1e5', '#126b38'] },
+  { id: 'd', name: 'Peron', main: true, colors: ['#ffd026', '#17181a'] },
+  { id: 'e', name: 'Obecna strona', main: true, colors: ['#f2f3f0', '#1d1f22'] },
+  { id: 'f', name: 'Mapa tematów', main: false, colors: ['#111210', '#fe8e66'] },
+  { id: 'g', name: 'Jedno zadanie', main: false, colors: ['#ffffff', '#1d1f22'] },
 ] as const
 
 export type PageId = (typeof PAGES)[number]['id']
@@ -47,9 +45,10 @@ export interface Visit {
 
 const KEYS = {
   device: 'ankieta-urzadzenie',
-  answers: 'ankieta-oceny',
-  order: 'ankieta-kolejnosc',
-  podium: 'ankieta-podium',
+  // Dwójka w nazwie: po zmianie zestawu stron litery znaczą co innego niż w starych zapisach.
+  answers: 'ankieta-oceny-2',
+  order: 'ankieta-kolejnosc-2',
+  podium: 'ankieta-podium-2',
   role: 'ankieta-kim',
 }
 
@@ -92,19 +91,27 @@ function deviceId(): string {
   return id
 }
 
-/**
- * Kolejność stron na liście, losowa i stała dla urządzenia. Bez losowania pierwsze strony
- * z listy zbierałyby najwięcej ocen, a ostatnie oceniałby ktoś już zmęczony.
- */
-export function pageOrder(): PageId[] {
-  const ids = PAGES.map((page) => page.id)
-  const saved = read<PageId[]>(KEYS.order, [])
-  if (saved.length === ids.length && ids.every((id) => saved.includes(id))) return saved
+function shuffled(ids: PageId[]): PageId[] {
   const order = [...ids]
   for (let index = order.length - 1; index > 0; index--) {
     const other = Math.floor(Math.random() * (index + 1))
     ;[order[index], order[other]] = [order[other]!, order[index]!]
   }
+  return order
+}
+
+/**
+ * Kolejność stron na liście, losowa i stała dla urządzenia: najpierw strony główne pomieszane
+ * między sobą, potem dodatkowe. Bez losowania pierwsze strony z listy zbierałyby najwięcej ocen,
+ * a ostatnie oceniałby ktoś już zmęczony.
+ */
+export function pageOrder(): PageId[] {
+  const ids = PAGES.map((page) => page.id)
+  const saved = read<PageId[]>(KEYS.order, [])
+  if (saved.length === ids.length && ids.every((id) => saved.includes(id))) return saved
+  const order = [true, false].flatMap((main) =>
+    shuffled(PAGES.filter((page) => page.main === main).map((page) => page.id)),
+  )
   localStorage.setItem(KEYS.order, JSON.stringify(order))
   return order
 }

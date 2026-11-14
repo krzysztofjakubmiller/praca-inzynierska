@@ -18,7 +18,17 @@ const PLACES = 3
 
 const order = pageOrder()
 const pages = order.map((id) => PAGES.find((page) => page.id === id)!)
-const rated = computed(() => pages.filter((page) => answers.value[page.id]).length)
+const groups = [
+  { id: 'glowne', title: '', note: '', pages: pages.filter((page) => page.main) },
+  {
+    id: 'dodatkowe',
+    title: 'Dla chętnych: dwie dodatkowe',
+    note: 'Nie musisz ich oceniać. Jeśli masz chwilę, zobacz je i napisz, co myślisz.',
+    pages: pages.filter((page) => !page.main),
+  },
+]
+const mainCount = groups[0]!.pages.length
+const rated = computed(() => groups[0]!.pages.filter((page) => answers.value[page.id]).length)
 
 const picked = ref<PageId[]>([...podium.value])
 const state = ref<'idle' | 'sending' | 'saved' | 'failed'>(podium.value.length ? 'saved' : 'idle')
@@ -51,8 +61,9 @@ async function send() {
       <p class="list__brand">{{ PRODUCT_NAME }}</p>
       <h1 class="list__title">Która strona jest najlepsza?</h1>
       <p class="list__lead">
-        Szukamy wyglądu strony głównej. Obejrzyj strony w dowolnej kolejności i oceń każdą: na
-        każdej w prawym dolnym rogu czeka dymek z trzema krótkimi pytaniami.
+        Szukamy wyglądu strony głównej. Najważniejsze jest {{ mainCount }} stron poniżej: obejrzyj
+        je w dowolnej kolejności i oceń każdą. Na każdej w prawym dolnym rogu czeka dymek z trzema
+        krótkimi pytaniami.
       </p>
     </header>
 
@@ -72,24 +83,28 @@ async function send() {
       </div>
     </section>
 
-    <p class="list__count" aria-live="polite">Ocenione: {{ rated }} z {{ pages.length }}</p>
+    <p class="list__count" aria-live="polite">Ocenione: {{ rated }} z {{ mainCount }}</p>
 
-    <ol class="list__pages">
-      <li v-for="page in pages" :key="page.id">
-        <RouterLink
-          class="page"
-          :to="`/wizytowka/${page.id}`"
-          :style="{ '--back': page.colors[0], '--mark': page.colors[1] }"
-        >
-          <span class="page__swatch" aria-hidden="true">{{ page.id }}</span>
-          <span class="page__name">{{ page.name }}</span>
-          <span v-if="answers[page.id]" class="page__state page__state--done">
-            twoja ocena: {{ answers[page.id]!.looks }}/10
-          </span>
-          <span v-else class="page__state">do oceny</span>
-        </RouterLink>
-      </li>
-    </ol>
+    <section v-for="group in groups" :key="group.id" class="list__group">
+      <h2 v-if="group.title" class="who__title">{{ group.title }}</h2>
+      <p v-if="group.note" class="list__note">{{ group.note }}</p>
+      <ol class="list__pages">
+        <li v-for="page in group.pages" :key="page.id">
+          <RouterLink
+            class="page"
+            :to="`/wizytowka/${page.id}`"
+            :style="{ '--back': page.colors[0], '--mark': page.colors[1] }"
+          >
+            <span class="page__swatch" aria-hidden="true">{{ page.id }}</span>
+            <span class="page__name">{{ page.name }}</span>
+            <span v-if="answers[page.id]" class="page__state page__state--done">
+              twoja ocena: {{ answers[page.id]!.looks }}/10
+            </span>
+            <span v-else class="page__state">do oceny</span>
+          </RouterLink>
+        </li>
+      </ol>
+    </section>
 
     <section v-if="rated >= 2" class="podium" aria-labelledby="podium-title">
       <h2 id="podium-title" class="podium__title">Na koniec: twoje podium</h2>
@@ -202,6 +217,16 @@ async function send() {
 .who__option[aria-pressed='true'] {
   background: var(--ink);
   color: var(--ground);
+}
+
+.list__group {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.list__note {
+  max-width: 52ch;
+  color: var(--ink-soft);
 }
 
 .list__pages {

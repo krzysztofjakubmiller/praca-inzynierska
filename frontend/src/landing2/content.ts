@@ -208,7 +208,7 @@ const EXAM_DAYS: Record<Exam['id'], string> = {
   'matura-rozszerzona': '2027-05-11',
 }
 
-export function examDay(exam: Exam['id']): Date {
+function examDay(exam: Exam['id']): Date {
   return new Date(`${EXAM_DAYS[exam]}T09:00:00`)
 }
 

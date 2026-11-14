@@ -136,7 +136,7 @@ const router = createRouter({
       meta: { title: 'Ankieta', public: true },
     },
     {
-      path: '/wizytowka/:page(a|b|c|d|e|f|g|h|i|j)',
+      path: '/wizytowka/:page(a|b|c|d|e|f|g)',
       name: 'survey-page',
       component: () => import('@/views/landing2/SurveyPage.vue'),
       props: true,

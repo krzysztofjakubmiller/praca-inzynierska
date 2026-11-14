@@ -92,7 +92,7 @@ def test_rejects_unknown_page(client):
 
 
 def test_saves_and_replaces_podium(client, session):
-    client.put("/api/survey/podium", json={"device_id": DEVICE, "pages": ["c", "a", "j"]})
+    client.put("/api/survey/podium", json={"device_id": DEVICE, "pages": ["c", "a", "g"]})
     response = client.put("/api/survey/podium", json={"device_id": DEVICE, "pages": ["b"]})
 
     assert response.status_code == 204

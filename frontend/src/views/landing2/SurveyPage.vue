@@ -13,12 +13,9 @@ const VIEWS: Record<PageId, Component> = {
   b: defineAsyncComponent(() => import('./VariantB.vue')),
   c: defineAsyncComponent(() => import('./VariantC.vue')),
   d: defineAsyncComponent(() => import('./VariantD.vue')),
-  e: defineAsyncComponent(() => import('./VariantE.vue')),
+  e: LandingView,
   f: defineAsyncComponent(() => import('./VariantF.vue')),
   g: defineAsyncComponent(() => import('./VariantG.vue')),
-  h: defineAsyncComponent(() => import('./VariantH.vue')),
-  i: defineAsyncComponent(() => import('./VariantI.vue')),
-  j: LandingView,
 }
 </script>
 

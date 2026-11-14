@@ -15,7 +15,7 @@ from app.models import SurveyAnswer, SurveyPodium
 # Odczyt wyników wymaga hasła panelu.
 router = APIRouter(prefix="/api")
 
-Page = Literal["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"]
+Page = Literal["a", "b", "c", "d", "e", "f", "g"]
 
 
 class Details(BaseModel):

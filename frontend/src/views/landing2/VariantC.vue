@@ -1,26 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watchEffect } from 'vue'
 import { EXAMS, type Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
-import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
-import type { TopicMap } from '@/maps/types'
 import {
-  AUDIENCE,
   CREW,
   CREW_INTRO,
   CREW_TITLE,
   LEAD,
   LEAD_SHORT,
   MAP_ROUTES,
-  WHO_LABELS,
   daysToExam,
   tidy,
 } from '@/landing2/content'
 import { useOffer } from '@/landing2/offer'
 import { vReveal } from '@/landing2/reveal'
 import { plural } from '@/utils/plural'
-import { formatPrice } from '@/utils/tickets'
+import { TICKET_NAMES, formatPrice, type TicketKind } from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
+import StationMarker from '@/components/landing/StationMarker.vue'
 import TicketCard from '@/components/landing/TicketCard.vue'
 import DutyChat from '@/components/landing2/DutyChat.vue'
 import FaqList from '@/components/landing2/FaqList.vue'
@@ -29,363 +26,342 @@ import OpinionList from '@/components/landing2/OpinionList.vue'
 import SolidFigure from '@/components/landing2/SolidFigure.vue'
 import StepList from '@/components/landing2/StepList.vue'
 import TrialTask from '@/components/landing2/TrialTask.vue'
-import WhoIcon from '@/components/landing2/WhoIcon.vue'
 
-const { today, year, cheapest, annualMonths, validUntil } = useOffer()
+const { today, year, annualMonths, validUntil } = useOffer()
 
-function stationNames(map: TopicMap): string[] {
-  const ids = new Set(map.graph.lines.flatMap((line) => line.stations))
-  return [...ids].map((id) => {
-    const station = map.graph.stations[id]!
-    return station.shortName ?? station.name
-  })
+// Blady odcień papieru biletu i ciemny odcień do tekstu, po jednym na egzamin.
+const PAPER: Record<Exam['id'], { tint: string; deep: string }> = {
+  e8: { tint: '#e3ebfb', deep: '#1f4fae' },
+  'matura-podstawowa': { tint: '#dff1e5', deep: '#126b38' },
+  'matura-rozszerzona': { tint: '#fbe5e1', deep: '#b3261b' },
 }
 
-// Matury biorą stacje z prawdziwych map tematów. Mapy E8 jeszcze nie ma, więc tu stoją działy
-// z wymagań egzaminu.
-const TOPICS: Record<Exam['id'], string[]> = {
-  e8: [
-    'Liczby',
-    'Procenty',
-    'Potęgi i pierwiastki',
-    'Wyrażenia algebraiczne',
-    'Równania',
-    'Figury płaskie',
-    'Bryły',
-    'Statystyka',
-  ],
-  'matura-podstawowa': stationNames(BASIC_MAP),
-  'matura-rozszerzona': stationNames(EXTENDED_MAP),
+// Napis na pieczątce kontroli dla każdego stanowiska z listy CREW, w tej samej kolejności.
+const STAMPS = [
+  'Ułożył człowiek',
+  'Sprawdził człowiek',
+  'Policzył program',
+  'Zrobili ludzie',
+  'Dyżurny (AI)',
+]
+const STAMP_TURNS = [-5, 3, -2, 4, -4]
+
+const selected = ref<Exam['id']>('matura-podstawowa')
+const kind = ref<TicketKind>('annual')
+
+const exam = computed(() => EXAMS.find((item) => item.id === selected.value)!)
+const paper = computed(() => PAPER[selected.value])
+const days = computed(() => daysToExam(selected.value, today))
+const rosette = Array.from({ length: 30 }, (_, index) => index * 6)
+
+watchEffect(() => {
+  document.body.style.background = paper.value.tint
+})
+onBeforeUnmount(() => {
+  document.body.style.background = ''
+})
+
+function tilt(event: PointerEvent) {
+  // Pochylenie tylko za myszą; palec przewija stronę i nie powinien kiwać biletem.
+  if (event.pointerType !== 'mouse') return
+  const ticket = event.currentTarget as HTMLElement
+  const box = ticket.getBoundingClientRect()
+  const x = (event.clientX - box.left) / box.width
+  const y = (event.clientY - box.top) / box.height
+  ticket.style.setProperty('--ry', `${(x - 0.5) * 7}deg`)
+  ticket.style.setProperty('--rx', `${(0.5 - y) * 6}deg`)
+  ticket.style.setProperty('--lean', `${x - 0.5}`)
 }
 
-// Tory schematu na górze strony, w układzie 360 × 380.
-const TRACKS: Record<Exam['id'], string> = {
-  e8: 'M180 40V84L62 202V290',
-  'matura-podstawowa': 'M180 40V290',
-  'matura-rozszerzona': 'M180 40V84L298 202V290',
-}
-
-const HUBS: Record<Exam['id'], number> = {
-  e8: 62,
-  'matura-podstawowa': 180,
-  'matura-rozszerzona': 298,
-}
-
-const humans = computed(() => CREW.filter((role) => role.who !== 'duty'))
-const duty = computed(() => CREW.find((role) => role.who === 'duty')!)
-
-function meta(exam: Exam): string {
-  const days = daysToExam(exam.id, today)
-  return `Do egzaminu ${days} ${plural(days, ['dzień', 'dni', 'dni'])}, bilet od ${formatPrice(exam.prices.monthly)}`
+function level(event: PointerEvent) {
+  const ticket = event.currentTarget as HTMLElement
+  ticket.style.removeProperty('--ry')
+  ticket.style.removeProperty('--rx')
+  ticket.style.removeProperty('--lean')
 }
 </script>
 
 <template>
-  <div class="vc">
-    <header class="vc-top">
-      <a class="vc-top__mark" href="#start">{{ PRODUCT_NAME }}</a>
-      <nav class="vc-top__nav" aria-label="Sekcje">
-        <a href="#linie">Egzaminy</a>
-        <a href="#ludzie">Kto to robi</a>
-        <a href="#bilety">Bilety</a>
-      </nav>
-      <RouterLink class="vc-top__login" :to="{ name: 'login' }">Zaloguj się</RouterLink>
+  <div
+    class="vd"
+    :style="{
+      '--exam': `var(--exam-${exam.id})`,
+      '--tint': paper.tint,
+      '--deep': paper.deep,
+    }"
+  >
+    <!-- Filtr daje pieczątkom nierówny brzeg tuszu. -->
+    <svg class="vd-defs" aria-hidden="true">
+      <filter id="vd-ink">
+        <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4" />
+        <feDisplacementMap in="SourceGraphic" scale="2.4" />
+      </filter>
+    </svg>
+
+    <header class="vd-top">
+      <a class="vd-top__mark" href="#start">{{ PRODUCT_NAME }}</a>
+      <div class="vd-pick vd-pick--small" role="radiogroup" aria-label="Egzamin">
+        <label v-for="item in EXAMS" :key="item.id" class="vd-pick__option">
+          <input
+            v-model="selected"
+            class="vd-pick__input"
+            type="radio"
+            name="vd-top"
+            :value="item.id"
+          />
+          <StationMarker :shape="item.solid" />
+          <span class="vd-pick__label">{{ item.shortName }}</span>
+        </label>
+      </div>
+      <RouterLink class="vd-top__login" :to="{ name: 'login' }">Zaloguj się</RouterLink>
     </header>
 
     <main>
-      <section id="start" class="vc-hero" aria-labelledby="vc-title">
-        <div class="vc-hero__body">
-          <h1 id="vc-title" class="vc-hero__title">{{ PRODUCT_NAME }}</h1>
-          <p class="vc-hero__audience">{{ AUDIENCE }}</p>
-          <p class="vc-hero__lead">{{ LEAD }} {{ LEAD_SHORT }}</p>
-          <div class="vc-actions">
+      <section id="start" class="vd-hero" aria-labelledby="vd-title">
+        <div class="vd-hero__body">
+          <h1 id="vd-title" class="vd-hero__title">{{ PRODUCT_NAME }}</h1>
+          <p class="vd-hero__lead">{{ LEAD }} {{ LEAD_SHORT }}</p>
+          <fieldset class="vd-ask">
+            <legend class="vd-ask__legend">Dokąd jedziesz?</legend>
+            <div class="vd-pick">
+              <label v-for="item in EXAMS" :key="item.id" class="vd-pick__option">
+                <input
+                  v-model="selected"
+                  class="vd-pick__input"
+                  type="radio"
+                  name="vd-hero"
+                  :value="item.id"
+                />
+                <StationMarker :shape="item.solid" />
+                <span>{{ item.shortName }}</span>
+              </label>
+            </div>
+          </fieldset>
+        </div>
+
+        <div class="vd-printer">
+          <div class="vd-printer__slot" aria-hidden="true" />
+          <Transition name="vd-print" mode="out-in">
+            <div :key="exam.id" class="vd-ticket" @pointermove="tilt" @pointerleave="level">
+              <article class="vd-ticket__paper">
+                <div class="vd-ticket__main">
+                  <p class="vd-ticket__micro" aria-hidden="true">
+                    {{ `${PRODUCT_NAME} · `.repeat(14) }}
+                  </p>
+                  <div class="vd-ticket__route" aria-hidden="true">
+                    <span>Start</span>
+                    <span class="vd-ticket__track" />
+                    <StationMarker :shape="exam.solid" class="vd-ticket__marker" />
+                  </div>
+                  <h2 class="vd-ticket__name">
+                    <span v-for="word in exam.name.split(' ')" :key="word">{{ word }}</span>
+                  </h2>
+
+                  <div class="vd-seal" aria-hidden="true">
+                    <svg class="vd-seal__rosette" viewBox="-50 -50 100 100">
+                      <ellipse
+                        v-for="angle in rosette"
+                        :key="angle"
+                        rx="47"
+                        ry="17"
+                        :transform="`rotate(${angle})`"
+                      />
+                    </svg>
+                    <div class="vd-seal__solid">
+                      <SolidFigure :kind="exam.solid" :fill="0.86" :weight="0.045" :spin="0.45" />
+                    </div>
+                  </div>
+
+                  <div class="vd-kind" role="group" aria-label="Rodzaj biletu">
+                    <button
+                      v-for="option in ['annual', 'monthly'] as const"
+                      :key="option"
+                      class="vd-kind__option"
+                      type="button"
+                      :aria-pressed="kind === option"
+                      @click="kind = option"
+                    >
+                      {{ TICKET_NAMES[option] }}
+                    </button>
+                  </div>
+
+                  <dl class="vd-fields">
+                    <div>
+                      <dt>Cena</dt>
+                      <dd class="vd-fields__price">{{ formatPrice(exam.prices[kind]) }}</dd>
+                    </div>
+                    <div>
+                      <dt>Ważny</dt>
+                      <dd>
+                        {{ kind === 'annual' ? `do ${validUntil}` : 'miesiąc, przedłużasz sam' }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Do egzaminu</dt>
+                      <dd>{{ days }} {{ plural(days, ['dzień', 'dni', 'dni']) }}</dd>
+                    </div>
+                  </dl>
+                  <div class="vd-ticket__foil" aria-hidden="true" />
+                </div>
+                <div class="vd-ticket__stub">
+                  <RouterLink class="button" :to="{ name: 'coming-soon' }">
+                    Kup bilet
+                    <ArrowIcon />
+                  </RouterLink>
+                  <span class="vd-ticket__code" aria-hidden="true" />
+                </div>
+              </article>
+            </div>
+          </Transition>
+        </div>
+      </section>
+
+      <section class="vd-section vd-split" aria-labelledby="vd-route-title">
+        <div class="vd-split__head">
+          <h2 id="vd-route-title" class="vd-h2">Trasa: {{ exam.name.toLowerCase() }}</h2>
+          <p class="vd-lead">{{ tidy(exam.description) }}</p>
+          <div class="vd-actions">
             <RouterLink class="button" :to="{ name: 'register' }">
               Załóż konto
               <ArrowIcon />
             </RouterLink>
-            <a v-if="cheapest" class="button button--quiet" href="#bilety">
-              Bilety już od {{ formatPrice(cheapest.price) }}
-            </a>
+            <RouterLink
+              v-if="MAP_ROUTES[exam.id]"
+              class="button button--quiet"
+              :to="{ name: MAP_ROUTES[exam.id] }"
+            >
+              Mapa tematów
+            </RouterLink>
           </div>
         </div>
-
-        <div class="vc-net">
-          <svg class="vc-net__tracks" viewBox="0 0 360 380" aria-hidden="true">
-            <g v-for="(exam, index) in EXAMS" :key="exam.id" :style="{ '--order': index }">
-              <path
-                class="vc-net__track"
-                :d="TRACKS[exam.id]"
-                :stroke="`var(--exam-${exam.id})`"
-                pathLength="1"
-              />
-              <rect class="vc-net__train" x="-11" y="-5.5" width="22" height="11" rx="5.5">
-                <animateMotion
-                  :path="TRACKS[exam.id]"
-                  :begin="`${1.4 + index * 1.3}s`"
-                  dur="7s"
-                  repeatCount="indefinite"
-                  rotate="auto"
-                  calcMode="spline"
-                  keyPoints="0;0.86;0.86;0;0"
-                  keyTimes="0;0.4;0.5;0.9;1"
-                  keySplines="0.4 0 0.2 1;0 0 1 1;0.4 0 0.2 1;0 0 1 1"
-                />
-              </rect>
-            </g>
-            <circle class="vc-net__stop" cx="121" cy="143" r="7" />
-            <circle class="vc-net__stop" cx="239" cy="143" r="7" />
-            <circle class="vc-net__stop" cx="180" cy="150" r="7" />
-            <circle class="vc-net__start" cx="180" cy="40" r="15" />
-          </svg>
-          <p class="vc-net__board">Tu wsiadasz</p>
-          <a
-            v-for="exam in EXAMS"
-            :key="exam.id"
-            class="vc-net__hub"
-            :href="`#${exam.id}`"
-            :style="{ '--exam': `var(--exam-${exam.id})`, '--x': HUBS[exam.id] }"
-          >
-            <span class="vc-hub">
-              <SolidFigure :kind="exam.solid" :drag="false" :fill="0.72" :weight="0.05" />
-            </span>
-            <span class="vc-net__name">{{ exam.shortName }}</span>
-          </a>
-        </div>
+        <StepList />
       </section>
 
-      <div class="vc-route">
-        <div class="vc-route__train" aria-hidden="true"><span /></div>
-
-        <section id="linie" class="vc-stop" aria-labelledby="vc-lines-title">
-          <h2 id="vc-lines-title" v-reveal class="vc-stop__name">Trzy linie, trzy egzaminy</h2>
-          <div class="vc-lines">
-            <article
-              v-for="exam in EXAMS"
-              :id="exam.id"
-              :key="exam.id"
-              class="vc-line"
-              :style="{ '--exam': `var(--exam-${exam.id})` }"
+      <section id="ludzie" class="vd-section" aria-labelledby="vd-crew-title">
+        <div>
+          <h2 id="vd-crew-title" class="vd-h2">{{ CREW_TITLE }}</h2>
+          <p class="vd-lead">{{ CREW_INTRO }}</p>
+        </div>
+        <ul class="vd-control">
+          <li v-for="(role, index) in CREW" :key="role.what" class="vd-check">
+            <div
+              v-reveal="index * 110"
+              class="vd-stamp"
+              :class="`vd-stamp--${role.who}`"
+              :style="{ '--turn': `${STAMP_TURNS[index]}deg` }"
             >
-              <div v-reveal class="vc-hub vc-line__hub" aria-hidden="true">
-                <SolidFigure :kind="exam.solid" :fill="0.7" :weight="0.04" />
-              </div>
-              <div class="vc-line__body">
-                <h3 class="vc-line__name">{{ exam.name }}</h3>
-                <p class="vc-line__text">{{ tidy(exam.description) }}</p>
-                <p class="vc-line__meta">{{ meta(exam) }}</p>
-                <div class="vc-actions">
-                  <RouterLink
-                    v-if="MAP_ROUTES[exam.id]"
-                    class="button"
-                    :to="{ name: MAP_ROUTES[exam.id] }"
-                  >
-                    Mapa tematów
-                    <ArrowIcon />
-                  </RouterLink>
-                  <a class="button button--quiet" href="#bilety">Kup bilet</a>
-                </div>
-              </div>
-              <!-- Stacje linii jadą w kółko, więc lista jest dwa razy; czytnik dostaje ją raz. -->
-              <div class="vc-strip" :style="{ '--count': TOPICS[exam.id].length }">
-                <ul
-                  v-for="copy in 2"
-                  :key="copy"
-                  class="vc-strip__run"
-                  :aria-hidden="copy === 2 ? 'true' : undefined"
-                  :aria-label="copy === 1 ? 'Stacje tej linii' : undefined"
-                >
-                  <li v-for="topic in TOPICS[exam.id]" :key="topic" class="vc-strip__stop">
-                    {{ topic }}
-                  </li>
-                </ul>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section id="ludzie" class="vc-stop" aria-labelledby="vc-crew-title">
-          <h2 id="vc-crew-title" v-reveal class="vc-stop__name">{{ CREW_TITLE }}</h2>
-          <p class="vc-lead">{{ CREW_INTRO }}</p>
-          <div class="vc-crew">
-            <div class="vc-branch vc-branch--human">
-              <p class="vc-branch__sign">
-                <span class="vc-branch__bullet">L</span>
-                Linia ludzi
-              </p>
-              <ul class="vc-branch__stops">
-                <li
-                  v-for="(role, index) in humans"
-                  :key="role.what"
-                  v-reveal="index * 80"
-                  class="vc-role"
-                  :class="`vc-role--${role.who}`"
-                >
-                  <h3 class="vc-role__what">
-                    {{ role.what }}
-                    <span class="vc-role__who">
-                      <WhoIcon :who="role.who" />
-                      {{ WHO_LABELS[role.who] }}
-                    </span>
-                  </h3>
-                  <p>{{ role.text }}</p>
-                </li>
-              </ul>
+              <span class="vd-stamp__ink">{{ STAMPS[index] }}</span>
             </div>
-            <div class="vc-branch vc-branch--duty">
-              <p class="vc-branch__sign">
-                <span class="vc-branch__bullet">D</span>
-                Linia Dyżurnego
-              </p>
-              <ul class="vc-branch__stops">
-                <li v-reveal class="vc-role vc-role--duty">
-                  <h3 class="vc-role__what">
-                    {{ duty.what }}
-                    <span class="vc-role__who">
-                      <WhoIcon who="duty" />
-                      {{ WHO_LABELS.duty }}
-                    </span>
-                  </h3>
-                  <p>{{ duty.text }}</p>
-                  <DutyChat class="vc-crew__chat" />
-                </li>
-              </ul>
-            </div>
-          </div>
-        </section>
+            <h3 class="vd-check__what">{{ role.what }}</h3>
+            <p>{{ role.text }}</p>
+          </li>
+        </ul>
+      </section>
 
-        <section class="vc-stop" aria-label="Zadanie na próbę">
-          <TrialTask v-reveal class="vc-card" />
-        </section>
+      <section class="vd-section vd-duo" aria-label="Dyżurny i zadanie na próbę">
+        <DutyChat v-reveal class="vd-rise" />
+        <TrialTask v-reveal="120" class="vd-rise vd-duo__trial" />
+      </section>
 
-        <section id="jak-to-dziala" class="vc-stop" aria-labelledby="vc-steps-title">
-          <h2 id="vc-steps-title" v-reveal class="vc-stop__name">Jak to działa</h2>
-          <p class="vc-lead">
-            {{
-              tidy(
-                'Zadania rozwiązujesz w zeszycie, tak jak na egzaminie, a aplikacja prowadzi cię od tematu do tematu.',
-              )
-            }}
-          </p>
-          <StepList class="vc-steps" />
-        </section>
+      <section class="vd-section" aria-labelledby="vd-voices-title">
+        <h2 id="vd-voices-title" class="vd-h2">Co mówią uczniowie i rodzice</h2>
+        <OpinionList />
+      </section>
 
-        <section class="vc-stop vc-stop--field" aria-labelledby="vc-voices-title">
-          <h2 id="vc-voices-title" v-reveal class="vc-stop__name">Co mówią uczniowie i rodzice</h2>
-          <OpinionList />
-        </section>
+      <section class="vd-section" aria-labelledby="vd-founder-title">
+        <h2 id="vd-founder-title" class="vd-h2">Kto za tym stoi</h2>
+        <FounderSlot />
+      </section>
 
-        <section class="vc-stop" aria-labelledby="vc-founder-title">
-          <h2 id="vc-founder-title" v-reveal class="vc-stop__name">Kto za tym stoi</h2>
-          <FounderSlot />
-        </section>
-
-        <section id="bilety" class="vc-stop" aria-labelledby="vc-tickets-title">
-          <h2 id="vc-tickets-title" v-reveal class="vc-stop__name">Kasa biletowa</h2>
-          <p class="vc-lead">
+      <section id="bilety" class="vd-section vd-split" aria-labelledby="vd-tickets-title">
+        <div class="vd-split__head">
+          <h2 id="vd-tickets-title" class="vd-h2">Wszystkie bilety</h2>
+          <p class="vd-lead">
             {{
               tidy(
                 'Bilet miesięczny przedłużasz co miesiąc. Roczny kupujesz raz i działa do końca sierpnia po egzaminie.',
               )
             }}
           </p>
-          <ol class="vc-tickets">
-            <li v-for="(exam, index) in EXAMS" :key="exam.id">
-              <TicketCard
-                :exam="exam"
-                :valid-until="validUntil"
-                :annual-months="annualMonths"
-                :order="index"
-              />
-            </li>
-          </ol>
-        </section>
+        </div>
+        <ol class="vd-tickets">
+          <li v-for="(item, index) in EXAMS" :key="item.id">
+            <TicketCard
+              :exam="item"
+              :valid-until="validUntil"
+              :annual-months="annualMonths"
+              :order="index"
+            />
+          </li>
+        </ol>
+      </section>
 
-        <section class="vc-stop" aria-labelledby="vc-faq-title">
-          <h2 id="vc-faq-title" v-reveal class="vc-stop__name">Pytania</h2>
-          <FaqList />
-        </section>
-
-        <section class="vc-stop vc-stop--last" aria-labelledby="vc-end-title">
-          <h2 id="vc-end-title" v-reveal class="vc-stop__name">Wsiadasz?</h2>
-          <div class="vc-actions">
-            <RouterLink class="button" :to="{ name: 'register' }">
-              Załóż konto
-              <ArrowIcon />
-            </RouterLink>
-          </div>
-        </section>
-      </div>
+      <section class="vd-section vd-split" aria-labelledby="vd-faq-title">
+        <div class="vd-split__head">
+          <h2 id="vd-faq-title" class="vd-h2">Pytania</h2>
+        </div>
+        <FaqList />
+      </section>
     </main>
 
-    <footer class="vc-foot">
+    <footer class="vd-foot">
       <p>{{ PRODUCT_NAME }}, {{ year }}</p>
     </footer>
   </div>
 </template>
 
 <style scoped>
-.vc {
-  --human: #294288;
-  --program: #066f69;
-  --duty: #b4510a;
-  --duty-line: #e67a2a;
+.vd {
+  --ground: var(--tint);
+  --card: #fff;
   --radius: 1.25rem;
-  --card-shadow: 0 1px 1px rgb(29 31 34 / 0.06), 0 10px 22px -10px rgb(29 31 34 / 0.18);
+  --card-shadow: 0 1px 1px rgb(29 31 34 / 0.07), 0 14px 26px -12px rgb(29 31 34 / 0.22);
+  --duty: var(--deep);
+  --sign: var(--deep);
+  --step-line: var(--deep);
+  --step-fill: #fff;
+  --display-stretch: 88%;
   --display-weight: 800;
-  --step-line: var(--program);
   --pad: max(var(--gutter), calc((100vw - 80rem) / 2));
-  /* Odległość linii trasy od lewej krawędzi treści i miejsce, które treść jej zostawia. */
-  --rail: 0.55rem;
-  --berth: 2.6rem;
+  background: var(--tint);
+  transition: background-color 0.7s ease;
 }
 
-.vc ::selection {
-  background: var(--human);
+.vd ::selection {
+  background: var(--deep);
   color: #fff;
 }
 
-.vc-top {
+.vd-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.vd-top {
   position: sticky;
   top: 0;
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   height: var(--header-h);
   padding-inline: var(--pad);
   border-bottom: 1px solid var(--hairline);
-  background: var(--ground);
+  background: var(--tint);
+  transition: background-color 0.7s ease;
 }
 
-.vc-top__mark {
+.vd-top__mark {
   margin-right: auto;
   font-weight: 800;
-  letter-spacing: -0.02em;
+  font-stretch: 88%;
+  letter-spacing: -0.015em;
   text-decoration: none;
   white-space: nowrap;
 }
 
-.vc-top__nav {
-  display: none;
-  gap: 1.5rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.vc-top__nav a {
-  display: flex;
-  align-items: center;
-  min-height: 2.75rem;
-  color: var(--ink-soft);
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.vc-top__nav a:hover {
-  color: var(--ink);
-}
-
-.vc-top__login {
+.vd-top__login {
   display: flex;
   align-items: center;
   min-height: 2.75rem;
@@ -393,619 +369,609 @@ function meta(exam: Exam): string {
   white-space: nowrap;
 }
 
-.vc-actions {
+/* Wybór egzaminu: trzy stacje w jednym pasie, wybrana wypełnia się kolorem. */
+.vd-pick {
+  display: inline-flex;
+  padding: 0.25rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.vd-pick__option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding-inline: 0.85rem 1rem;
+  border-radius: 999px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
+}
+
+.vd-pick__input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.vd-pick__option:has(:checked) {
+  --marker-fill: var(--exam);
+  --marker-stroke: #fff;
+  background: var(--ink);
+  color: #fff;
+}
+
+.vd-pick__option:has(:focus-visible) {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.vd-pick--small {
+  padding: 0.15rem;
+  border-width: 1.5px;
+}
+
+.vd-pick--small .vd-pick__option {
+  min-height: 2.4rem;
+  padding-inline: 0.6rem;
+  font-size: 0.9375rem;
+}
+
+.vd-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  margin-top: 1.5rem;
 }
 
-.vc-hero {
+.vd-hero {
   display: grid;
   gap: 2rem;
-  padding: clamp(2rem, 1rem + 4vw, 4rem) var(--pad) clamp(2.5rem, 2rem + 3vw, 4.5rem);
-  /* Papier schematu: drobna siatka punktów. */
-  background: radial-gradient(circle, rgb(29 31 34 / 0.13) 1px, transparent 1.4px) 0 0 / 1.5rem
-    1.5rem;
+  padding: clamp(1.75rem, 1rem + 3.5vw, 4rem) var(--pad) clamp(3rem, 2rem + 4vw, 5rem);
 }
 
-.vc-hero__body {
+.vd-hero__body {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
   align-content: center;
+  justify-items: start;
 }
 
-.vc-hero__title {
-  font-size: clamp(3.4rem, 1.6rem + 8.4vw, 7.25rem);
-  font-weight: 850;
-  font-stretch: 104%;
-  letter-spacing: -0.04em;
+.vd-hero__title {
+  font-size: clamp(3.3rem, 1.6rem + 8vw, 7rem);
+  font-weight: 800;
+  font-stretch: 88%;
+  letter-spacing: -0.035em;
   line-height: 0.9;
 }
 
-.vc-hero__audience {
-  max-width: 32ch;
-  margin-top: 0.4rem;
-  font-size: clamp(1.1rem, 1rem + 0.55vw, 1.4rem);
-  font-weight: 700;
-  line-height: 1.25;
+.vd-hero__lead {
+  max-width: 40ch;
+  font-size: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
+  line-height: 1.4;
 }
 
-.vc-hero__lead {
-  max-width: 44ch;
-  color: var(--ink-soft);
+.vd-ask {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  border: 0;
 }
 
-.vc-hero .vc-actions {
-  margin-top: 0.5rem;
+/* W pasie pod pytaniem trzy stacje dzielą całą szerokość, żeby zmieścić się na telefonie. */
+.vd-ask .vd-pick {
+  display: flex;
+  width: min(100%, 26rem);
 }
 
-/* Schemat: tory w SVG, a węzły z bryłami leżą na nim w tych samych współrzędnych. */
-.vc-net {
+.vd-ask .vd-pick__option {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding-inline: 0.5rem 0.65rem;
+  font-size: clamp(0.9375rem, 0.8rem + 0.7vw, 1.0625rem);
+}
+
+.vd-ask__legend {
+  margin-bottom: 0.6rem;
+  padding: 0;
+  font-size: clamp(1.35rem, 1.15rem + 0.9vw, 1.8rem);
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
+
+/* Drukarka: ciemna szczelina, z której wysuwa się bilet. */
+.vd-printer {
   position: relative;
   width: 100%;
-  max-width: 34rem;
+  max-width: 29rem;
   margin-inline: auto;
-  aspect-ratio: 360 / 420;
+  padding-top: 0.6rem;
+  perspective: 70rem;
 }
 
-.vc-net__tracks {
+.vd-printer__slot {
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100%;
-  overflow: visible;
+  right: -0.9rem;
+  left: -0.9rem;
+  z-index: 2;
+  height: 1.2rem;
+  border-radius: 999px;
+  background: var(--ink);
+  box-shadow: 0 6px 10px -4px rgb(29 31 34 / 0.45);
 }
 
-.vc-net__track {
-  fill: none;
-  stroke-width: 13;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-.vc-net__stop,
-.vc-net__start {
-  fill: var(--surface);
-  stroke: var(--ink);
-  stroke-width: 5;
-}
-
-.vc-net__start {
-  stroke-width: 7;
-}
-
-.vc-net__train {
-  fill: var(--ink);
-}
-
-.vc-net__board {
-  position: absolute;
-  top: calc(40 / 420 * 100%);
-  left: calc(50% + 1.9rem);
-  translate: 0 -50%;
-  font-size: 0.9375rem;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.vc-net__hub {
-  position: absolute;
-  top: calc(290 / 420 * 100%);
-  left: calc(var(--x) / 360 * 100%);
-  display: grid;
-  justify-items: center;
-  gap: 0.4rem;
-  width: 31%;
-  translate: -50% -15.5cqi;
-  text-decoration: none;
-}
-
-.vc-net {
-  container-type: inline-size;
-}
-
-.vc-hub {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  border: clamp(0.35rem, 1.6cqi, 0.6rem) solid var(--exam);
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--exam);
-  transition: scale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vc-net__hub:hover .vc-hub {
-  scale: 1.06;
-}
-
-.vc-net__name {
-  font-size: clamp(0.9375rem, 3.6cqi, 1.2rem);
-  font-weight: 750;
-  letter-spacing: -0.01em;
-}
-
-/* Linia trasy biegnie przez całą stronę, a pociąg trzyma się środka ekranu. */
-.vc-route {
+.vd-ticket {
+  --pad-t: clamp(1.1rem, 0.9rem + 1vw, 1.6rem);
+  --notch: 0.75rem;
+  --stub-h: calc(3rem + 2 * var(--pad-t));
   position: relative;
-  padding-bottom: 1rem;
+  isolation: isolate;
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.vc-route::before {
+.vd-ticket::before {
   content: '';
   position: absolute;
-  top: 0;
-  bottom: 3rem;
-  left: calc(var(--pad) + var(--rail));
-  z-index: 1;
-  width: 0.5rem;
-  border-radius: 0 0 0.25rem 0.25rem;
+  inset: 0;
+  z-index: -1;
+  border-radius: 0 0 1.25rem 1.25rem;
+  box-shadow:
+    0 2px 2px rgb(29 31 34 / 0.1),
+    0 22px 34px -12px rgb(29 31 34 / 0.3);
+}
+
+.vd-ticket__paper {
+  position: relative;
+  display: grid;
+  border-radius: 0 0 1.25rem 1.25rem;
+  background: #fff;
+  overflow: hidden;
+  mask:
+    radial-gradient(
+      circle var(--notch) at 0% calc(100% - var(--stub-h)),
+      transparent calc(100% - 1px),
+      #000 100%
+    ),
+    radial-gradient(
+      circle var(--notch) at 100% calc(100% - var(--stub-h)),
+      transparent calc(100% - 1px),
+      #000 100%
+    );
+  mask-composite: intersect;
+}
+
+/* Giloszowe tło: cienkie fale w kolorze egzaminu, jak na papierze wartościowym. */
+.vd-ticket__paper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--exam);
+  opacity: 0.16;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='14'%3E%3Cpath d='M0 7c8-9 16-9 24 0s16 9 24 0' fill='none' stroke='%23000' stroke-width='1'/%3E%3C/svg%3E")
+    0 0 / 48px 14px;
+  transition: background-color 0.7s ease;
+  pointer-events: none;
+}
+
+.vd-ticket__main {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.9rem 1rem;
+  padding: var(--pad-t);
+}
+
+.vd-ticket__main > * {
+  grid-column: 1 / -1;
+}
+
+.vd-ticket__micro {
+  margin: calc(-0.35 * var(--pad-t)) calc(-1 * var(--pad-t)) 0;
+  color: var(--deep);
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.vd-ticket__route {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.vd-ticket__track {
+  flex: 1;
+  height: 0.5rem;
+  margin-right: -1.3rem;
+  border-radius: 0.25rem 0 0 0.25rem;
+  background: var(--exam);
+}
+
+.vd-ticket__marker {
+  position: relative;
+  font-size: 1.6rem;
+}
+
+.vd-ticket__name {
+  display: grid;
+  grid-column: 1;
+  align-self: center;
+  font-size: clamp(2.1rem, 1.2rem + 4.6vw, 3.2rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  letter-spacing: 0.004em;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+/* Pieczęć: rozeta z elips, a w środku obracająca się bryła egzaminu. */
+.vd-seal {
+  position: relative;
+  grid-column: 2;
+  width: clamp(6.5rem, 30vw, 8.5rem);
+  aspect-ratio: 1;
+}
+
+.vd-seal__rosette {
+  position: absolute;
+  inset: 0;
+  fill: none;
+  stroke: var(--exam);
+  stroke-width: 0.55;
+  opacity: 0.75;
+}
+
+.vd-seal__solid {
+  position: absolute;
+  inset: 21%;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--deep);
+}
+
+.vd-kind {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.vd-kind__option {
+  min-height: 2.75rem;
+  padding: 0 0.95rem;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.vd-kind__option[aria-pressed='true'] {
   background: var(--ink);
+  color: #fff;
 }
 
-.vc-route__train {
-  position: sticky;
-  top: 46svh;
-  z-index: 2;
-  height: 0;
-  margin-left: calc(var(--pad) + var(--rail) - 0.3rem);
+.vd-fields {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem 1.5rem;
+  align-items: end;
 }
 
-.vc-route__train span {
-  display: block;
-  width: 1.1rem;
-  height: 2.6rem;
-  border: 0.2rem solid var(--ground);
-  border-radius: 0.55rem;
-  background: var(--map-last);
+.vd-fields > div:first-child {
+  grid-row: span 2;
 }
 
-.vc-stop {
+.vd-fields dt {
+  color: var(--ink-soft);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.vd-fields dd {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.vd-fields__price {
+  font-size: clamp(2.6rem, 2rem + 3vw, 3.5rem);
+  font-weight: 800;
+  font-stretch: 82%;
+  letter-spacing: -0.02em;
+  line-height: 0.95;
+}
+
+/* Pasek hologramu. Kolory przesuwają się za myszą, a tam, gdzie przeglądarka to umie,
+   także przy przewijaniu. */
+.vd-ticket__foil {
+  height: 1.5rem;
+  margin-top: 0.2rem;
+  border-radius: 0.3rem;
+  background:
+    repeating-linear-gradient(115deg, rgb(255 255 255 / 0.55) 0 2px, transparent 2px 7px),
+    linear-gradient(100deg, #9fe8ff, #c9b6ff, #ffc2e6, #fff0a3, #a8ffd0, #9fe8ff, #c9b6ff, #ffc2e6)
+      calc((var(--shine) + var(--lean, 0)) * 100%) 0 / 320% 100%;
+}
+
+.vd-ticket__stub {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  height: var(--stub-h);
+  padding-inline: var(--pad-t);
+  border-top: 2px dashed var(--hairline);
+}
+
+/* Kod kreskowy z samych pasków. */
+.vd-ticket__code {
+  width: 6.5rem;
+  height: 2.4rem;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--ink) 0 2px,
+    transparent 2px 5px,
+    var(--ink) 5px 6px,
+    transparent 6px 8px,
+    var(--ink) 8px 11px,
+    transparent 11px 13px
+  );
+}
+
+.vd-print-enter-active {
+  transition:
+    clip-path 0.75s cubic-bezier(0.16, 1, 0.3, 1),
+    translate 0.75s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vd-print-enter-from {
+  clip-path: inset(0 -2rem 100% -2rem);
+  translate: 0 -3rem;
+}
+
+.vd-print-enter-to {
+  clip-path: inset(0 -2rem -4rem -2rem);
+}
+
+.vd-print-leave-active {
+  transition:
+    opacity 0.2s ease,
+    translate 0.25s ease-in;
+}
+
+.vd-print-leave-to {
+  opacity: 0;
+  translate: 0 2rem;
+}
+
+.vd-section {
   /* Sekcja poza ekranem nie jest liczona ani malowana, dopóki nie zbliży się do widoku. */
   content-visibility: auto;
   contain-intrinsic-size: auto 46rem;
-  position: relative;
   display: grid;
-  gap: 1.5rem;
-  padding: clamp(3rem, 2rem + 5vw, 6rem) var(--pad) clamp(2rem, 1.5rem + 3vw, 4rem)
-    calc(var(--pad) + var(--berth));
+  gap: clamp(2rem, 1.5rem + 2.5vw, 3.5rem);
+  padding: clamp(3.5rem, 2.5rem + 5vw, 7rem) var(--pad);
+  border-top: 1px solid var(--hairline);
   scroll-margin-top: var(--header-h);
 }
 
-.vc-stop__name {
-  position: relative;
+.vd-h2 {
   max-width: 16ch;
-  font-size: clamp(2.1rem, 1.4rem + 3.4vw, 4.25rem);
-  font-weight: 830;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.2rem, 1.5rem + 3.6vw, 4.5rem);
+  font-weight: 800;
+  font-stretch: 88%;
+  letter-spacing: -0.03em;
   line-height: 0.98;
 }
 
-/* Stacja na linii trasy, na wysokości nazwy. */
-.vc-stop__name::before {
-  content: '';
-  position: absolute;
-  top: 0.12em;
-  left: calc(-1 * var(--berth) + var(--rail) - 0.45rem);
-  z-index: 1;
-  width: 1.4rem;
-  height: 1.4rem;
-  border: 0.35rem solid var(--ink);
-  border-radius: 50%;
-  background: var(--surface);
-  transition: scale 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vc-stop__name.is-waiting::before {
-  scale: 0;
-}
-
-.vc-stop__name {
-  transition:
-    opacity 0.6s ease,
-    translate 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vc-stop__name.is-waiting {
-  opacity: 0;
-  translate: -1.25rem 0;
-}
-
-.vc-lead {
-  max-width: 46ch;
+.vd-lead {
+  max-width: 44ch;
+  margin-top: 1.1rem;
   font-size: clamp(1.1rem, 1rem + 0.5vw, 1.35rem);
   line-height: 1.45;
 }
 
-.vc-lines {
+.vd-control {
   display: grid;
-  gap: clamp(2.5rem, 2rem + 3vw, 4.5rem);
-}
-
-.vc-line {
-  display: grid;
-  grid-template-columns: 4.75rem minmax(0, 1fr);
-  gap: 0.75rem 1rem;
-  align-items: center;
-  scroll-margin-top: calc(var(--header-h) + 1rem);
-}
-
-.vc-line__hub {
-  border-width: clamp(0.35rem, 1.3vw, 0.6rem);
-  transition: scale 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.vc-line__hub.is-waiting {
-  scale: 0.6;
-}
-
-/* Na telefonie obok węzła stoi sama nazwa, a opis ma całą szerokość. */
-.vc-line__body {
-  display: contents;
-}
-
-.vc-line__body > :not(.vc-line__name) {
-  grid-column: 1 / -1;
-}
-
-.vc-line__name {
-  font-size: clamp(1.6rem, 1.2rem + 2vw, 2.75rem);
-  font-weight: 820;
-  letter-spacing: -0.03em;
-  line-height: 1;
-}
-
-.vc-line__text {
-  max-width: 46ch;
-}
-
-.vc-line__meta {
-  color: var(--ink-soft);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.vc-line .vc-actions {
-  margin-top: 0.4rem;
-}
-
-.vc-strip {
-  display: flex;
-  grid-column: 1 / -1;
-  min-width: 0;
-  margin-top: 0.5rem;
-  margin-right: calc(-1 * var(--pad));
-  overflow: hidden;
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    #000 2rem,
-    #000 calc(100% - 3rem),
-    transparent
-  );
-}
-
-.vc-strip__run {
-  display: flex;
-  flex: none;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 2.25rem clamp(1.5rem, 3vw, 2.5rem);
   padding: 0;
   list-style: none;
 }
 
-.vc-strip__stop {
-  position: relative;
-  padding: 1.7rem 1.75rem 0.25rem 0;
-  border-top: 0.55rem solid var(--exam);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.vc-strip__stop::before {
-  content: '';
-  position: absolute;
-  top: -0.85rem;
-  left: 0.15rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  border: 0.28rem solid var(--ink);
-  border-radius: 50%;
-  background: var(--surface);
-}
-
-.vc-crew {
+.vd-check {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 2.5rem;
-}
-
-.vc-branch {
-  --branch: var(--human);
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1rem;
+  gap: 0.5rem;
   align-content: start;
+  justify-items: start;
 }
 
-.vc-branch--duty {
-  --branch: var(--duty-line);
-}
-
-.vc-branch__sign {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 1.15rem;
-  font-weight: 780;
-  letter-spacing: -0.01em;
-}
-
-/* Znak linii jak na schemacie: litera w kole w kolorze linii. */
-.vc-branch__bullet {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: 50%;
-  background: var(--branch);
-  color: #fff;
-  font-size: 1.05rem;
-  font-weight: 800;
-}
-
-.vc-branch--duty .vc-branch__bullet {
-  color: #1d1f22;
-}
-
-.vc-branch__stops {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  margin-left: 0.8rem;
-  padding: 0;
-  list-style: none;
-}
-
-.vc-role {
-  position: relative;
-  padding: 0 0 1.6rem 2.1rem;
-  transition:
-    opacity 0.6s ease var(--reveal-delay, 0ms),
-    translate 0.8s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
-}
-
-.vc-role.is-waiting {
-  opacity: 0;
-  translate: 0 1.25rem;
-}
-
-.vc-role::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 0.5rem;
-  background: var(--branch);
-}
-
-.vc-role:last-child::after {
-  bottom: auto;
-  height: 0.9rem;
-}
-
-.vc-role::before {
-  content: '';
-  position: absolute;
-  top: 0.15rem;
-  left: -0.4rem;
-  z-index: 1;
-  width: 1.3rem;
-  height: 1.3rem;
-  border: 0.3rem solid var(--ink);
-  border-radius: 50%;
-  background: var(--surface);
-}
-
-/* Wynik liczy program: stacja kwadratowa, żeby różniła się od stacji obsadzonych przez ludzi. */
-.vc-role--program::before {
-  border-radius: 0.2rem;
-}
-
-.vc-role__what {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.8rem;
-  margin-bottom: 0.3rem;
+.vd-check__what {
+  margin-top: 0.75rem;
   font-size: clamp(1.25rem, 1.1rem + 0.7vw, 1.6rem);
   font-weight: 780;
-  letter-spacing: -0.018em;
-  line-height: 1.15;
+  letter-spacing: -0.015em;
 }
 
-.vc-role__who {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  color: var(--human);
-  font-size: 0.9375rem;
-  font-weight: 700;
-  letter-spacing: 0;
+.vd-check p {
+  max-width: 34ch;
+  color: #44484e;
 }
 
-.vc-role--program .vc-role__who {
-  color: var(--program);
-}
-
-.vc-role--duty .vc-role__who {
-  color: var(--duty);
-}
-
-.vc-role p {
-  max-width: 46ch;
-  color: var(--ink-soft);
-}
-
-.vc-crew__chat {
-  margin-top: 1.25rem;
-}
-
-.vc-card {
+/* Pieczątka: podwójna ramka i wersaliki, lekko krzywo, jak przybita ręką. */
+.vd-stamp {
+  --stamp: #2b3fa8;
+  rotate: var(--turn);
   transition:
-    opacity 0.6s ease,
-    translate 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    opacity 0.12s ease var(--reveal-delay, 0ms),
+    scale 0.35s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
 }
 
-.vc-card.is-waiting {
+.vd-stamp--program {
+  --stamp: #2c2f34;
+}
+
+.vd-stamp--duty {
+  --stamp: #b3261b;
+}
+
+.vd-stamp.is-waiting {
   opacity: 0;
-  translate: 0 1.5rem;
+  scale: 1.6;
 }
 
-.vc-steps {
-  margin-top: 0.5rem;
+.vd-stamp__ink {
+  display: block;
+  padding: 0.5rem 0.9rem 0.55rem;
+  border: 3px solid var(--stamp);
+  border-radius: 0.5rem;
+  outline: 1.5px solid var(--stamp);
+  outline-offset: 3px;
+  color: var(--stamp);
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-stretch: 78%;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  filter: url('#vd-ink');
 }
 
-/* Pole w kolorze najmocniejszej linii mapy pod opinie. */
-.vc-stop--field {
-  --card: #fff;
-  --note: #1d1f22;
-  background: #f4c53d;
+.vd-duo {
+  align-items: start;
 }
 
-.vc-tickets {
+.vd-rise {
+  transition:
+    opacity 0.7s ease var(--reveal-delay, 0ms),
+    translate 0.9s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+}
+
+.vd-rise.is-waiting {
+  opacity: 0;
+  translate: 0 1.75rem;
+}
+
+.vd-tickets {
   display: grid;
   gap: 1.25rem;
   padding: 0;
   list-style: none;
 }
 
-/* Stacja końcowa: większa, z podwójnym pierścieniem. */
-.vc-stop--last {
-  padding-bottom: clamp(4rem, 3rem + 5vw, 7rem);
-}
-
-.vc-stop--last .vc-stop__name::before {
-  top: 0.02em;
-  left: calc(-1 * var(--berth) + var(--rail) - 0.7rem);
-  width: 1.9rem;
-  height: 1.9rem;
-  box-shadow:
-    0 0 0 0.3rem var(--ground),
-    0 0 0 0.6rem var(--ink);
-}
-
-.vc-foot {
+.vd-foot {
   padding: 1.75rem var(--pad) 2.25rem;
   border-top: 1px solid var(--hairline);
-  color: var(--ink-soft);
   font-size: 0.9375rem;
 }
 
-@media (min-width: 44rem) {
-  .vc-top__nav {
-    display: flex;
+@media (max-width: 43.99rem) {
+  .vd-pick--small .vd-pick__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
-  .vc-top__login {
-    margin-left: 0.5rem;
-  }
-
-  .vc {
-    --rail: 1rem;
-    --berth: 4.5rem;
+  .vd-top__mark {
+    font-size: 0.9375rem;
   }
 }
 
 @media (min-width: 60rem) {
-  .vc-hero {
+  .vd-hero {
     grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
     align-items: center;
     min-height: calc(100svh - var(--header-h));
-  }
-
-  .vc-net {
-    max-width: none;
-  }
-
-  .vc-line {
-    grid-template-columns: 11rem minmax(0, 1fr);
-    gap: 1.1rem 2.5rem;
-    align-items: start;
-  }
-
-  .vc-line__body {
-    display: grid;
-    gap: 0.6rem;
-  }
-
-  .vc-crew {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: clamp(2rem, 5vw, 5rem);
+  }
+
+  .vd-duo {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    column-gap: clamp(1.5rem, 3vw, 2.5rem);
+  }
+
+  /* W wąskiej kolumnie zadanie próbne zostaje w jednym słupku. */
+  .vd-duo__trial {
+    grid-template-columns: none;
+  }
+
+  .vd-split {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: start;
+    column-gap: var(--gutter);
+  }
+
+  .vd-split__head {
+    position: sticky;
+    top: calc(var(--header-h) + 2rem);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .vc-net__track {
-    stroke-dasharray: 1;
-    animation: vc-draw 1.5s cubic-bezier(0.65, 0, 0.35, 1) calc(0.15s + var(--order) * 0.18s) both;
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .vd-ticket__foil {
+      animation: vd-foil linear both;
+      animation-timeline: scroll();
+      animation-range: 0 60rem;
+    }
+  }
+}
+
+/* Zarejestrowana liczba, żeby dało się ją płynnie animować przewijaniem. */
+@property --shine {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0.35;
+}
+
+@keyframes vd-foil {
+  from {
+    --shine: 0.05;
   }
 
-  .vc-net__stop,
-  .vc-net__start {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: vc-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.9s both;
-  }
-
-  .vc-net__start {
-    animation-delay: 0s;
-  }
-
-  .vc-net__hub .vc-hub {
-    animation: vc-pop 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.25s both;
-  }
-
-  .vc-strip__run {
-    animation: vc-run calc(var(--count) * 3.4s) linear infinite;
-  }
-
-  .vc-strip:hover .vc-strip__run {
-    animation-play-state: paused;
+  to {
+    --shine: 0.95;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .vc-net__train {
-    display: none;
-  }
-
-  /* Bez ruchu pas stacji da się przewinąć palcem. */
-  .vc-strip {
-    overflow-x: auto;
-  }
-
-  .vc-strip__run[aria-hidden='true'] {
-    display: none;
-  }
-}
-
-@keyframes vc-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-}
-
-@keyframes vc-pop {
-  from {
-    scale: 0;
-  }
-}
-
-@keyframes vc-run {
-  to {
-    translate: -100% 0;
+  .vd,
+  .vd-top,
+  .vd-ticket,
+  .vd-print-enter-active,
+  .vd-print-leave-active {
+    transition: none;
   }
 }
 </style>

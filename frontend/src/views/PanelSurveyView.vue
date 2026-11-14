@@ -73,6 +73,11 @@ const summary = computed(() =>
   }).sort((first, second) => second.looksMean - first.looksMean),
 )
 
+function pageName(id: string): string {
+  const page = PAGES.find((item) => item.id === id)
+  return page ? `${id.toUpperCase()}. ${page.name}` : id.toUpperCase()
+}
+
 function when(moment: string) {
   return new Date(moment).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' })
 }
@@ -161,7 +166,7 @@ function when(moment: string) {
           </thead>
           <tbody>
             <tr v-for="row in answers" :key="row.device_id + row.page">
-              <td>{{ row.page.toUpperCase() }}</td>
+              <td>{{ pageName(row.page) }}</td>
               <td class="survey__main">{{ row.looks }}</td>
               <td>{{ LIKERT[row.expensive - 1] }}</td>
               <td>{{ LIKERT[row.buying - 1] }}</td>
