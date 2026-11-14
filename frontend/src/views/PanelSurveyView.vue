@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import PanelTabs from '@/components/panel/PanelTabs.vue'
-import { LIKERT, PAGES } from '@/landing2/survey'
+import { LIKERT, PAGES, ROLES, type Role } from '@/landing2/survey'
 import { panelApi, type SurveyResults } from '@/panel/api'
 import { useProblems } from '@/panel/format'
 import '@/assets/panel.css'
@@ -24,13 +24,37 @@ function average(values: number[]): string {
   return mean.toLocaleString('pl-PL', { maximumFractionDigits: 1 })
 }
 
-const devices = computed(() => new Set(results.value.answers.map((row) => row.device_id)).size)
+// Rola jest cechą urządzenia: bierzemy ją z jego najnowszej oceny, w której jest podana.
+const roles = computed(() => {
+  const byDevice = new Map<string, Role>()
+  for (const row of results.value.answers) {
+    if (row.details.role && !byDevice.has(row.device_id)) {
+      byDevice.set(row.device_id, row.details.role)
+    }
+  }
+  return byDevice
+})
+
+const shownRole = ref<Role | 'wszyscy'>('wszyscy')
+
+function shown(deviceId: string): boolean {
+  return shownRole.value === 'wszyscy' || roles.value.get(deviceId) === shownRole.value
+}
+
+const answers = computed(() => results.value.answers.filter((row) => shown(row.device_id)))
+const podiums = computed(() => results.value.podiums.filter((row) => shown(row.device_id)))
+const devices = computed(() => new Set(answers.value.map((row) => row.device_id)).size)
+
+function roleName(deviceId: string): string {
+  const role = roles.value.get(deviceId)
+  return ROLES.find((item) => item.id === role)?.name.toLowerCase() ?? ''
+}
 
 // Jedna linia na wizytówkę, od najwyżej ocenianej.
 const summary = computed(() =>
   PAGES.map((page) => {
-    const rows = results.value.answers.filter((row) => row.page === page.id)
-    const points = results.value.podiums.reduce((sum, podium) => {
+    const rows = answers.value.filter((row) => row.page === page.id)
+    const points = podiums.value.reduce((sum, podium) => {
       const place = podium.pages.indexOf(page.id)
       return sum + (PODIUM_POINTS[place] ?? 0)
     }, 0)
@@ -63,7 +87,18 @@ function when(moment: string) {
     </ul>
 
     <section class="panel__card">
-      <h2>Wizytówki ({{ results.answers.length }} ocen z {{ devices }} urządzeń)</h2>
+      <div class="survey__toolbar">
+        <h2>Wizytówki ({{ answers.length }} ocen z {{ devices }} urządzeń)</h2>
+        <label class="survey__filter">
+          Kto ocenia
+          <select v-model="shownRole">
+            <option value="wszyscy">wszyscy</option>
+            <option v-for="item in ROLES" :key="item.id" :value="item.id">
+              {{ item.name.toLowerCase() }}
+            </option>
+          </select>
+        </label>
+      </div>
       <p class="survey__note">
         Wygląd w skali 1–10, „drogo” i „zakup” w skali 1–5 (1 to „zdecydowanie nie”). Podium: 3
         punkty za pierwsze miejsce, 2 za drugie, 1 za trzecie.
@@ -104,7 +139,7 @@ function when(moment: string) {
 
     <section class="panel__card">
       <h2>Wszystkie oceny</h2>
-      <div v-if="results.answers.length" class="survey__scroll">
+      <div v-if="answers.length" class="survey__scroll">
         <table class="survey">
           <thead>
             <tr>
@@ -113,6 +148,7 @@ function when(moment: string) {
               <th>Drogo</th>
               <th>Zakup</th>
               <th>Komentarz</th>
+              <th>Kto</th>
               <th>Urządzenie</th>
               <th>Przewinięte</th>
               <th>Czas</th>
@@ -124,12 +160,13 @@ function when(moment: string) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in results.answers" :key="row.device_id + row.page">
+            <tr v-for="row in answers" :key="row.device_id + row.page">
               <td>{{ row.page.toUpperCase() }}</td>
               <td class="survey__main">{{ row.looks }}</td>
               <td>{{ LIKERT[row.expensive - 1] }}</td>
               <td>{{ LIKERT[row.buying - 1] }}</td>
               <td class="survey__comment">{{ row.comment }}</td>
+              <td>{{ roleName(row.device_id) }}</td>
               <td>
                 {{ row.device }}
                 <span class="survey__soft">
@@ -161,6 +198,20 @@ function when(moment: string) {
   max-width: 70ch;
   color: var(--ink-soft);
   font-size: 0.9rem;
+}
+
+.survey__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.panel .survey__filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .survey__scroll {

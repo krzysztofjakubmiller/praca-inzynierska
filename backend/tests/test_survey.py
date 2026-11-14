@@ -36,6 +36,7 @@ def answer(**changes):
             "opened_by": "koniec-strony",
             "tried_task": True,
             "blocked_clicks": 2,
+            "role": "rodzic",
         },
     }
     return body | changes
@@ -48,6 +49,14 @@ def test_saves_answer_without_password(client, session):
     saved = session.scalars(select(SurveyAnswer)).one()
     assert (saved.device_id, saved.page, saved.looks, saved.scrolled) == (DEVICE, "a", 8, 62)
     assert saved.details["model"] == "SM-A546B"
+    assert saved.details["role"] == "rodzic"
+
+
+def test_rejects_unknown_role(client):
+    body = answer()
+    body["details"]["role"] = "sasiad"
+
+    assert client.put("/api/survey/answers/a", json=body).status_code == 422
 
 
 def test_second_answer_from_device_replaces_first(client, session):

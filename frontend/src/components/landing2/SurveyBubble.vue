@@ -2,10 +2,13 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import {
   LIKERT,
+  ROLES,
   answers,
   blockedClicks,
   nextPage,
+  role,
   saveAnswer,
+  setRole,
   type PageId,
   type Visit,
 } from '@/landing2/survey'
@@ -38,6 +41,9 @@ const comment = ref('')
 const asked = ref(0)
 const state = ref<'asking' | 'sending' | 'failed'>('asking')
 const changing = ref(false)
+
+// Kto otworzył ankietę bez odpowiedzi na „kim jesteś” z listy, dostaje to pytanie jako pierwsze.
+const askRole = role.value === null
 
 const saved = computed(() => answers.value[props.page])
 const next = computed(() => nextPage(props.page))
@@ -131,7 +137,7 @@ async function submit() {
 }
 
 // Nowe pytanie pojawia się na dole rozmowy, więc okno samo do niego zjeżdża.
-watch([asked, open, state], async () => {
+watch([asked, open, state, role], async () => {
   await nextTick()
   log.value?.scrollTo({ top: log.value.scrollHeight })
 })
@@ -183,8 +189,25 @@ onBeforeUnmount(() => {
           </template>
 
           <template v-else>
+            <template v-if="askRole">
+              <p class="survey__message">Zanim zaczniemy: kim jesteś?</p>
+              <div v-if="!role" class="survey__options" role="group" aria-label="Kim jesteś?">
+                <button
+                  v-for="item in ROLES"
+                  :key="item.id"
+                  class="survey__option"
+                  type="button"
+                  @click="setRole(item.id)"
+                >
+                  {{ item.name }}
+                </button>
+              </div>
+              <p v-else class="survey__reply">
+                {{ ROLES.find((item) => item.id === role)?.name }}
+              </p>
+            </template>
             <template v-for="(question, index) in QUESTIONS" :key="question.key">
-              <template v-if="index <= asked || draft[question.key] !== undefined">
+              <template v-if="role && (index <= asked || draft[question.key] !== undefined)">
                 <p class="survey__message">
                   {{ question.text }}
                   <span v-if="question.hint" class="survey__aside">{{ question.hint }}</span>

@@ -19,6 +19,14 @@ export const PAGES = [
 
 export type PageId = (typeof PAGES)[number]['id']
 
+export const ROLES = [
+  { id: 'uczen', name: 'Uczeń' },
+  { id: 'student', name: 'Student' },
+  { id: 'rodzic', name: 'Rodzic' },
+] as const
+
+export type Role = (typeof ROLES)[number]['id']
+
 export const LIKERT = ['Zdecydowanie nie', 'Nie', 'Średnio', 'Tak', 'Zdecydowanie tak']
 
 export interface Answer {
@@ -42,6 +50,7 @@ const KEYS = {
   answers: 'ankieta-oceny',
   order: 'ankieta-kolejnosc',
   podium: 'ankieta-podium',
+  role: 'ankieta-kim',
 }
 
 function read<T>(key: string, fallback: T): T {
@@ -52,6 +61,14 @@ function read<T>(key: string, fallback: T): T {
 /** Oceny wystawione z tego urządzenia, żeby lista i dymek pokazywały, co już ocenione. */
 export const answers = ref<Partial<Record<PageId, Answer>>>(read(KEYS.answers, {}))
 export const podium = ref<PageId[]>(read(KEYS.podium, []))
+
+/** Kim jest oceniający. Pytamy raz na urządzenie, a odpowiedź idzie z każdą oceną. */
+export const role = ref<Role | null>(read<Role | null>(KEYS.role, null))
+
+export function setRole(value: Role) {
+  role.value = value
+  localStorage.setItem(KEYS.role, JSON.stringify(value))
+}
 
 /** Rośnie, gdy oceniający kliknie przycisk prowadzący do części aplikacji zamkniętej hasłem. */
 export const blockedClicks = ref(0)
@@ -176,6 +193,7 @@ export async function saveAnswer(page: PageId, answer: Answer, visit: Visit) {
       opened_by: visit.openedBy,
       tried_task: visit.triedTask,
       blocked_clicks: visit.blockedClicks,
+      role: role.value,
     },
   })
   answers.value = { ...answers.value, [page]: answer }

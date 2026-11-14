@@ -1,7 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { PRODUCT_NAME } from '@/config/product'
-import { PAGES, answers, pageOrder, podium, savePodium, type PageId } from '@/landing2/survey'
+import {
+  PAGES,
+  ROLES,
+  answers,
+  pageOrder,
+  podium,
+  role,
+  savePodium,
+  setRole,
+  type PageId,
+} from '@/landing2/survey'
 
 // Miejsca na podium: tyle stron oceniający ustawia od najlepszej.
 const PLACES = 3
@@ -44,8 +54,25 @@ async function send() {
         Szukamy wyglądu strony głównej. Obejrzyj strony w dowolnej kolejności i oceń każdą: na
         każdej w prawym dolnym rogu czeka dymek z trzema krótkimi pytaniami.
       </p>
-      <p class="list__count" aria-live="polite">Ocenione: {{ rated }} z {{ pages.length }}</p>
     </header>
+
+    <section class="who" aria-labelledby="who-title">
+      <h2 id="who-title" class="who__title">Najpierw: kim jesteś?</h2>
+      <div class="who__options" role="group" aria-labelledby="who-title">
+        <button
+          v-for="item in ROLES"
+          :key="item.id"
+          class="who__option"
+          type="button"
+          :aria-pressed="role === item.id"
+          @click="setRole(item.id)"
+        >
+          {{ item.name }}
+        </button>
+      </div>
+    </section>
+
+    <p class="list__count" aria-live="polite">Ocenione: {{ rated }} z {{ pages.length }}</p>
 
     <ol class="list__pages">
       <li v-for="page in pages" :key="page.id">
@@ -135,8 +162,46 @@ async function send() {
 }
 
 .list__count {
+  margin-bottom: -1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+}
+
+.who {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.who__title {
+  font-size: clamp(1.35rem, 1.15rem + 0.9vw, 1.8rem);
+  font-weight: 780;
+  letter-spacing: -0.02em;
+}
+
+.who__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.who__option {
+  min-height: 2.9rem;
+  padding: 0 1.25rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.who__option[aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .list__pages {

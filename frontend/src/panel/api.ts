@@ -254,6 +254,7 @@ export interface SurveyAnswerRow {
     opened_by: 'klik' | 'koniec-strony'
     tried_task: boolean
     blocked_clicks: number
+    role?: 'uczen' | 'student' | 'rodzic' | null
   }
   updated_at: string
 }
