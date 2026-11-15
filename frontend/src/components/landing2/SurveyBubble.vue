@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import {
   LIKERT,
+  PAGES,
   ROLES,
   answers,
   blockedClicks,
@@ -18,7 +19,7 @@ const props = defineProps<{ page: PageId }>()
 const QUESTIONS = [
   {
     key: 'looks',
-    text: 'Ile na 10 wygląda ta strona?',
+    text: 'Ile na 10 dajesz tej stronie?',
     hint: '1 to bardzo źle, 10 to bardzo dobrze.',
   },
   { key: 'quality', text: 'Czy ta strona wygląda na produkt wysokiej jakości?', hint: '' },
@@ -46,6 +47,7 @@ const changing = ref(false)
 // Kto otworzył ankietę bez odpowiedzi na „kim jesteś” z listy, dostaje to pytanie jako pierwsze.
 const askRole = role.value === null
 
+const pageName = PAGES.find((item) => item.id === props.page)!.name
 const saved = computed(() => answers.value[props.page])
 const next = computed(() => nextPage(props.page))
 
@@ -174,7 +176,7 @@ onBeforeUnmount(() => {
           <span class="survey__avatar" aria-hidden="true">M</span>
           <p class="survey__who">
             <strong>Matma po kolei</strong>
-            <span>4 krótkie pytania o tę stronę</span>
+            <span>Oceniasz tylko tę stronę: {{ pageName }}</span>
           </p>
           <button class="survey__close" type="button" aria-label="Zamknij ankietę" @click="toggle">
             <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" /></svg>
@@ -184,7 +186,10 @@ onBeforeUnmount(() => {
         <div ref="log" class="survey__log">
           <template v-if="saved && !changing">
             <p class="survey__message">
-              Dziękujemy! Twoja ocena tej strony to {{ saved.looks }} na 10.
+              Dziękujemy! Strona „{{ pageName }}” dostała od ciebie {{ saved.looks }} na 10.
+              <span v-if="next" class="survey__aside"
+                >Następna strona też czeka na osobną ocenę.</span
+              >
             </p>
             <div class="survey__after">
               <RouterLink v-if="next" class="survey__send" :to="`/wizytowka/${next}`">
@@ -266,7 +271,9 @@ onBeforeUnmount(() => {
             <template v-if="asked === QUESTIONS.length">
               <label class="survey__message" for="survey-comment">
                 Chcesz coś dodać?
-                <span class="survey__aside">Komentarz nie jest obowiązkowy.</span>
+                <span class="survey__aside">
+                  Tylko o tej stronie. Inne strony ocenisz osobno.
+                </span>
               </label>
               <textarea
                 id="survey-comment"
@@ -274,7 +281,7 @@ onBeforeUnmount(() => {
                 class="survey__comment"
                 rows="2"
                 maxlength="2000"
-                placeholder="Co ci się podoba, a co przeszkadza?"
+                placeholder="Co ci się podoba na tej stronie, a co przeszkadza?"
               />
               <p v-if="state === 'failed'" class="survey__error" role="alert">
                 Nie udało się wysłać oceny. Sprawdź połączenie i spróbuj jeszcze raz.

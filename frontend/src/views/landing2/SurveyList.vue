@@ -59,12 +59,13 @@ async function send() {
   <main class="list">
     <header class="list__head">
       <p class="list__brand">{{ PRODUCT_NAME }}</p>
-      <h1 class="list__title">Która strona jest najlepsza?</h1>
-      <p class="list__lead">
-        Szukamy wyglądu strony głównej. Najważniejsze jest {{ mainCount }} stron poniżej: obejrzyj
-        je w dowolnej kolejności i oceń każdą. Na każdej w prawym dolnym rogu czeka dymek z czterema
-        krótkimi pytaniami.
-      </p>
+      <h1 class="list__title">Oceń każdą stronę osobno</h1>
+      <ol class="list__steps">
+        <li>Otwórz stronę z listy.</li>
+        <li>Kliknij dymek w prawym dolnym rogu i oceń <strong>tylko tę stronę</strong>.</li>
+        <li>Wróć tutaj i otwórz następną.</li>
+      </ol>
+      <p class="list__lead">Każda z {{ mainCount }} stron dostaje własną ocenę od 1 do 10.</p>
     </header>
 
     <section class="who" aria-labelledby="who-title">
@@ -100,7 +101,7 @@ async function send() {
             <span v-if="answers[page.id]" class="page__state page__state--done">
               twoja ocena: {{ answers[page.id]!.looks }}/10
             </span>
-            <span v-else class="page__state">do oceny</span>
+            <span v-else class="page__state page__state--todo">otwórz i oceń</span>
           </RouterLink>
         </li>
       </ol>
@@ -155,6 +156,31 @@ async function send() {
 .list__head {
   display: grid;
   gap: 0.9rem;
+}
+
+.list__steps {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 34ch;
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: clamp(1.2rem, 1.05rem + 0.8vw, 1.6rem);
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.list__steps strong {
+  font-weight: 850;
+  text-decoration: underline;
+  text-decoration-thickness: 0.1em;
+  text-underline-offset: 0.18em;
+}
+
+.page__state--todo {
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .list__brand {

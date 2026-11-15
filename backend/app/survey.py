@@ -65,8 +65,6 @@ class PodiumIn(BaseModel):
 def save_answer(page: Page, body: AnswerIn, session: Session = Depends(get_session)):
     values = body.model_dump(exclude={"device_id"})
     values["comment"] = (body.comment or "").strip() or None
-    # Ponowna ocena odpowiada już na nowe pytania, więc stara odpowiedź o „drogo” znika.
-    values["expensive"] = None
     statement = insert(SurveyAnswer).values(device_id=str(body.device_id), page=page, **values)
     session.execute(
         statement.on_conflict_do_update(
@@ -97,7 +95,6 @@ def results(session: Session = Depends(get_session)):
                 "device_id": answer.device_id,
                 "page": answer.page,
                 "looks": answer.looks,
-                "expensive": answer.expensive,
                 "quality": answer.quality,
                 "trust": answer.trust,
                 "buying": answer.buying,

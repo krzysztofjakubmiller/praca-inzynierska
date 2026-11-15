@@ -240,8 +240,6 @@ export interface SurveyAnswerRow {
   device_id: string
   page: string
   looks: number
-  /** Odpowiedź na pytanie z pierwszej wersji ankiety; nowe oceny jej nie mają. */
-  expensive: number | null
   quality: number | null
   trust: number | null
   buying: number

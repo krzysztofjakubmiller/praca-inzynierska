@@ -70,7 +70,6 @@ const summary = computed(() =>
       looks: average(looks),
       quality: average(given(rows.map((row) => row.quality))),
       trust: average(given(rows.map((row) => row.trust))),
-      expensive: average(given(rows.map((row) => row.expensive))),
       buying: average(rows.map((row) => row.buying)),
       scrolled: average(rows.map((row) => row.scrolled)),
       seconds: average(rows.map((row) => row.seconds)),
@@ -86,6 +85,16 @@ function pageName(id: string): string {
 
 function likert(value: number | null): string {
   return value === null ? '' : LIKERT[value - 1]!
+}
+
+// Cały odczyt z bazy w jednym pliku, do analizy poza panelem.
+function download() {
+  const file = new Blob([JSON.stringify(results.value, null, 2)], { type: 'application/json' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(file)
+  link.download = 'ankieta-wizytowek.json'
+  link.click()
+  URL.revokeObjectURL(link.href)
 }
 
 function when(moment: string) {
@@ -104,6 +113,9 @@ function when(moment: string) {
     <section class="panel__card">
       <div class="survey__toolbar">
         <h2>Wizytówki ({{ answers.length }} ocen z {{ devices }} urządzeń)</h2>
+        <button class="button button--quiet" type="button" @click="download">
+          Pobierz wyniki (JSON)
+        </button>
         <label class="survey__filter">
           Kto ocenia
           <select v-model="shownRole">
@@ -115,9 +127,8 @@ function when(moment: string) {
         </label>
       </div>
       <p class="survey__note">
-        Wygląd w skali 1–10, pozostałe pytania w skali 1–5 (1 to „zdecydowanie nie”). „Drogo” to
-        pytanie z pierwszej wersji ankiety, zastąpione przez jakość i zaufanie. Podium: 3 punkty za
-        pierwsze miejsce, 2 za drugie, 1 za trzecie.
+        Wygląd w skali 1–10, pozostałe pytania w skali 1–5 (1 to „zdecydowanie nie”). Podium: 3
+        punkty za pierwsze miejsce, 2 za drugie, 1 za trzecie.
       </p>
       <div class="survey__scroll">
         <table class="survey">
@@ -128,7 +139,6 @@ function when(moment: string) {
               <th>Wygląd</th>
               <th>Jakość</th>
               <th>Zaufanie</th>
-              <th>Drogo (stare)</th>
               <th>Zakup</th>
               <th>Podium</th>
               <th>Przewinięte %</th>
@@ -146,7 +156,6 @@ function when(moment: string) {
               <td class="survey__main">{{ row.looks }}</td>
               <td>{{ row.quality }}</td>
               <td>{{ row.trust }}</td>
-              <td>{{ row.expensive }}</td>
               <td>{{ row.buying }}</td>
               <td>{{ row.points || '' }}</td>
               <td>{{ row.scrolled }}</td>
@@ -167,7 +176,6 @@ function when(moment: string) {
               <th>Wygląd</th>
               <th>Jakość</th>
               <th>Zaufanie</th>
-              <th>Drogo (stare)</th>
               <th>Zakup</th>
               <th>Komentarz</th>
               <th>Kto</th>
@@ -187,7 +195,6 @@ function when(moment: string) {
               <td class="survey__main">{{ row.looks }}</td>
               <td>{{ likert(row.quality) }}</td>
               <td>{{ likert(row.trust) }}</td>
-              <td>{{ likert(row.expensive) }}</td>
               <td>{{ LIKERT[row.buying - 1] }}</td>
               <td class="survey__comment">{{ row.comment }}</td>
               <td>{{ roleName(row.device_id) }}</td>

@@ -51,7 +51,7 @@ def test_saves_answer_without_password(client, session):
     assert (saved.device_id, saved.page, saved.looks, saved.scrolled) == (DEVICE, "a", 8, 62)
     assert saved.details["model"] == "SM-A546B"
     assert saved.details["role"] == "dorosly"
-    assert (saved.quality, saved.trust, saved.expensive) == (4, 5, None)
+    assert (saved.quality, saved.trust) == (4, 5)
 
 
 def test_rejects_unknown_role(client):
