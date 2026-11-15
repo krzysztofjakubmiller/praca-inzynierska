@@ -40,25 +40,31 @@ const next = computed(() => list.value[index.value + 1])
   overflow: clip;
 }
 
+/* Na telefonie nagłówek ma dwa stałe wiersze, a nazwa wariantu się nie zawija, żeby jego
+   wysokość nie zmieniała się po wczytaniu czcionki. */
 .lab__top {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 0 1.25rem;
-  min-height: var(--header-h);
-  padding: 0.25rem var(--gutter);
+  padding: 0.25rem var(--gutter) 0.6rem;
   border-bottom: 1px solid var(--hairline);
   background: var(--ground);
   font-size: 0.9375rem;
+  white-space: nowrap;
 }
 
 .lab__back {
+  justify-self: start;
   font-weight: 800;
 }
 
 .lab__name {
-  margin-right: auto;
+  grid-row: 2;
+  grid-column: 1 / -1;
   color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .lab__name strong {
@@ -76,6 +82,18 @@ const next = computed(() => list.value[index.value + 1])
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
+}
+
+@media (min-width: 48rem) {
+  .lab__top {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .lab__name {
+    grid-row: 1;
+    grid-column: 2;
+  }
 }
 
 .lab__main {

@@ -349,6 +349,9 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
   line-height: 0.98;
   text-decoration: underline double var(--red) 0.07em;
   text-underline-offset: 0.14em;
+  /* Tytuł zostaje w jednym wierszu także w czcionce zastępczej, żeby strona nie skakała
+     po wczytaniu właściwej. */
+  white-space: nowrap;
 }
 
 .nb-hero__audience {
@@ -428,6 +431,9 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 }
 
 .nb-section {
+  /* Sekcja poza ekranem nie jest liczona ani malowana, dopóki nie zbliży się do widoku. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40rem;
   display: grid;
   gap: clamp(1.5rem, 1.2rem + 1.6vw, 2.5rem);
   padding: clamp(2.5rem, 2rem + 3vw, 4.5rem) var(--pad);
@@ -497,6 +503,7 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 .nb-tickets {
   --tp-body: #14213d;
   --tk-button: var(--pen);
+  content-visibility: visible;
   position: relative;
   z-index: 3;
 }

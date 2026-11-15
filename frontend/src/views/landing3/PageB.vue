@@ -417,9 +417,10 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
   padding: clamp(1rem, 0.5rem + 2vw, 2rem) var(--pad) clamp(2rem, 1.5rem + 3vw, 3.5rem);
 }
 
-/* Tablica: grafitowa płyta z rzędami klapek. Rozmiar pola liczy się z szerokości tablicy. */
+/* Tablica: grafitowa płyta z rzędami klapek. Na telefonie zajmuje całą szerokość strony,
+   więc rozmiar pola liczy się wprost z szerokości okna. */
 .vb-board {
-  --cell: calc((100cqi - 2.9rem) / 18);
+  --cell: calc((100vw - 2 * var(--gutter) - 4.5rem) / 18);
   --flap: #37342e;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -432,7 +433,6 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
     0 1px 0 rgb(255 255 255 / 0.08) inset,
     0 26px 40px -24px rgb(28 26 23 / 0.6);
   overflow: hidden;
-  container-type: inline-size;
 }
 
 .vb-board :focus-visible {
@@ -534,6 +534,8 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
 
 /* Trzy perony. Na szerokim ekranie stoją w jednym rzędzie. */
 .vb-platforms {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 60rem;
   display: grid;
   border-top: 1px solid var(--hairline);
 }
@@ -546,7 +548,6 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
   padding: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem) var(--gutter);
   border-bottom: 1px solid var(--hairline);
   scroll-margin-top: var(--header-h);
-  container-type: inline-size;
 }
 
 /* Tablica z nazwą stacji: emaliowany pas w kolorze egzaminu. */
@@ -558,7 +559,7 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
   border-radius: 0.2em;
   background: var(--sign);
   color: #fff;
-  font-size: clamp(1.7rem, 8.4cqi, 2.6rem);
+  font-size: clamp(1.7rem, 1.2rem + 2.6vw, 2.3rem);
   font-weight: 800;
   font-stretch: 75%;
   letter-spacing: 0.005em;
@@ -817,8 +818,10 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
     grid-column: 1;
   }
 
+  /* Obok tytułu tablica ma szerokość kolumny, więc tu pole liczy się z jej własnej szerokości. */
   .vb-board {
     --cell: min(1.75rem, calc((100cqi - 5.7rem) / 32));
+    container-type: inline-size;
     gap: 1rem;
     padding: 1.1rem 1.25rem 0;
   }

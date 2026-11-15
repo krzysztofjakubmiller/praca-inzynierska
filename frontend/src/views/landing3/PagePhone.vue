@@ -358,6 +358,9 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 }
 
 .ph-step {
+  /* Sekcja poza ekranem nie jest liczona ani malowana, dopóki nie zbliży się do widoku. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 44rem;
   display: grid;
   gap: 1.75rem;
   align-items: center;
@@ -428,6 +431,8 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 }
 
 .ph-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 40rem;
   display: grid;
   gap: clamp(1.5rem, 1.2rem + 1.6vw, 2.5rem);
   padding: clamp(2.5rem, 2rem + 3vw, 4.5rem) var(--pad);
@@ -479,6 +484,7 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 /* Sekcja z kasownikiem nie może przycinać swojej zawartości, bo zabrany bilet opuszcza ją dołem. */
 .ph-tickets {
   --tp-body: #17181a;
+  content-visibility: visible;
   position: relative;
   z-index: 3;
   background: var(--mint);

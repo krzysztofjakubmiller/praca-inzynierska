@@ -55,7 +55,7 @@ const LEGEND = [
 .shot {
   display: grid;
   gap: clamp(1.5rem, 1rem + 3vw, 4rem);
-  align-content: center;
+  align-content: start;
   align-items: center;
   padding: clamp(2.5rem, 2rem + 3vw, 5rem) max(var(--gutter), calc((100vw - 66rem) / 2));
   background: #e6e9f2;
