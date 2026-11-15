@@ -45,7 +45,13 @@ function shown(deviceId: string): boolean {
   return shownRole.value === 'wszyscy' || roles.value.get(deviceId) === shownRole.value
 }
 
-const answers = computed(() => results.value.answers.filter((row) => shown(row.device_id)))
+const shownPages = ref<string[]>(PAGES.map((page) => page.id))
+
+const answers = computed(() =>
+  results.value.answers.filter(
+    (row) => shown(row.device_id) && shownPages.value.includes(row.page),
+  ),
+)
 const podiums = computed(() => results.value.podiums.filter((row) => shown(row.device_id)))
 const devices = computed(() => new Set(answers.value.map((row) => row.device_id)).size)
 
@@ -56,7 +62,7 @@ function roleName(deviceId: string): string {
 
 // Jedna linia na wizytówkę, od najwyżej ocenianej.
 const summary = computed(() =>
-  PAGES.map((page) => {
+  PAGES.filter((page) => shownPages.value.includes(page.id)).map((page) => {
     const rows = answers.value.filter((row) => row.page === page.id)
     const points = podiums.value.reduce((sum, podium) => {
       const place = podium.pages.indexOf(page.id)
@@ -126,6 +132,13 @@ function when(moment: string) {
           </select>
         </label>
       </div>
+      <fieldset class="survey__pages">
+        <legend>Strony</legend>
+        <label v-for="page in PAGES" :key="page.id">
+          <input v-model="shownPages" type="checkbox" :value="page.id" />
+          {{ page.id.toUpperCase() }}. {{ page.name }}
+        </label>
+      </fieldset>
       <p class="survey__note">
         Wygląd w skali 1–10, pozostałe pytania w skali 1–5 (1 to „zdecydowanie nie”). Podium: 3
         punkty za pierwsze miejsce, 2 za drugie, 1 za trzecie.
@@ -243,6 +256,27 @@ function when(moment: string) {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.survey__pages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.survey__pages legend {
+  margin-bottom: 0.4rem;
+  color: var(--ink-soft);
+  font-weight: 650;
+}
+
+.survey__pages label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
 .survey__scroll {
