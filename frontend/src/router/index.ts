@@ -143,6 +143,51 @@ const router = createRouter({
       meta: { public: true, survey: true },
     },
     {
+      path: '/wizytowka3/:tab(mapa|bilet)?',
+      name: 'variants-3',
+      component: () => import('@/views/landing3/VariantsIndex.vue'),
+      props: (route) => ({ tab: route.params.tab || 'strony' }),
+      meta: { title: 'Wizytówka 3.0' },
+    },
+    {
+      path: '/wizytowka3/a',
+      component: () => import('@/views/landing3/PageA.vue'),
+      meta: { title: 'Stacje w kolorze 3.0' },
+    },
+    {
+      path: '/wizytowka3/b',
+      component: () => import('@/views/landing3/PageB.vue'),
+      meta: { title: 'Tablica odjazdów 3.0' },
+    },
+    {
+      path: '/wizytowka3/zeszyt',
+      component: () => import('@/views/landing3/PageNotebook.vue'),
+      meta: { title: 'Zeszyt w kratkę' },
+    },
+    {
+      path: '/wizytowka3/telefon',
+      component: () => import('@/views/landing3/PagePhone.vue'),
+      meta: { title: 'Aplikacja w telefonie' },
+    },
+    {
+      path: '/wizytowka3/:look(a|b)/:screen(logowanie|mapa|zadanie)',
+      component: () => import('@/views/landing3/AppScreen.vue'),
+      props: true,
+      meta: { title: 'Ekran aplikacji' },
+    },
+    {
+      path: '/wizytowka3/mapa/:variant(1|2|3|4|5)',
+      component: () => import('@/views/landing3/MapLab.vue'),
+      props: true,
+      meta: { title: 'Mapa tematów: wariant' },
+    },
+    {
+      path: '/wizytowka3/bilet/:variant(1|2|3|4|5)',
+      component: () => import('@/views/landing3/TicketLab.vue'),
+      props: true,
+      meta: { title: 'Bilet: wariant' },
+    },
+    {
       path: '/style',
       name: 'styles',
       component: () => import('@/views/styles/StylesIndex.vue'),
