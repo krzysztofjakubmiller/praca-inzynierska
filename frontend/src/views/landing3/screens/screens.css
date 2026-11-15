@@ -1,0 +1,207 @@
+/* Ekrany aplikacji w stylu dwóch wizytówek. Układ jest wspólny, a kolory, krój nagłówków
+   i przyciski biorą się z klasy stylu: a to Stacje w kolorze, b to jasna Tablica odjazdów. */
+.as {
+  display: flex;
+  flex-direction: column;
+  min-height: 100svh;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+/* Stacje w kolorze: granatowe pole, białe napisy i linie w jasnych odcieniach kolorów egzaminów. */
+.as--a {
+  --ground: #16224f;
+  --surface: #1f2c61;
+  --card: #1f2c61;
+  --ink: #fff;
+  --ink-raised: #e8ecf8;
+  --ink-soft: rgb(255 255 255 / 0.82);
+  --hairline: rgb(255 255 255 / 0.24);
+  --danger: #ffb4a8;
+  --correct: #7be0a6;
+  --accent: #fff;
+  --accent-ink: #16224f;
+  --duty: #9fc3ff;
+  --radius: 1.25rem;
+  --chat-task: #2a3870;
+  --chat-duty: #2a3870;
+  --sign-fill: #168344;
+  --line-1: #ffd35c;
+  --line-2: #7fb0ff;
+  --line-3: #4fd58d;
+  --line-4: #ff7a69;
+  --line-5: #ffa867;
+  --line-6: #cdb2ff;
+  --map-outline: #8d9bcb;
+  --map-progress: #fff;
+  --map-last: #ff7a69;
+  --track: rgb(255 255 255 / 0.2);
+  color-scheme: dark;
+  scrollbar-color: #5c6aa3 var(--ground);
+}
+
+/* Ekran zadania w stylu A jest jasny, żeby długo czytany tekst stał na białej karcie. */
+.as--a.as--zadanie {
+  --ground: #e6e9f2;
+  --surface: #fff;
+  --card: #fff;
+  --ink: #101421;
+  --ink-raised: #2b3147;
+  --ink-soft: #4a5270;
+  --hairline: rgb(22 34 79 / 0.16);
+  --danger: #b42318;
+  --correct: #157a3a;
+  --accent: #16224f;
+  --accent-ink: #fff;
+  --duty: #2a66d6;
+  --chat-task: #e6e9f2;
+  --chat-duty: #e6e9f2;
+  --track: rgb(22 34 79 / 0.14);
+  color-scheme: light;
+  scrollbar-color: auto;
+}
+
+.as--b {
+  --ground: #f3efe6;
+  --surface: #fffdf8;
+  --card: #fffdf8;
+  --ink: #1c1a17;
+  --ink-raised: #34312b;
+  --ink-soft: #5d584e;
+  --hairline: rgb(28 26 23 / 0.15);
+  --danger: #b42318;
+  --correct: #157a3a;
+  --accent: #ffb224;
+  --accent-ink: #1b1400;
+  --duty: #8a5200;
+  --radius: 1rem;
+  --chat-task: #ebe5d8;
+  --chat-duty: #ebe5d8;
+  --sign-fill: #168344;
+  --line-1: #d48a00;
+  --line-2: #2a66d6;
+  --line-3: #168344;
+  --line-4: #d42f23;
+  --line-5: #7847a6;
+  --line-6: #078a82;
+  --map-outline: #8a8578;
+  --map-progress: var(--ink);
+  --map-last: #e2531f;
+  --track: rgb(28 26 23 / 0.14);
+}
+
+.as ::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.as :focus-visible {
+  outline-color: var(--ink);
+}
+
+.as-top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: var(--header-h);
+  padding-inline: var(--gutter);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.as-top__mark {
+  margin-right: auto;
+  font-weight: 800;
+  font-stretch: 82%;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.as--b .as-top__mark {
+  text-transform: uppercase;
+}
+
+.as-top__screens {
+  display: flex;
+  gap: 0.15rem;
+}
+
+.as-top__screen {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-inline: 0.6rem;
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  font-weight: 650;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.as-top__screen[aria-current='page'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 0.14em;
+  text-underline-offset: 0.3em;
+}
+
+/* Główny przycisk ekranu ma kolor stylu, pozostałe zostają spokojne. */
+.as-cta {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.as-cta:hover {
+  border-color: color-mix(in srgb, var(--accent) 86%, var(--ground));
+  background: color-mix(in srgb, var(--accent) 86%, var(--ground));
+}
+
+.as-label {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+  font-weight: 650;
+}
+
+.as--b .as-label {
+  font-size: 0.8125rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.as-title {
+  font-weight: 800;
+  font-stretch: 76%;
+  letter-spacing: 0.003em;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+/* Tablica z klapkami w jasnym stylu B: jedyny ciemny element ekranu. */
+.as-board {
+  --flap: #37342e;
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  background: #24221e;
+  color: #f6f2e9;
+}
+
+.as-flaps {
+  color: #f6f2e9;
+}
+
+.as-flaps--amber {
+  --flap: #3d3421;
+  color: #ffb224;
+}
+
+/* Liczba w stylu A: zamiast klapek zwykły, mocny zapis. */
+.as-count {
+  font-size: 1.35rem;
+  font-weight: 800;
+  font-stretch: 82%;
+  font-variant-numeric: tabular-nums;
+}
