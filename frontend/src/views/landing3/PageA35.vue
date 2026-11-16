@@ -118,7 +118,7 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
           <span class="va-top__label">Bilety</span>
         </a>
       </nav>
-      <RouterLink class="va-top__login" to="/wizytowka3/a/logowanie">Zaloguj się</RouterLink>
+      <RouterLink class="va-top__login" :to="{ name: 'login' }">Zaloguj się</RouterLink>
     </header>
 
     <main>
