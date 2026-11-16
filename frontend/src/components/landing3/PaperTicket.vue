@@ -99,7 +99,14 @@ function level(event: PointerEvent) {
           </svg>
           <span class="tk__disc" />
           <div class="tk__solid">
-            <SolidFigure :kind="exam.solid" :fill="0.5" :weight="0.045" :spin="0.3" />
+            <!-- Bryła nie zmienia kształtu w locie, więc każdy egzamin dostaje własną. -->
+            <SolidFigure
+              :key="exam.id"
+              :kind="exam.solid"
+              :fill="0.5"
+              :weight="0.045"
+              :spin="0.3"
+            />
           </div>
         </div>
 
