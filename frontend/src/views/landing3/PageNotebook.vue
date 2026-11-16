@@ -326,12 +326,15 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 
 .nb-hero {
   display: grid;
+  /* Kolumna nie rozpycha się do szerokości tytułu, który w czcionce zastępczej jest szerszy. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 1.5rem;
   padding: clamp(2rem, 1.5rem + 4vw, 5rem) var(--pad) clamp(2rem, 1.5rem + 3vw, 4rem);
 }
 
 .nb-hero__body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.9rem;
   justify-items: start;
 }
