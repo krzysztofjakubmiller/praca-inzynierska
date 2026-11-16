@@ -4,8 +4,8 @@ import { PRODUCT_NAME } from '@/config/product'
 import { plural } from '@/utils/plural'
 import { TICKET_NAMES, formatPrice, type TicketKind } from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
-import StationMarker from '@/components/landing/StationMarker.vue'
 import SolidFigure from '@/components/landing2/SolidFigure.vue'
+import TicketTrack, { type TrackMode } from './TicketTrack.vue'
 
 // Papierowy bilet na jeden egzamin. Kolory bierze ze zmiennych --tk-*, więc każda strona
 // ubiera go po swojemu, a długość ma zawsze tę samą, niezależnie od wybranego okresu.
@@ -17,8 +17,9 @@ withDefaults(
     /** Bez przełącznika bilet tylko pokazuje okres wybrany gdzie indziej. */
     pickKind?: boolean
     buyLabel?: string
+    track?: TrackMode
   }>(),
-  { pickKind: true, buyLabel: 'Kup bilet' },
+  { pickKind: true, buyLabel: 'Kup bilet', track: 'spring' },
 )
 
 const kind = defineModel<TicketKind>('kind', { required: true })
@@ -75,16 +76,18 @@ function level(event: PointerEvent) {
     <article class="tk__paper">
       <div class="tk__main">
         <p class="tk__micro" aria-hidden="true">{{ `${PRODUCT_NAME} · `.repeat(14) }}</p>
-        <div class="tk__route" aria-hidden="true">
-          <span>Start</span>
-          <span class="tk__track" />
-          <StationMarker :shape="exam.solid" class="tk__marker" />
-        </div>
+        <TicketTrack
+          :shape="exam.solid"
+          :mode="track"
+          :days="days"
+          aria-hidden="true"
+          @arrive="$emit('buy')"
+        />
         <h3 class="tk__name">
           <span v-for="word in exam.name.split(' ')" :key="word">{{ word }}</span>
         </h3>
 
-        <div class="tk__seal" aria-hidden="true">
+        <div class="tk__seal" aria-hidden="true" @pointerdown.stop @pointermove.stop>
           <svg class="tk__rosette" viewBox="-50 -50 100 100">
             <ellipse
               v-for="angle in rosette"
@@ -94,14 +97,9 @@ function level(event: PointerEvent) {
               :transform="`rotate(${angle})`"
             />
           </svg>
+          <span class="tk__disc" />
           <div class="tk__solid">
-            <SolidFigure
-              :kind="exam.solid"
-              :drag="false"
-              :fill="0.86"
-              :weight="0.045"
-              :spin="0.3"
-            />
+            <SolidFigure :kind="exam.solid" :fill="0.5" :weight="0.045" :spin="0.3" />
           </div>
         </div>
 
@@ -238,29 +236,6 @@ function level(event: PointerEvent) {
   overflow: hidden;
 }
 
-.tk__route {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.9375rem;
-  font-weight: 700;
-}
-
-.tk__track {
-  flex: 1;
-  height: 0.5rem;
-  margin-right: -1.3rem;
-  border-radius: 0.25rem 0 0 0.25rem;
-  background: var(--tk-exam);
-}
-
-.tk__marker {
-  --marker-fill: var(--paper);
-  --marker-stroke: var(--ink);
-  position: relative;
-  font-size: 1.6rem;
-}
-
 .tk__name {
   display: grid;
   grid-column: 1;
@@ -273,7 +248,8 @@ function level(event: PointerEvent) {
   text-transform: uppercase;
 }
 
-/* Pieczęć: rozeta z elips, a w środku obracająca się bryła egzaminu. */
+/* Pieczęć: rozeta z elips, a w środku bryła egzaminu, którą da się obrócić. Bryłę można
+   złapać na całej pieczęci, bo sam środek jest za mały na palec. */
 .tk__seal {
   position: relative;
   grid-column: 2;
@@ -290,11 +266,16 @@ function level(event: PointerEvent) {
   opacity: 0.75;
 }
 
-.tk__solid {
+.tk__disc {
   position: absolute;
   inset: 21%;
   border-radius: 50%;
   background: var(--paper);
+}
+
+.tk__solid {
+  position: absolute;
+  inset: 0;
   color: var(--deep);
 }
 
