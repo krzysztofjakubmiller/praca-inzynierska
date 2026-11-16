@@ -19,7 +19,7 @@ withDefaults(
     buyLabel?: string
     track?: TrackMode
   }>(),
-  { pickKind: true, buyLabel: 'Kup bilet', track: 'spring' },
+  { pickKind: true, buyLabel: 'Kup bilet', track: 'days' },
 )
 
 const kind = defineModel<TicketKind>('kind', { required: true })
@@ -105,7 +105,7 @@ function level(event: PointerEvent) {
 
         <div v-if="pickKind" class="tk__kind" role="group" aria-label="Rodzaj biletu">
           <button
-            v-for="option in ['annual', 'monthly'] as const"
+            v-for="option in ['monthly', 'annual'] as const"
             :key="option"
             class="tk__option"
             type="button"

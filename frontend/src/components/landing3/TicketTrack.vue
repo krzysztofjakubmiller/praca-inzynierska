@@ -6,7 +6,7 @@ import { plural } from '@/utils/plural'
 import StationMarker from '@/components/landing/StationMarker.vue'
 
 // Pasek trasy na bilecie, od startu do stacji egzaminu. W każdym trybie da się go złapać:
-// 'spring' odciąga stację, a ta wraca jak na sprężynie, 'days' przy odciąganiu liczy dni
+// 'spring' odciąga stację, a ta wraca jak na sprężynie, 'days' robi to samo i liczy dni
 // do egzaminu, a w 'ride' wagonik dowieziony do stacji kupuje bilet.
 export type TrackMode = 'spring' | 'days' | 'ride'
 
@@ -15,7 +15,7 @@ const emit = defineEmits<{ arrive: [] }>()
 
 const STIFFNESS = 300
 const DAMPING = 20
-// Poza końcem paska uchwyt idzie za palcem tylko w tej części.
+// Za stacją uchwyt idzie za palcem tylko w tej części. W lewo zatrzymuje się na starcie.
 const RESISTANCE = 0.25
 // Wagonik puszczony tak blisko stacji uznajemy za dowieziony.
 const ARRIVED_AT = 0.94
@@ -54,9 +54,7 @@ function grab(event: PointerEvent) {
 function move(event: PointerEvent) {
   if (!held.value) return
   const raw = pointerAt(event) - grabbedAt
-  if (raw > 1) at.value = 1 + (raw - 1) * RESISTANCE
-  else if (raw < 0) at.value = raw * RESISTANCE
-  else at.value = raw
+  at.value = raw > 1 ? 1 + (raw - 1) * RESISTANCE : Math.max(0, raw)
 }
 
 function release() {
