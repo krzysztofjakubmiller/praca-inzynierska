@@ -45,7 +45,32 @@ const PICK_AFTER = 1000
 const BOARD_TEXT = tidy(
   'Tablica pokazuje na zmianę, ile dni zostało do egzaminu i od ilu złotych jest bilet.',
 )
-const BOARD_NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
+const DEMO_TEXT = tidy(
+  'Bez konta i bez logowania. Obejrzyj mapę tematów i ekran zadania tak, jak widzi je uczeń.',
+)
+const DEMOS = [
+  {
+    name: 'Mapa tematów',
+    text: 'Stacje, postęp i powtórki na dziś.',
+    to: '/wizytowka3/a/mapa',
+  },
+  {
+    name: 'Ekran zadania',
+    text: 'Zadanie z arkusza, odpowiedź i pomoc Dyżurnego.',
+    to: '/wizytowka3/a/zadanie',
+  },
+  { name: 'Teoria', text: 'Krótkie wyjaśnienie tematu przed zadaniami.', to: '/wkrotce' },
+]
+const TALK = [
+  { name: 'Czat', text: 'Piszesz pytanie zwykłymi słowami, tak jak do korepetytora.' },
+  {
+    name: 'Klawiatura naukowa',
+    text: 'Ułamki, potęgi i pierwiastki wpisujesz jednym przyciskiem.',
+  },
+  { name: 'Tablica', text: 'Liczysz i rysujesz na tablicy, a Dyżurny czyta to, co na niej jest.' },
+  { name: 'Zdjęcie zeszytu', text: 'Robisz zdjęcie rozwiązania w zeszycie i wysyłasz je Dyżurnemu.' },
+]
+const BOARD_NOTICE ='Typy zadań z egzaminu · nowe liczby w każdej powtórce'
 const TOUCH_TEXT = tidy('Dotknij ceny na ekranie kasownika, a wydrukuje się twój bilet.')
 
 const router = useRouter()
@@ -197,6 +222,13 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
               </div>
             </li>
           </ul>
+          <h3 class="va-talk__title">Jak rozmawiać z Dyżurnym</h3>
+          <ul class="va-talk">
+            <li v-for="way in TALK" :key="way.name" class="va-talk__way">
+              <strong>{{ way.name }}</strong>
+              <span>{{ way.text }}</span>
+            </li>
+          </ul>
         </div>
         <div v-reveal class="va-crew__chat">
           <DutyChat />
@@ -205,10 +237,22 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
 
       <section class="va-section va-trial" aria-label="Zadanie na próbę">
         <TrialTask v-reveal />
-        <RouterLink class="va-more" to="/wizytowka3/a/zadanie">
-          Zobacz ekran zadania w aplikacji
-          <ArrowIcon />
-        </RouterLink>
+      </section>
+
+      <section id="demo" class="va-section va-demo va-field" aria-labelledby="va-demo-title">
+        <div class="va-demo__head">
+          <h2 id="va-demo-title" class="va-h2">Zajrzyj do aplikacji</h2>
+          <p class="va-lead">{{ DEMO_TEXT }}</p>
+        </div>
+        <ul class="va-demo__list">
+          <li v-for="item in DEMOS" :key="item.name">
+            <RouterLink class="va-demo__link" :to="item.to">
+              <strong>{{ item.name }}</strong>
+              <span>{{ item.text }}</span>
+              <ArrowIcon />
+            </RouterLink>
+          </li>
+        </ul>
       </section>
 
       <section id="jak-to-dziala" class="va-section va-split" aria-labelledby="va-steps-title">
@@ -731,6 +775,92 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
   justify-self: stretch;
 }
 
+.va-talk__title {
+  font-size: clamp(1.2rem, 1.1rem + 0.6vw, 1.5rem);
+  font-weight: 780;
+  letter-spacing: -0.015em;
+}
+
+.va-talk {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  padding: 0;
+  list-style: none;
+}
+
+.va-talk__way {
+  display: grid;
+  gap: 0.3rem;
+  align-content: start;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: var(--card-shadow);
+}
+
+.va-talk__way strong {
+  color: var(--duty);
+  font-weight: 780;
+}
+
+.va-talk__way span {
+  color: var(--ink-soft);
+  line-height: 1.4;
+}
+
+/* Wejście do podglądu aplikacji: trzy duże odnośniki na granatowym polu. */
+.va-demo {
+  --field: var(--navy);
+}
+
+.va-demo__head {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+}
+
+.va-demo__list {
+  display: grid;
+  padding: 0;
+  border-bottom: 1px solid var(--hairline);
+  list-style: none;
+}
+
+.va-demo__link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem 1rem;
+  align-items: center;
+  padding-block: 1.1rem;
+  border-top: 1px solid var(--hairline);
+  text-decoration: none;
+}
+
+.va-demo__link strong {
+  font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.2rem);
+  font-weight: 800;
+  font-stretch: 88%;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+.va-demo__link span {
+  grid-column: 1;
+  color: var(--ink-soft);
+}
+
+.va-demo__link svg {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  font-size: 1.5rem;
+  transition: translate 0.2s ease;
+}
+
+.va-demo__link:hover svg {
+  translate: 0.3rem 0;
+}
+
 .va-voices {
   --card: #fff;
   background: #e6e9f2;
@@ -858,6 +988,7 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
 
   .va-split,
   .va-map,
+  .va-demo,
   .va-tickets {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     align-items: start;

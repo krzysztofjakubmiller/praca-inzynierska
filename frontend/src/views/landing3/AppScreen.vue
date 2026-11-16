@@ -14,7 +14,6 @@ type Screen = 'logowanie' | 'mapa' | 'zadanie'
 const props = defineProps<{ look: Look; screen: Screen }>()
 
 const SCREENS: { id: Screen; name: string }[] = [
-  { id: 'logowanie', name: 'Logowanie' },
   { id: 'mapa', name: 'Mapa' },
   { id: 'zadanie', name: 'Zadanie' },
 ]

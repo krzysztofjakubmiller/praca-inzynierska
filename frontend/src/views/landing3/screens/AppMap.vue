@@ -16,6 +16,8 @@ defineProps<{ look: Look }>()
 const map: TopicMap = BASIC_MAP
 const progress: MapProgress<string> = BASIC_DEMO_PROGRESS
 
+// W podglądzie da się obejrzeć mapę, ale ćwiczenie i powtórki wymagają konta.
+const locked = ref(false)
 const selected = ref<string | undefined>(progress.lastStation)
 const station = computed(() => (selected.value ? map.graph.stations[selected.value] : undefined))
 const topic = computed(() => (selected.value ? progress.topics[selected.value] : undefined))
@@ -40,7 +42,9 @@ const due = Object.values(progress.topics).reduce((sum, item) => sum + (item?.du
         />
         <strong v-else class="as-count">{{ daysText }}</strong>
       </div>
-      <button class="button as-cta map__reviews" type="button">Powtórki na dziś: {{ due }}</button>
+      <button class="button as-cta map__reviews" type="button" @click="locked = true">
+        Powtórki na dziś: {{ due }}
+      </button>
     </div>
 
     <main class="map__area">
@@ -64,11 +68,30 @@ const due = Object.values(progress.topics).reduce((sum, item) => sum + (item?.du
         </div>
       </dl>
       <div class="map__actions">
-        <RouterLink class="button as-cta" :to="`/wizytowka3/${look}/zadanie`">Ćwicz</RouterLink>
-        <button class="button button--quiet" type="button">Powtórki</button>
-        <button class="button button--quiet" type="button">Teoria</button>
+        <button class="button as-cta" type="button" @click="locked = true">Ćwicz</button>
+        <button class="button button--quiet" type="button" @click="locked = true">Powtórki</button>
+        <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">Teoria</RouterLink>
       </div>
     </section>
+
+    <div v-if="locked" class="map__lock" @click.self="locked = false">
+      <div class="map__lock-card" role="alertdialog" aria-labelledby="map-lock-title">
+        <h2 id="map-lock-title" class="as-title">Do tego potrzebne jest konto</h2>
+        <p>
+          W podglądzie obejrzysz mapę i przykładowe zadanie. Ćwiczenie tematów i powtórki
+          działają po zalogowaniu.
+        </p>
+        <div class="map__actions">
+          <RouterLink class="button as-cta" :to="{ name: 'register' }">Załóż konto</RouterLink>
+          <RouterLink class="button button--quiet" :to="`/wizytowka3/${look}/zadanie`">
+            Przykładowe zadanie
+          </RouterLink>
+          <button class="button button--quiet" type="button" @click="locked = false">
+            Wróć do mapy
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -168,6 +191,33 @@ const due = Object.values(progress.topics).reduce((sum, item) => sum + (item?.du
   display: flex;
   flex-wrap: wrap;
   gap: 0.6rem;
+}
+
+.map__lock {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: end center;
+  padding: var(--gutter);
+  background: rgb(0 0 0 / 0.5);
+}
+
+.map__lock-card {
+  display: grid;
+  gap: 0.9rem;
+  width: min(100%, 30rem);
+  padding: 1.4rem;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 50px -20px rgb(0 0 0 / 0.6);
+}
+
+@media (min-width: 40rem) {
+  .map__lock {
+    place-items: center;
+  }
 }
 
 @media (min-width: 64rem) {
