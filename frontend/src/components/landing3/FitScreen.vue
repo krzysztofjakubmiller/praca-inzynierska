@@ -50,29 +50,51 @@ function show(always = false) {
   outer.value.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' })
 }
 
+// Przejazd do kasownika trwa tyle niezależnie od odległości.
+const GLIDE_MS = 600
+let glideFrame = 0
+
+function centerTop(): number {
+  const box = outer.value!.getBoundingClientRect()
+  return window.scrollY + box.top - (window.innerHeight - box.height) / 2
+}
+
+function stopGlide() {
+  cancelAnimationFrame(glideFrame)
+  window.removeEventListener('wheel', stopGlide)
+  window.removeEventListener('touchstart', stopGlide)
+}
+
+// Łagodny start i hamowanie.
+function ease(progress: number): number {
+  return progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2
+}
+
 /**
- * Ustawia zawartość na środku wysokości okna: płynnie albo jednym przeskokiem.
- * Przeskok musi być wprost 'instant', bo 'auto' bierze płynne przewijanie ze stylu strony.
+ * Szybki, płynny przejazd strony, aż zawartość stanie na środku wysokości okna. Płynne
+ * przewijanie przeglądarki liczy cel raz, a sekcje po drodze dostają prawdziwą wysokość
+ * dopiero na ekranie. Tutaj cel jest liczony w każdej klatce, więc zmiana wysokości
+ * wchodzi w ruch zamiast skoku. Ruch kółkiem albo palcem przerywa przejazd.
  */
-function center(smooth: boolean) {
-  const go = (behavior: ScrollBehavior) =>
-    outer.value?.scrollIntoView({ block: 'center', behavior })
-  // Sekcje po drodze dostają prawdziwą wysokość dopiero, gdy są na ekranie, więc położenie
-  // trzeba wyrównać jeszcze raz: po przeskoku w następnej klatce, po jeździe, gdy stanie.
-  if (!smooth || calm) {
-    go('instant')
-    requestAnimationFrame(() => requestAnimationFrame(() => go('instant')))
+function center() {
+  if (!outer.value) return
+  stopGlide()
+  if (calm) {
+    window.scrollTo({ top: centerTop(), behavior: 'instant' })
     return
   }
-  go('smooth')
-  let last = -1
-  const timer = window.setInterval(() => {
-    if (window.scrollY === last) {
-      window.clearInterval(timer)
-      go('instant')
-    }
-    last = window.scrollY
-  }, 120)
+  const from = window.scrollY
+  const started = performance.now()
+  const step = (now: number) => {
+    const progress = Math.min(1, (now - started) / GLIDE_MS)
+    // 'instant' wprost, bo 'auto' wziąłby płynne przewijanie ze stylu strony.
+    window.scrollTo({ top: from + (centerTop() - from) * ease(progress), behavior: 'instant' })
+    if (progress < 1) glideFrame = requestAnimationFrame(step)
+    else stopGlide()
+  }
+  window.addEventListener('wheel', stopGlide, { passive: true })
+  window.addEventListener('touchstart', stopGlide, { passive: true })
+  glideFrame = requestAnimationFrame(step)
 }
 
 onMounted(() => {
@@ -81,7 +103,10 @@ onMounted(() => {
   observer.observe(probe.value!)
 })
 
-onBeforeUnmount(() => observer?.disconnect())
+onBeforeUnmount(() => {
+  observer?.disconnect()
+  stopGlide()
+})
 
 defineExpose({ show, center })
 </script>

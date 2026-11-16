@@ -83,12 +83,12 @@ function daysLeft(exam: Exam): string {
   return `${days} ${plural(days, ['dzień', 'dni', 'dni'])}`
 }
 
-// Bez egzaminu strona tylko dojeżdża do kasownika. Z egzaminem przeskakuje do niego,
-// kasownik czeka bez wciśniętego przycisku, a po chwili sam drukuje bilet na ten egzamin.
+// Strona dojeżdża do kasownika. Z wybranym egzaminem kasownik czeka bez wciśniętego
+// przycisku, a po chwili sam drukuje bilet na ten egzamin.
 function toTickets(id?: Exam['id']) {
   window.clearTimeout(pickTimer)
   if (id) machine.value?.wait()
-  machine.value?.center(!id)
+  machine.value?.center()
   if (id) pickTimer = window.setTimeout(() => machine.value?.pick(id), PICK_AFTER)
 }
 

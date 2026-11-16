@@ -36,16 +36,11 @@ const message = computed(() => {
   return taken.value ? 'Bilet zerwany. Możesz wydrukować kolejny.' : 'Dotknij ceny biletu'
 })
 
-function touch(id: Exam['id'], column: TicketKind, toTop = false) {
+function touch(id: Exam['id'], column: TicketKind) {
   taken.value = false
   kind.value = column
   selected.value = { exam: id, kind: column }
-  fit.value?.show(toTop)
-}
-
-/** Wybór egzaminu z innego miejsca strony: kasownik staje u góry okna i drukuje bilet. */
-function pick(id: Exam['id']) {
-  touch(id, 'monthly', true)
+  fit.value?.show()
 }
 
 function onTaken() {
@@ -54,8 +49,6 @@ function onTaken() {
   selected.value = null
   if (picked) emit('taken', picked.exam, picked.kind)
 }
-
-defineExpose({ pick, center: (smooth: boolean) => fit.value?.center(smooth) })
 </script>
 
 <template>

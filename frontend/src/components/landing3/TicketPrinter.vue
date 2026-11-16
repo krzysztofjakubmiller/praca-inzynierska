@@ -76,7 +76,7 @@ function onTaken() {
   if (id) emit('taken', id, kind.value)
 }
 
-defineExpose({ wait, pick, center: (smooth: boolean) => fit.value?.center(smooth) })
+defineExpose({ wait, pick, center: () => fit.value?.center() })
 </script>
 
 <template>
