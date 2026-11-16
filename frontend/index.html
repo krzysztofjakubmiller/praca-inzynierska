@@ -15,8 +15,9 @@
           !/^\/(wizytowka|panel)(\/|$)/.test(location.pathname)
         ) {
           document.documentElement.dataset.theme = 'dark'
+          const shade = localStorage.getItem('odcien-motywu')
           document.documentElement.dataset.shade =
-            localStorage.getItem('odcien-motywu') === 'black' ? 'black' : 'grey'
+            shade === 'black' || shade === 'navy' ? shade : 'grey'
         }
       } catch {}
     </script>

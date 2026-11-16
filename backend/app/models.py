@@ -247,7 +247,7 @@ class Profile(Base):
         CheckConstraint("level in ('podstawowa', 'rozszerzona')", name="profile_level_valid"),
         CheckConstraint("target_percent between 1 and 100", name="profile_target_percent_valid"),
         CheckConstraint("theme in ('light', 'dark')", name="profile_theme_valid"),
-        CheckConstraint("dark_shade in ('grey', 'black')", name="profile_dark_shade_valid"),
+        CheckConstraint("dark_shade in ('grey', 'black', 'navy')", name="profile_dark_shade_valid"),
         CheckConstraint(
             "daily_reviews in ('malo', 'srednio', 'duzo')", name="profile_daily_reviews_valid"
         ),

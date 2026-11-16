@@ -2,7 +2,7 @@ import { computed, ref, watch } from 'vue'
 import { profile, updateProfile } from '@/profile'
 
 export type Theme = 'light' | 'dark'
-export type DarkShade = 'grey' | 'black'
+export type DarkShade = 'grey' | 'black' | 'navy'
 
 // Te same klucze czyta skrypt w index.html, który przyciemnia stronę przed pierwszym malowaniem.
 const THEME_KEY = 'motyw'
@@ -29,7 +29,7 @@ function store(key: string, value: string): void {
 // pokazać właściwy motyw, zanim przyjdzie profil z serwera.
 const saved = ref({
   theme: stored<Theme>(THEME_KEY, ['light', 'dark'], 'light'),
-  shade: stored<DarkShade>(SHADE_KEY, ['grey', 'black'], 'grey'),
+  shade: stored<DarkShade>(SHADE_KEY, ['grey', 'black', 'navy'], 'grey'),
 })
 
 export const theme = computed<Theme>(() => profile.value?.theme ?? saved.value.theme)

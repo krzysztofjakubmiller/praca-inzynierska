@@ -22,6 +22,7 @@ const THEMES: { value: Theme; label: string }[] = [
 const SHADES: { value: DarkShade; label: string }[] = [
   { value: 'grey', label: 'Ciemnoszary' },
   { value: 'black', label: 'Czarny' },
+  { value: 'navy', label: 'Granatowy' },
 ]
 const REVIEWS: { value: DailyReviews; label: string }[] = [
   { value: 'malo', label: 'mało' },
@@ -411,6 +412,10 @@ function chooseDifficulties(event: Event) {
 
 .settings__swatch--black {
   background: #070706;
+}
+
+.settings__swatch--navy {
+  background: #16224f;
 }
 
 .settings__target {

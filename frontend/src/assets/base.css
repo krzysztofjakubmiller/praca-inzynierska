@@ -74,6 +74,24 @@
   --surface: #020202;
 }
 
+/* Granatowy odcień w kolorze wizytówki. Linie mapy mają jaśniejsze wersje, żeby odcinały
+   się od granatu. */
+:root[data-theme='dark'][data-shade='navy'] {
+  --ground: #16224f;
+  --surface: #101a3f;
+  --ink: #fff;
+  --ink-raised: #e8ecf8;
+  --ink-soft: #c5cbe0;
+  --hairline: rgb(255 255 255 / 0.24);
+  --map-outline: #a5add0;
+  --line-1: #ffd35c;
+  --line-2: #7fb0ff;
+  --line-3: #4fd58d;
+  --line-4: #ff7a69;
+  --line-5: #ffa867;
+  --line-6: #cdb2ff;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   :root {
     scroll-behavior: smooth;

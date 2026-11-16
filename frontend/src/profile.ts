@@ -10,7 +10,7 @@ export interface ProfileSettings {
   exam_year: number
   target_percent: number | null
   theme: 'light' | 'dark'
-  dark_shade: 'grey' | 'black'
+  dark_shade: 'grey' | 'black' | 'navy'
   daily_reviews: DailyReviews
   learning_difficulties: LearningDifficulties
 }

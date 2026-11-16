@@ -63,8 +63,8 @@ def problems(data: ProfileData) -> list[str]:
         found.append("Cel podaj w procentach, od 1 do 100.")
     if data.theme not in ("light", "dark"):
         found.append("Wybierz motyw: jasny albo ciemny.")
-    if data.dark_shade not in ("grey", "black"):
-        found.append("Wybierz odcień ciemnego motywu: szary albo czarny.")
+    if data.dark_shade not in ("grey", "black", "navy"):
+        found.append("Wybierz odcień ciemnego motywu: szary, czarny albo granatowy.")
     if data.daily_reviews not in DAILY_REVIEW_LIMITS:
         found.append("Wybierz liczbę powtórek na dzień: mało, średnio albo dużo.")
     if data.learning_difficulties not in LEARNING_DIFFICULTIES:
