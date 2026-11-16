@@ -50,51 +50,75 @@ function show(always = false) {
   outer.value.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' })
 }
 
-// Przejazd do kasownika trwa tyle niezależnie od odległości.
-const GLIDE_MS = 600
+// Czas przejazdu rośnie z odległością, żeby nawet z początku strony ekran przesuwał się
+// w jednej klatce najwyżej o mniej więcej ćwierć swojej wysokości. Przy szybszym ruchu
+// oko nie łączy klatek i przejazd wygląda jak przeskok.
+const GLIDE_MIN_MS = 450
+const GLIDE_MAX_MS = 1100
+const GLIDE_MS_PER_PX = 0.08
 let glideFrame = 0
+let finishGlide: ((arrived: boolean) => void) | undefined
 
 function centerTop(): number {
   const box = outer.value!.getBoundingClientRect()
   return window.scrollY + box.top - (window.innerHeight - box.height) / 2
 }
 
-function stopGlide() {
+function endGlide(arrived: boolean) {
   cancelAnimationFrame(glideFrame)
-  window.removeEventListener('wheel', stopGlide)
-  window.removeEventListener('touchstart', stopGlide)
+  window.removeEventListener('wheel', interrupt)
+  window.removeEventListener('touchstart', interrupt)
+  finishGlide?.(arrived)
+  finishGlide = undefined
+}
+
+function interrupt() {
+  endGlide(false)
 }
 
 // Łagodny start i hamowanie.
 function ease(progress: number): number {
-  return progress < 0.5 ? 4 * progress ** 3 : 1 - (-2 * progress + 2) ** 3 / 2
+  return (1 - Math.cos(Math.PI * progress)) / 2
 }
 
 /**
- * Szybki, płynny przejazd strony, aż zawartość stanie na środku wysokości okna. Płynne
- * przewijanie przeglądarki liczy cel raz, a sekcje po drodze dostają prawdziwą wysokość
- * dopiero na ekranie. Tutaj cel jest liczony w każdej klatce, więc zmiana wysokości
- * wchodzi w ruch zamiast skoku. Ruch kółkiem albo palcem przerywa przejazd.
+ * Płynny przejazd strony, aż zawartość stanie na środku wysokości okna. Płynne przewijanie
+ * przeglądarki liczy cel raz, a sekcje po drodze dostają prawdziwą wysokość dopiero na
+ * ekranie. Tutaj cel jest liczony w każdej klatce, więc zmiana wysokości wchodzi w ruch
+ * zamiast skoku. Ruch kółkiem albo palcem przerywa przejazd; wynik mówi, czy dojechał.
  */
-function center() {
-  if (!outer.value) return
-  stopGlide()
+function center(): Promise<boolean> {
+  endGlide(false)
+  if (!outer.value) return Promise.resolve(false)
   if (calm) {
     window.scrollTo({ top: centerTop(), behavior: 'instant' })
-    return
+    return Promise.resolve(true)
   }
   const from = window.scrollY
+  const duration = Math.min(
+    GLIDE_MAX_MS,
+    Math.max(GLIDE_MIN_MS, Math.abs(centerTop() - from) * GLIDE_MS_PER_PX),
+  )
   const started = performance.now()
+  let at = from
+  let eased = 0
+  // W każdej klatce strona pokonuje taką część pozostałej drogi, jaką wyznacza krzywa ruchu.
+  // Przy stałym celu to zwykły przejazd po krzywej, a nagłe przesunięcie celu rozkłada się
+  // na resztę przejazdu, zamiast dać skok w jednej klatce.
   const step = (now: number) => {
-    const progress = Math.min(1, (now - started) / GLIDE_MS)
+    const progress = Math.min(1, (now - started) / duration)
+    const next = ease(progress)
+    at += (centerTop() - at) * (progress < 1 ? (next - eased) / (1 - eased) : 1)
+    eased = next
     // 'instant' wprost, bo 'auto' wziąłby płynne przewijanie ze stylu strony.
-    window.scrollTo({ top: from + (centerTop() - from) * ease(progress), behavior: 'instant' })
+    window.scrollTo({ top: at, behavior: 'instant' })
     if (progress < 1) glideFrame = requestAnimationFrame(step)
-    else stopGlide()
+    else endGlide(true)
   }
-  window.addEventListener('wheel', stopGlide, { passive: true })
-  window.addEventListener('touchstart', stopGlide, { passive: true })
+  window.addEventListener('wheel', interrupt, { passive: true })
+  window.addEventListener('touchstart', interrupt, { passive: true })
   glideFrame = requestAnimationFrame(step)
+  return new Promise((resolve) => (finishGlide = resolve))
 }
 
 onMounted(() => {
@@ -105,7 +129,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   observer?.disconnect()
-  stopGlide()
+  endGlide(false)
 })
 
 defineExpose({ show, center })

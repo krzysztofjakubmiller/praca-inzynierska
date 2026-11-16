@@ -38,8 +38,8 @@ import WhoIcon from '@/components/landing3/WhoIcon.vue'
 // Stacje w kolorze 3.5: początek strony taki jak w wersji 2.0, niżej mapy tematów w telefonie,
 // tablica odjazdów i kasownik z przyciskami.
 
-// Po przejściu do kasownika z konkretnego egzaminu jego przycisk wciska się sam po tylu ms.
-const PICK_AFTER = 1000
+// Po dojechaniu do kasownika z konkretnym egzaminem jego przycisk wciska się sam po tylu ms.
+const PICK_AFTER = 400
 const BOARD_TEXT = tidy(
   'Tablica pokazuje na zmianę, ile dni zostało do egzaminu i od ilu złotych jest bilet.',
 )
@@ -84,12 +84,13 @@ function daysLeft(exam: Exam): string {
 }
 
 // Strona dojeżdża do kasownika. Z wybranym egzaminem kasownik czeka bez wciśniętego
-// przycisku, a po chwili sam drukuje bilet na ten egzamin.
-function toTickets(id?: Exam['id']) {
+// przycisku, a chwilę po dojechaniu sam drukuje bilet na ten egzamin. Gdy ktoś przerwie
+// przejazd, przewijając sam, kasownik niczego nie drukuje.
+async function toTickets(id?: Exam['id']) {
   window.clearTimeout(pickTimer)
   if (id) machine.value?.wait()
-  machine.value?.center()
-  if (id) pickTimer = window.setTimeout(() => machine.value?.pick(id), PICK_AFTER)
+  const arrived = await machine.value?.center()
+  if (id && arrived) pickTimer = window.setTimeout(() => machine.value?.pick(id), PICK_AFTER)
 }
 
 async function buy(exam: Exam['id'], kind: TicketKind) {
