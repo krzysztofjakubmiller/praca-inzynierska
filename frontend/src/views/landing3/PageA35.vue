@@ -73,10 +73,7 @@ const BOARD_NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
 const router = useRouter()
 const { today, year, cheapest } = useOffer()
 const map = ref<Exam['id']>('matura-podstawowa')
-const machine = useTemplateRef<{
-  pick: (id: Exam['id']) => void
-  center: (smooth: boolean) => void
-}>('machine')
+const machine = useTemplateRef<InstanceType<typeof TicketPrinter>>('machine')
 let pickTimer = 0
 
 usePageGround('#16224f')
@@ -87,9 +84,10 @@ function daysLeft(exam: Exam): string {
 }
 
 // Bez egzaminu strona tylko dojeżdża do kasownika. Z egzaminem przeskakuje do niego,
-// a po chwili kasownik sam drukuje bilet na ten egzamin.
+// kasownik czeka bez wciśniętego przycisku, a po chwili sam drukuje bilet na ten egzamin.
 function toTickets(id?: Exam['id']) {
   window.clearTimeout(pickTimer)
+  if (id) machine.value?.wait()
   machine.value?.center(!id)
   if (id) pickTimer = window.setTimeout(() => machine.value?.pick(id), PICK_AFTER)
 }

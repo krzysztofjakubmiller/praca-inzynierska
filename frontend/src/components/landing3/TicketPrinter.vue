@@ -53,6 +53,15 @@ function press(id: Exam['id'] | null) {
   fit.value?.show()
 }
 
+/**
+ * Strona prowadzi do kasownika z wybranym już egzaminem. Do tej pory żaden przycisk nie jest
+ * wciśnięty, inaczej kasownik zdążyłby wydrukować domyślny bilet, zanim przyjdzie właściwy.
+ */
+function wait() {
+  taken.value = false
+  selected.value = null
+}
+
 /** Wybór egzaminu z innego miejsca strony: kasownik staje u góry okna i drukuje bilet. */
 function pick(id: Exam['id']) {
   taken.value = false
@@ -67,7 +76,7 @@ function onTaken() {
   if (id) emit('taken', id, kind.value)
 }
 
-defineExpose({ pick, center: (smooth: boolean) => fit.value?.center(smooth) })
+defineExpose({ wait, pick, center: (smooth: boolean) => fit.value?.center(smooth) })
 </script>
 
 <template>

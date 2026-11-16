@@ -50,18 +50,26 @@ function show(always = false) {
   outer.value.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' })
 }
 
-/** Przewija stronę tak, żeby zawartość stała na środku wysokości okna. */
+/**
+ * Ustawia zawartość na środku wysokości okna: płynnie albo jednym przeskokiem.
+ * Przeskok musi być wprost 'instant', bo 'auto' bierze płynne przewijanie ze stylu strony.
+ */
 function center(smooth: boolean) {
   const go = (behavior: ScrollBehavior) =>
     outer.value?.scrollIntoView({ block: 'center', behavior })
-  go(smooth && !calm ? 'smooth' : 'auto')
-  // Sekcje po drodze dostają prawdziwą wysokość dopiero na ekranie, więc gdy przewijanie
-  // stanie, położenie trzeba jeszcze raz wyrównać.
+  // Sekcje po drodze dostają prawdziwą wysokość dopiero, gdy są na ekranie, więc położenie
+  // trzeba wyrównać jeszcze raz: po przeskoku w następnej klatce, po jeździe, gdy stanie.
+  if (!smooth || calm) {
+    go('instant')
+    requestAnimationFrame(() => requestAnimationFrame(() => go('instant')))
+    return
+  }
+  go('smooth')
   let last = -1
   const timer = window.setInterval(() => {
     if (window.scrollY === last) {
       window.clearInterval(timer)
-      go('auto')
+      go('instant')
     }
     last = window.scrollY
   }, 120)
