@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { EXAMS, type Exam } from '@/config/exams'
 import { useOffer } from '@/landing2/offer'
 import { formatPrice, type TicketKind } from '@/utils/tickets'
 import StationMarker from '@/components/landing/StationMarker.vue'
+import FitScreen from '../FitScreen.vue'
 import TicketChute, { type ChutePhase } from '../TicketChute.vue'
 
 // Kasownik z ekranem dotykowym. Na ekranie jest cały cennik w dwóch kolumnach, a dotknięcie
@@ -21,6 +22,7 @@ const selected = ref<{ exam: Exam['id']; kind: TicketKind } | null>(null)
 const kind = ref<TicketKind>('annual')
 const phase = ref<ChutePhase>('empty')
 const taken = ref(false)
+const fit = useTemplateRef<InstanceType<typeof FitScreen>>('fit')
 
 const exam = computed(() => EXAMS.find((item) => item.id === selected.value?.exam) ?? null)
 const token = computed(() =>
@@ -38,6 +40,7 @@ function touch(id: Exam['id'], column: TicketKind) {
   taken.value = false
   kind.value = column
   selected.value = { exam: id, kind: column }
+  fit.value?.show()
 }
 
 function onTaken() {
@@ -48,7 +51,7 @@ function onTaken() {
 </script>
 
 <template>
-  <div class="tv">
+  <FitScreen ref="fit" class="tv">
     <div class="tv__body">
       <div class="tv__screen">
         <p class="tv__status" aria-live="polite">{{ message }}</p>
@@ -62,8 +65,10 @@ function onTaken() {
           <tbody>
             <tr v-for="item in EXAMS" :key="item.id" :style="{ '--exam': `var(--tv-${item.id})` }">
               <th scope="row">
-                <StationMarker :shape="item.solid" class="tv__marker" />
-                {{ item.name }}
+                <span class="tv__exam">
+                  <StationMarker :shape="item.solid" class="tv__marker" />
+                  {{ item.name }}
+                </span>
               </th>
               <td v-for="column in COLUMNS" :key="column.kind">
                 <button
@@ -96,7 +101,7 @@ function onTaken() {
         @taken="onTaken"
       />
     </div>
-  </div>
+  </FitScreen>
 </template>
 
 <style scoped>
@@ -165,17 +170,22 @@ function onTaken() {
   text-align: left;
 }
 
+.tv__exam {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .tv__marker {
   --marker-fill: var(--exam);
   --marker-stroke: var(--exam);
-  display: block;
-  margin-bottom: 0.2rem;
-  font-size: 1rem;
+  flex: none;
+  font-size: 0.95rem;
 }
 
 .tv__price {
   width: 100%;
-  min-height: 3.4rem;
+  min-height: 2.9rem;
   padding: 0 0.25rem;
   border: 1.5px solid rgb(255 255 255 / 0.22);
   border-radius: 0.7rem;

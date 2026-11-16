@@ -288,6 +288,8 @@ const NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
 <style scoped>
 /* Jasna hala dworca: ciepły papier i grafitowy tekst. Ciemna zostaje tylko sama tablica. */
 .vb {
+  /* Tyle miejsca u góry okna zajmuje stały nagłówek. */
+  --fit-top: calc(var(--header-h) + 0.75rem);
   --ground: #f3efe6;
   --surface: #fffdf8;
   --card: #fffdf8;

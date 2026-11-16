@@ -225,6 +225,8 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 
 <style scoped>
 .va {
+  /* Tyle miejsca u góry okna zajmuje stały nagłówek. */
+  --fit-top: 4.5rem;
   --navy: #16224f;
   --duty: #2a66d6;
   --radius: 1.25rem;

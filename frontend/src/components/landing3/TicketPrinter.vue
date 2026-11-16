@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, useTemplateRef } from 'vue'
 import { EXAMS, type Exam } from '@/config/exams'
 import { useOffer } from '@/landing2/offer'
 import type { TicketKind } from '@/utils/tickets'
+import FitScreen from './FitScreen.vue'
+import KeyRow from './KeyRow.vue'
 import TicketChute, { type ChutePhase } from './TicketChute.vue'
 
 // Kasownik z trzema przyciskami: wciśnięty egzamin drukuje swój bilet. Kolory obudowy,
@@ -16,6 +18,13 @@ const LABELS: Record<Exam['id'], string[]> = {
   'matura-podstawowa': ['Matura', 'podstawowa'],
   'matura-rozszerzona': ['Matura', 'rozszerzona'],
 }
+const KEYS = EXAMS.map((item) => ({
+  id: item.id,
+  lines: LABELS[item.id],
+  color: `var(--exam-${item.id})`,
+}))
+
+const fit = useTemplateRef<InstanceType<typeof FitScreen>>('fit')
 
 const selected = ref<Exam['id'] | null>('matura-podstawowa')
 const kind = ref<TicketKind>('annual')
@@ -31,9 +40,10 @@ const message = computed(() => {
   return taken.value ? 'Bilet zabrany' : 'Wybierz egzamin'
 })
 
-function press(id: Exam['id']) {
+function press(id: Exam['id'] | null) {
   taken.value = false
   selected.value = id
+  fit.value?.show()
 }
 
 function onTaken() {
@@ -44,7 +54,7 @@ function onTaken() {
 </script>
 
 <template>
-  <div class="tp">
+  <FitScreen ref="fit" class="tp">
     <div class="tp__body">
       <p class="tp__display" aria-live="polite">
         <span
@@ -53,25 +63,7 @@ function onTaken() {
         />
         {{ message }}
       </p>
-      <div class="tp__keys" role="radiogroup" aria-label="Egzamin">
-        <button
-          v-for="item in EXAMS"
-          :key="item.id"
-          class="tp__key"
-          type="button"
-          role="radio"
-          :aria-checked="selected === item.id"
-          :style="{ '--key': `var(--exam-${item.id})` }"
-          @click="press(item.id)"
-        >
-          <span class="tp__cap">
-            <span class="tp__led" aria-hidden="true" />
-            <span class="tp__label">
-              <span v-for="line in LABELS[item.id]" :key="line">{{ line }}</span>
-            </span>
-          </span>
-        </button>
-      </div>
+      <KeyRow :model-value="selected" :keys="KEYS" label="Egzamin" @update:model-value="press" />
     </div>
     <TicketChute
       v-model:kind="kind"
@@ -82,7 +74,7 @@ function onTaken() {
       @phase="phase = $event"
       @taken="onTaken"
     />
-  </div>
+  </FitScreen>
 </template>
 
 <style scoped>
@@ -136,105 +128,6 @@ function onTaken() {
   height: 0.55rem;
   border-radius: 50%;
   background: currentColor;
-}
-
-.tp__keys {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.7rem;
-}
-
-/* Przycisk siedzi we wnęce obudowy. Wybrany zostaje wciśnięty i świeci mu się dioda. */
-.tp__key {
-  position: relative;
-  padding: 0 0 0.5rem;
-  border: 0;
-  border-radius: 0.9rem;
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.tp__key::before {
-  content: '';
-  position: absolute;
-  inset: 0.3rem -0.22rem -0.12rem;
-  border-radius: 1.05rem;
-  background: color-mix(in srgb, var(--body) 55%, #000);
-  box-shadow:
-    inset 0 2px 5px rgb(0 0 0 / 0.65),
-    0 1px 0 rgb(255 255 255 / 0.12);
-}
-
-.tp__cap {
-  --cap: var(--tp-cap, var(--key));
-  --side: color-mix(in srgb, var(--cap) 58%, #000);
-  position: relative;
-  display: grid;
-  gap: 0.35rem;
-  justify-items: center;
-  align-content: center;
-  min-height: 4.6rem;
-  padding: 0.55rem 0.3rem;
-  border-radius: 0.8rem;
-  background: linear-gradient(
-    to bottom,
-    color-mix(in srgb, var(--cap) 86%, #fff),
-    var(--cap) 45%,
-    color-mix(in srgb, var(--cap) 90%, #000)
-  );
-  color: var(--tp-cap-ink, #fff);
-  box-shadow:
-    0 0.45rem 0 var(--side),
-    0 0.75rem 0.7rem -0.15rem rgb(0 0 0 / 0.5),
-    inset 0 1px 0 rgb(255 255 255 / 0.4);
-  transition:
-    translate 0.09s ease-out,
-    box-shadow 0.09s ease-out;
-}
-
-.tp__key:active .tp__cap,
-.tp__key[aria-checked='true'] .tp__cap {
-  translate: 0 0.32rem;
-  box-shadow:
-    0 0.13rem 0 var(--side),
-    0 0.25rem 0.3rem -0.1rem rgb(0 0 0 / 0.5),
-    inset 0 2px 3px rgb(0 0 0 / 0.22);
-}
-
-.tp__led {
-  width: 0.5rem;
-  height: 0.5rem;
-  border-radius: 50%;
-  background: rgb(0 0 0 / 0.35);
-  box-shadow: inset 0 1px 1px rgb(0 0 0 / 0.5);
-}
-
-.tp__key[aria-checked='true'] .tp__led {
-  background: var(--tp-led, #fff6c9);
-  box-shadow: 0 0 0.45rem 0.1rem var(--tp-led, #fff6c9);
-}
-
-.tp__label {
-  display: grid;
-  font-size: clamp(0.78rem, 0.6rem + 0.9vw, 0.95rem);
-  font-weight: 800;
-  font-stretch: 80%;
-  letter-spacing: 0.03em;
-  line-height: 1.05;
-  text-align: center;
-  text-transform: uppercase;
-}
-
-/* Samo „E8” jest krótkie, więc może być większe. */
-.tp__label span:only-child {
-  font-size: 1.6em;
-}
-
-.tp__key:focus-visible {
-  outline: 3px solid var(--body-ink);
-  outline-offset: 4px;
 }
 
 .tp__chute {

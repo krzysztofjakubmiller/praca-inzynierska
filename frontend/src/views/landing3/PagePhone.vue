@@ -199,6 +199,8 @@ function daysLeft(exam: (typeof EXAMS)[number]): string {
 
 <style scoped>
 .ph {
+  /* Tyle miejsca u góry okna zajmuje stały nagłówek. */
+  --fit-top: calc(var(--header-h) + 0.75rem);
   --ground: #f6f7f2;
   --surface: #fff;
   --card: #fff;
