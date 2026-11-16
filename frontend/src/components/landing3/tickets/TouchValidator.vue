@@ -9,7 +9,7 @@ import TicketChute, { type ChutePhase } from '../TicketChute.vue'
 
 // Kasownik z ekranem dotykowym. Na ekranie jest cały cennik w dwóch kolumnach, a dotknięcie
 // ceny drukuje bilet. Bilet zrywa się dopiero po przejściu dalej.
-const emit = defineEmits<{ taken: [] }>()
+const emit = defineEmits<{ taken: [exam: Exam['id'], kind: TicketKind] }>()
 
 const { today, validUntil } = useOffer()
 
@@ -36,18 +36,26 @@ const message = computed(() => {
   return taken.value ? 'Bilet zerwany. Możesz wydrukować kolejny.' : 'Dotknij ceny biletu'
 })
 
-function touch(id: Exam['id'], column: TicketKind) {
+function touch(id: Exam['id'], column: TicketKind, toTop = false) {
   taken.value = false
   kind.value = column
   selected.value = { exam: id, kind: column }
-  fit.value?.show()
+  fit.value?.show(toTop)
+}
+
+/** Wybór egzaminu z innego miejsca strony: kasownik staje u góry okna i drukuje bilet. */
+function pick(id: Exam['id']) {
+  touch(id, 'monthly', true)
 }
 
 function onTaken() {
+  const picked = selected.value
   taken.value = true
   selected.value = null
-  emit('taken')
+  if (picked) emit('taken', picked.exam, picked.kind)
 }
+
+defineExpose({ pick, center: (smooth: boolean) => fit.value?.center(smooth) })
 </script>
 
 <template>

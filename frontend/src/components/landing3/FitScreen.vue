@@ -36,13 +36,35 @@ function fit() {
   height.value = next < 1 ? tallest * next : undefined
 }
 
-/** Przewija stronę tak, żeby całą zawartość było widać, jeśli część jest poza oknem. */
-function show() {
+const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+/**
+ * Przewija stronę tak, żeby całą zawartość było widać, jeśli część jest poza oknem.
+ * Z `always` zawartość staje u góry okna także wtedy, gdy już się mieści.
+ */
+function show(always = false) {
   if (!outer.value) return
   const box = outer.value.getBoundingClientRect()
-  if (box.top >= headerRoom() - 1 && box.bottom <= window.innerHeight) return
-  const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const fits = box.top >= headerRoom() - 1 && box.bottom <= window.innerHeight
+  if (fits && !always) return
   outer.value.scrollIntoView({ block: 'start', behavior: calm ? 'auto' : 'smooth' })
+}
+
+/** Przewija stronę tak, żeby zawartość stała na środku wysokości okna. */
+function center(smooth: boolean) {
+  const go = (behavior: ScrollBehavior) =>
+    outer.value?.scrollIntoView({ block: 'center', behavior })
+  go(smooth && !calm ? 'smooth' : 'auto')
+  // Sekcje po drodze dostają prawdziwą wysokość dopiero na ekranie, więc gdy przewijanie
+  // stanie, położenie trzeba jeszcze raz wyrównać.
+  let last = -1
+  const timer = window.setInterval(() => {
+    if (window.scrollY === last) {
+      window.clearInterval(timer)
+      go('auto')
+    }
+    last = window.scrollY
+  }, 120)
 }
 
 onMounted(() => {
@@ -53,7 +75,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => observer?.disconnect())
 
-defineExpose({ show })
+defineExpose({ show, center })
 </script>
 
 <template>

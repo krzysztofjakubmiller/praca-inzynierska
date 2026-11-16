@@ -9,7 +9,7 @@ import TicketChute, { type ChutePhase } from './TicketChute.vue'
 
 // Kasownik z trzema przyciskami: wciśnięty egzamin drukuje swój bilet. Kolory obudowy,
 // przycisków i papieru ustawia strona przez zmienne --tp-* i --tk-*.
-const emit = defineEmits<{ taken: [] }>()
+const emit = defineEmits<{ taken: [exam: Exam['id'], kind: TicketKind] }>()
 
 const { today, validUntil } = useOffer()
 
@@ -27,7 +27,7 @@ const KEYS = EXAMS.map((item) => ({
 const fit = useTemplateRef<InstanceType<typeof FitScreen>>('fit')
 
 const selected = ref<Exam['id'] | null>('matura-podstawowa')
-const kind = ref<TicketKind>('annual')
+const kind = ref<TicketKind>('monthly')
 const phase = ref<ChutePhase>('empty')
 const taken = ref(false)
 
@@ -46,11 +46,21 @@ function press(id: Exam['id'] | null) {
   fit.value?.show()
 }
 
+/** Wybór egzaminu z innego miejsca strony: kasownik staje u góry okna i drukuje bilet. */
+function pick(id: Exam['id']) {
+  taken.value = false
+  selected.value = id
+  fit.value?.show(true)
+}
+
 function onTaken() {
+  const id = selected.value
   taken.value = true
   selected.value = null
-  emit('taken')
+  if (id) emit('taken', id, kind.value)
 }
+
+defineExpose({ pick, center: (smooth: boolean) => fit.value?.center(smooth) })
 </script>
 
 <template>

@@ -8,7 +8,9 @@ import FlapText from './FlapText.vue'
 
 // Sama tablica odjazdów, do wstawienia w dowolną stronę. Klapki ruszają dopiero, gdy tablicę
 // widać, a potem co kilka sekund przełączają się między dniami do egzaminu a ceną biletu.
+// Kliknięty rząd zgłasza swój egzamin, a strona prowadzi z nim do kasownika.
 const props = defineProps<{ today: Date }>()
+const emit = defineEmits<{ pick: [exam: Exam['id']] }>()
 
 const SWAP_MS = 6000
 
@@ -76,9 +78,10 @@ onBeforeUnmount(() => {
           <!-- Nazwa linku jest stała, bo pola tablicy są puste, dopóki nie widać jej na ekranie. -->
           <a
             class="board__row"
-            :href="`#${exam.id}`"
+            href="#bilety"
             :aria-label="`${exam.name}, ${info(exam)}`"
             :style="{ '--exam': `var(--board-${exam.id})` }"
+            @click.prevent="emit('pick', exam.id)"
           >
             <span class="board__solid" aria-hidden="true">
               <SolidFigure :kind="exam.solid" :drag="false" :fill="0.94" :weight="0.085" :spin="0" />

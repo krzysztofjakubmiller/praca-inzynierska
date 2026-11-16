@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { EXAMS, type Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
-import { AUDIENCE, LEAD, LEAD_SHORT, MAP_ROUTES, daysToExam, tidy } from '@/landing2/content'
+import { AUDIENCE, LEAD, LEAD_SHORT, daysToExam, tidy } from '@/landing2/content'
 import { useOffer } from '@/landing2/offer'
 import { usePageGround } from '@/landing2/pageGround'
 import { vReveal } from '@/landing2/reveal'
@@ -17,8 +17,9 @@ import {
   STEPS_TEXT,
   TICKETS_TEXT,
 } from '@/landing3/content'
+import { purchaseRoute } from '@/purchase'
 import { plural } from '@/utils/plural'
-import { formatPrice } from '@/utils/tickets'
+import { formatPrice, type TicketKind } from '@/utils/tickets'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import DutyChat from '@/components/landing2/DutyChat.vue'
@@ -27,7 +28,8 @@ import OpinionList from '@/components/landing2/OpinionList.vue'
 import SolidFigure from '@/components/landing2/SolidFigure.vue'
 import DepartureBoard from '@/components/landing3/DepartureBoard.vue'
 import FaqList from '@/components/landing3/FaqList.vue'
-import MapPhone, { type MapExam } from '@/components/landing3/MapPhone.vue'
+import MapLegendDemo from '@/components/landing3/MapLegendDemo.vue'
+import MapPhone from '@/components/landing3/MapPhone.vue'
 import StepList from '@/components/landing3/StepList.vue'
 import TicketPrinter from '@/components/landing3/TicketPrinter.vue'
 import TrialTask from '@/components/landing3/TrialTask.vue'
@@ -38,11 +40,8 @@ import TouchValidator from '@/components/landing3/tickets/TouchValidator.vue'
 // tablica odjazdów i kasownik w jednym z dwóch wariantów.
 defineProps<{ printer: 'przyciski' | 'dotyk' }>()
 
-const MAP_LEGEND = [
-  'Kształt stacji to trudność tematu, od koła po pięciokąt.',
-  'Kontur stacji zapełnia się, gdy robisz zadania.',
-  'Pasażerowie przy stacji to zadania, które czekają na powtórkę.',
-]
+// Po przejściu do kasownika z konkretnego egzaminu jego przycisk wciska się sam po tylu ms.
+const PICK_AFTER = 1000
 const BOARD_TEXT = tidy(
   'Tablica pokazuje na zmianę, ile dni zostało do egzaminu i od ilu złotych jest bilet.',
 )
@@ -51,7 +50,12 @@ const TOUCH_TEXT = tidy('Dotknij ceny na ekranie kasownika, a wydrukuje się tw�
 
 const router = useRouter()
 const { today, year, cheapest } = useOffer()
-const map = ref<MapExam>('matura-podstawowa')
+const map = ref<Exam['id']>('matura-podstawowa')
+const machine = useTemplateRef<{
+  pick: (id: Exam['id']) => void
+  center: (smooth: boolean) => void
+}>('machine')
+let pickTimer = 0
 
 usePageGround('#16224f')
 
@@ -60,9 +64,19 @@ function daysLeft(exam: Exam): string {
   return `${days} ${plural(days, ['dzień', 'dni', 'dni'])}`
 }
 
-function pickMap(id: Exam['id']) {
-  if (id !== 'e8') map.value = id
+// Bez egzaminu strona tylko dojeżdża do kasownika. Z egzaminem przeskakuje do niego,
+// a po chwili kasownik sam drukuje bilet na ten egzamin.
+function toTickets(id?: Exam['id']) {
+  window.clearTimeout(pickTimer)
+  machine.value?.center(!id)
+  if (id) pickTimer = window.setTimeout(() => machine.value?.pick(id), PICK_AFTER)
 }
+
+async function buy(exam: Exam['id'], kind: TicketKind) {
+  router.push(await purchaseRoute(exam, kind))
+}
+
+onBeforeUnmount(() => window.clearTimeout(pickTimer))
 </script>
 
 <template>
@@ -74,7 +88,7 @@ function pickMap(id: Exam['id']) {
           <StationMarker :shape="exam.solid" />
           <span class="va-top__label">{{ exam.shortName }}</span>
         </a>
-        <a class="va-top__stop" href="#bilety">
+        <a class="va-top__stop" href="#bilety" @click.prevent="toTickets()">
           <StationMarker shape="ticket" />
           <span class="va-top__label">Bilety</span>
         </a>
@@ -108,7 +122,7 @@ function pickMap(id: Exam['id']) {
               Załóż konto
               <ArrowIcon />
             </RouterLink>
-            <a v-if="cheapest" class="va-more" href="#bilety">
+            <a v-if="cheapest" class="va-more" href="#bilety" @click.prevent="toTickets()">
               Bilety już od {{ formatPrice(cheapest.price) }}
               <ArrowIcon down />
             </a>
@@ -137,16 +151,15 @@ function pickMap(id: Exam['id']) {
               Do egzaminu <strong>{{ daysLeft(exam) }}</strong>
             </p>
             <div v-reveal="200" class="va-actions">
-              <a
-                v-if="MAP_ROUTES[exam.id]"
-                class="button"
-                href="#mapa"
-                @click="pickMap(exam.id)"
-              >
+              <a class="button" href="#mapa" @click="map = exam.id">
                 Mapa tematów
                 <ArrowIcon down />
               </a>
-              <a class="button button--quiet" href="#bilety">
+              <a
+                class="button button--quiet"
+                href="#bilety"
+                @click.prevent="toTickets(exam.id)"
+              >
                 Bilet od {{ formatPrice(exam.prices.monthly) }}
               </a>
             </div>
@@ -158,9 +171,7 @@ function pickMap(id: Exam['id']) {
         <div class="va-map__head">
           <h2 id="va-map-title" class="va-h2">{{ MAP_TITLE }}</h2>
           <p class="va-lead">{{ MAP_TEXT }}</p>
-          <ul class="va-map__legend">
-            <li v-for="item in MAP_LEGEND" :key="item">{{ item }}</li>
-          </ul>
+          <MapLegendDemo />
         </div>
         <MapPhone v-model:exam="map" />
       </section>
@@ -223,7 +234,7 @@ function pickMap(id: Exam['id']) {
           <h2 id="va-board-title" class="va-h2">Rozkład jazdy</h2>
           <p class="va-lead">{{ BOARD_TEXT }}</p>
         </div>
-        <DepartureBoard :today="today">{{ BOARD_NOTICE }}</DepartureBoard>
+        <DepartureBoard :today="today" @pick="toTickets">{{ BOARD_NOTICE }}</DepartureBoard>
       </section>
 
       <section
@@ -235,8 +246,8 @@ function pickMap(id: Exam['id']) {
           <h2 id="va-tickets-title" class="va-h2">Bilety</h2>
           <p class="va-lead">{{ printer === 'dotyk' ? TOUCH_TEXT : TICKETS_TEXT }}</p>
         </div>
-        <TouchValidator v-if="printer === 'dotyk'" @taken="router.push({ name: 'coming-soon' })" />
-        <TicketPrinter v-else @taken="router.push({ name: 'coming-soon' })" />
+        <TouchValidator v-if="printer === 'dotyk'" ref="machine" @taken="buy" />
+        <TicketPrinter v-else ref="machine" @taken="buy" />
       </section>
 
       <section class="va-section va-split" aria-labelledby="va-faq-title">
@@ -629,14 +640,6 @@ function pickMap(id: Exam['id']) {
   display: grid;
   gap: 0.9rem;
   align-content: start;
-}
-
-.va-map__legend {
-  display: grid;
-  gap: 0.45rem;
-  max-width: 44ch;
-  padding-left: 1.1em;
-  color: var(--ink-soft);
 }
 
 /* Tablica odjazdów w kolorach tej strony: granatowa płyta i żółte lampki. */

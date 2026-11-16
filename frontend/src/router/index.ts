@@ -260,6 +260,12 @@ const router = createRouter({
       meta: { title: 'Ankieta', panel: true },
     },
     {
+      path: '/platnosc',
+      name: 'payment',
+      component: () => import('@/views/PaymentView.vue'),
+      meta: { title: 'Płatność' },
+    },
+    {
       path: '/wkrotce',
       name: 'coming-soon',
       component: () => import('@/views/ComingSoonView.vue'),

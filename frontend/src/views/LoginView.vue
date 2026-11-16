@@ -1,14 +1,22 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { logIn, logInWithGoogle, register, type Problem } from '@/account'
+import { usePageGround } from '@/landing2/pageGround'
+import { readPurchase } from '@/purchase'
 import GoogleButton from '@/components/account/GoogleButton.vue'
 import PasswordField from '@/components/account/PasswordField.vue'
+import SolidFigure from '@/components/landing2/SolidFigure.vue'
 import '@/assets/auth.css'
 
 const props = defineProps<{ mode: 'login' | 'register' }>()
 
 const router = useRouter()
+const route = useRoute()
+// Logowanie w drodze po bilet pokazuje bryłę wybranego egzaminu, a potem prowadzi do płatności.
+const purchase = computed(() => readPurchase(route.query))
+
+usePageGround('#16224f')
 
 const email = ref('')
 const password = ref('')
@@ -56,7 +64,9 @@ async function send(attempt: () => Promise<Problem | null>, onSuccess: () => unk
 }
 
 function openAccount() {
-  return router.replace({ name: 'account' })
+  return router.replace(
+    purchase.value.exam ? { name: 'payment', query: route.query } : { name: 'account' },
+  )
 }
 
 function submitForm() {
@@ -83,7 +93,25 @@ function submitGoogle(credential: string) {
 </script>
 
 <template>
-  <main class="auth">
+  <main class="auth login">
+    <template v-if="purchase.exam">
+      <div
+        class="login__solid"
+        :style="{ color: `var(--solid-${purchase.exam.id})` }"
+        aria-hidden="true"
+      >
+        <SolidFigure
+          :key="purchase.exam.id"
+          :kind="purchase.exam.solid"
+          :spin="0.2"
+          :fill="0.9"
+          :weight="0.04"
+        />
+      </div>
+      <p class="login__ticket">
+        Bilet: {{ purchase.exam.name }}. Po zalogowaniu przejdziesz do płatności.
+      </p>
+    </template>
     <h1>{{ mode === 'login' ? 'Logowanie' : 'Rejestracja' }}</h1>
     <template v-if="sentTo">
       <p role="status">Wysłaliśmy link na adres {{ sentTo }}. Kliknij go, żeby założyć konto.</p>
@@ -132,9 +160,49 @@ function submitGoogle(credential: string) {
       <p v-if="noPassword"><RouterLink :to="passwordLink">Dodaj hasło</RouterLink></p>
       <template v-if="mode === 'login'">
         <p><RouterLink :to="passwordLink">Nie pamiętam hasła</RouterLink></p>
-        <p>Nie masz konta? <RouterLink :to="{ name: 'register' }">Załóż konto</RouterLink></p>
+        <p>
+          Nie masz konta?
+          <RouterLink :to="{ name: 'register', query: route.query }">Załóż konto</RouterLink>
+        </p>
       </template>
-      <p v-else>Masz już konto? <RouterLink :to="{ name: 'login' }">Zaloguj się</RouterLink></p>
+      <p v-else>
+        Masz już konto?
+        <RouterLink :to="{ name: 'login', query: route.query }">Zaloguj się</RouterLink>
+      </p>
     </template>
   </main>
 </template>
+
+<style scoped>
+/* Granatowe pole jak na wizytówce: tekst i przyciski odwracają się na białe. */
+.login {
+  --ground: #16224f;
+  --ink: #fff;
+  --ink-soft: rgb(255 255 255 / 0.82);
+  --solid-e8: #7fb0ff;
+  --solid-matura-podstawowa: #4fd58d;
+  --solid-matura-rozszerzona: #ff7a69;
+  min-height: 100svh;
+  align-content: center;
+  color: var(--ink);
+}
+
+.login :deep(input:not([type='checkbox'])) {
+  border-color: transparent;
+  background: #fff;
+  color: #1d1f22;
+}
+
+.login :focus-visible {
+  outline-color: #fff;
+}
+
+.login__solid {
+  width: 9rem;
+  height: 9rem;
+}
+
+.login__ticket {
+  font-weight: 650;
+}
+</style>
