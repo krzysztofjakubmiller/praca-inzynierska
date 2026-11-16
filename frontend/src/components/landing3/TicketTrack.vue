@@ -168,8 +168,10 @@ onBeforeUnmount(() => stopTick?.())
   left: 100%;
 }
 
+/* Przy odciągnięciu do końca pasek znika, a stacja staje jeszcze 2 mm (0,47rem) przed
+   napisem „Start”, żeby go nie zasłonić. W spoczynku stoi na końcu paska. */
 .track__knob {
-  left: calc(var(--at) * 100%);
+  left: calc(var(--at) * 100% + (1 - var(--at)) * 0.47rem);
   display: grid;
   cursor: grab;
   /* Ruch w poziomie przesuwa uchwyt, a w pionie dalej przewija stronę. */
@@ -203,7 +205,7 @@ onBeforeUnmount(() => stopTick?.())
   position: absolute;
   top: 50%;
   right: -0.8rem;
-  left: calc(var(--at) * 100% + 1.4rem);
+  left: calc(var(--at) * 100% + (1 - var(--at)) * 0.47rem + 1.4rem);
   color: var(--ink-soft);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
