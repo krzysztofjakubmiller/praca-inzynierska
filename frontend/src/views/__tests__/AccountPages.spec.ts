@@ -2,6 +2,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import App from '@/App.vue'
 import router from '@/router'
+import { stubBrowser } from './browserStubs'
 
 type Answers = Record<string, [status: number, body?: unknown]>
 type GoogleCallback = (response: { credential: string }) => void
@@ -11,7 +12,9 @@ let googleCallback: GoogleCallback | undefined
 const renderGoogleButton = vi.fn<(parent: HTMLElement, options: Record<string, string>) => void>()
 
 // Atrapa skryptu Google: zapamiętuje funkcję, którą Google wywołałby po wyborze konta.
+// Do tego atrapy tego, czego jsdom nie ma, a czego używa bryła na stronie logowania.
 beforeEach(() => {
+  stubBrowser()
   renderGoogleButton.mockClear()
   vi.stubGlobal('google', {
     accounts: {
@@ -123,7 +126,7 @@ describe('login page', () => {
     await router.push('/rejestracja')
     await flushPromises()
 
-    expect(wrapper.find('h1').text()).toBe('Rejestracja')
+    expect(wrapper.find('h1').text()).toBe('Załóż konto')
     expect(wrapper.find('[role="alert"]').exists()).toBe(false)
   })
 

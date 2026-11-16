@@ -1,8 +1,9 @@
-import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import App from '@/App.vue'
 import { profile } from '@/profile'
 import router from '@/router'
+import { stubBrowser } from './browserStubs'
 
 type Answers = Record<string, [status: number, body?: unknown]>
 
@@ -38,28 +39,18 @@ function backend(answers: Answers) {
 
 beforeAll(() => {
   localStorage.setItem('haslo-dostepu', 'sekret')
-  // jsdom nie przewija stron i nie mierzy elementów, a z jednego i drugiego korzysta konto.
+  // jsdom nie przewija stron, a router przewija po każdej zmianie strony.
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      disconnect() {}
-    },
-  )
 })
+
+// jsdom nie mierzy elementów i nie zna zapytań o media, a korzysta z nich konto i bryła
+// na stronie logowania, na którą trafia niezalogowany.
+beforeEach(stubBrowser)
 
 afterEach(() => {
   wrapper?.unmount()
   profile.value = null
   vi.unstubAllGlobals()
-  vi.stubGlobal(
-    'ResizeObserver',
-    class {
-      observe() {}
-      disconnect() {}
-    },
-  )
 })
 
 async function renderAt(path: string) {
