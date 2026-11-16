@@ -22,10 +22,11 @@ onMounted(async () => {
     callback: (response) => emit('credential', response.credential),
   })
   google.renderButton(container.value, {
-    theme: 'outline',
-    // W rozmiarze medium Google nie podmienia przycisku na „Kontynuuj jako …” z imieniem
-    // zalogowanego użytkownika, więc strona nie przeskakuje przy wczytywaniu.
-    size: 'medium',
+    // Strona logowania jest granatowa, a ciemny wariant Google pasuje do niej najlepiej.
+    theme: 'filled_black',
+    // W dużym rozmiarze Google może pokazać „Kontynuuj jako …” z imieniem zalogowanego
+    // użytkownika. Ma tę samą wysokość, a miejsce jest zajęte od razu, więc nic nie przeskakuje.
+    size: 'large',
     text: 'continue_with',
     shape: 'pill',
     locale: 'pl',
@@ -45,9 +46,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Miejsce zajęte od razu, żeby formularz nie zjeżdżał w dół, gdy skrypt Google narysuje przycisk. */
+/* Miejsce zajęte od razu, żeby formularz nie zjeżdżał w dół, gdy skrypt Google narysuje przycisk.
+   Ramka Google ma jasny schemat kolorów. Gdy strona ma ciemny, przeglądarka podkłada pod ramkę
+   białe tło, więc jej miejsce dostaje jasny schemat. */
 .google-button__slot {
-  min-height: 32px;
+  min-height: 40px;
+  color-scheme: light;
 }
 
 .google-button__problem {

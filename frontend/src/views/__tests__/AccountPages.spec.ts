@@ -299,13 +299,12 @@ describe('Google button', () => {
     )
   })
 
-  // W rozmiarze medium Google nie podmienia przycisku na „Kontynuuj jako …” z imieniem.
-  it('is always the plain button without the user name', async () => {
+  it('is the large dark button that fits the navy login page', async () => {
     await renderAt('/logowanie')
 
     expect(renderGoogleButton).toHaveBeenCalledWith(
       expect.any(HTMLElement),
-      expect.objectContaining({ size: 'medium' }),
+      expect.objectContaining({ size: 'large', theme: 'filled_black', shape: 'pill' }),
     )
   })
 
