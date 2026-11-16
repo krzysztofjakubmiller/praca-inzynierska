@@ -9,6 +9,13 @@ import TicketChute, { type ChutePhase } from './TicketChute.vue'
 
 // Kasownik z trzema przyciskami: wciśnięty egzamin drukuje swój bilet. Kolory obudowy,
 // przycisków i papieru ustawia strona przez zmienne --tp-* i --tk-*.
+withDefaults(
+  defineProps<{
+    /** Kupiony bilet wyciągnięty w całości albo zerwany, ze skrawkiem w szczelinie. */
+    take?: 'pull' | 'tear'
+  }>(),
+  { take: 'pull' },
+)
 const emit = defineEmits<{ taken: [exam: Exam['id'], kind: TicketKind] }>()
 
 const { today, validUntil } = useOffer()
@@ -81,6 +88,7 @@ defineExpose({ pick, center: (smooth: boolean) => fit.value?.center(smooth) })
       :exam="exam"
       :valid-until="validUntil"
       :today="today"
+      :take="take"
       @phase="phase = $event"
       @taken="onTaken"
     />

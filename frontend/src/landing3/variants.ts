@@ -15,7 +15,7 @@ export const TABS = [
     id: 'strony',
     name: 'Strony',
     path: '/wizytowka3',
-    lead: 'Stacje w kolorze 3.5 z dwoma kasownikami, poprawione strony A i B z ekranami aplikacji oraz dwie strony z nowym pomysłem.',
+    lead: 'Wybrana strona Stacje w kolorze 3.5, poprawione strony A i B z ekranami aplikacji oraz dwie strony z nowym pomysłem.',
   },
   {
     id: 'mapa',
@@ -108,16 +108,10 @@ export const TICKET_VARIANTS: VariantLink[] = [
 export const VARIANTS: Record<TabId, VariantLink[]> = {
   strony: [
     {
-      name: 'Stacje w kolorze 3.5: kasownik z przyciskami',
+      name: 'Stacje w kolorze 3.5',
       note: 'Początek jak w wersji 2.0, niżej mapy tematów w telefonie, tablica odjazdów i kasownik z trzema przyciskami.',
-      to: '/wizytowka3/a35/przyciski',
+      to: '/wizytowka3/a35',
       colors: ['#16224f', '#4fd58d'],
-    },
-    {
-      name: 'Stacje w kolorze 3.5: kasownik dotykowy',
-      note: 'Ta sama strona z kasownikiem, na którego ekranie dotyka się ceny biletu.',
-      to: '/wizytowka3/a35/dotyk',
-      colors: ['#16224f', '#ffd026'],
     },
     {
       name: 'Stacje w kolorze 3.0',

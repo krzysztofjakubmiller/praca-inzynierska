@@ -155,10 +155,14 @@ const router = createRouter({
       meta: { title: 'Stacje w kolorze 3.0' },
     },
     {
-      path: '/wizytowka3/a35/:printer(przyciski|dotyk)',
+      path: '/wizytowka3/a35',
       component: () => import('@/views/landing3/PageA35.vue'),
-      props: true,
       meta: { title: 'Stacje w kolorze 3.5' },
+    },
+    {
+      // Dawne adresy dwóch wariantów kasownika, zanim wybrany został ten z przyciskami.
+      path: '/wizytowka3/a35/:printer(przyciski|dotyk)',
+      redirect: '/wizytowka3/a35',
     },
     {
       path: '/wizytowka3/b',

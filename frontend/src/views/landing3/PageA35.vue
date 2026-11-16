@@ -34,11 +34,9 @@ import StepList from '@/components/landing3/StepList.vue'
 import TicketPrinter from '@/components/landing3/TicketPrinter.vue'
 import TrialTask from '@/components/landing3/TrialTask.vue'
 import WhoIcon from '@/components/landing3/WhoIcon.vue'
-import TouchValidator from '@/components/landing3/tickets/TouchValidator.vue'
 
 // Stacje w kolorze 3.5: początek strony taki jak w wersji 2.0, niżej mapy tematów w telefonie,
-// tablica odjazdów i kasownik w jednym z dwóch wariantów.
-defineProps<{ printer: 'przyciski' | 'dotyk' }>()
+// tablica odjazdów i kasownik z przyciskami.
 
 // Po przejściu do kasownika z konkretnego egzaminu jego przycisk wciska się sam po tylu ms.
 const PICK_AFTER = 1000
@@ -70,8 +68,7 @@ const TALK = [
   { name: 'Tablica', text: 'Liczysz i rysujesz na tablicy, a Dyżurny czyta to, co na niej jest.' },
   { name: 'Zdjęcie zeszytu', text: 'Robisz zdjęcie rozwiązania w zeszycie i wysyłasz je Dyżurnemu.' },
 ]
-const BOARD_NOTICE ='Typy zadań z egzaminu · nowe liczby w każdej powtórce'
-const TOUCH_TEXT = tidy('Dotknij ceny na ekranie kasownika, a wydrukuje się twój bilet.')
+const BOARD_NOTICE = 'Typy zadań z egzaminu · nowe liczby w każdej powtórce'
 
 const router = useRouter()
 const { today, year, cheapest } = useOffer()
@@ -288,10 +285,9 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
       >
         <div class="va-tickets__head">
           <h2 id="va-tickets-title" class="va-h2">Bilety</h2>
-          <p class="va-lead">{{ printer === 'dotyk' ? TOUCH_TEXT : TICKETS_TEXT }}</p>
+          <p class="va-lead">{{ TICKETS_TEXT }}</p>
         </div>
-        <TouchValidator v-if="printer === 'dotyk'" ref="machine" @taken="buy" />
-        <TicketPrinter v-else ref="machine" @taken="buy" />
+        <TicketPrinter ref="machine" take="tear" @taken="buy" />
       </section>
 
       <section class="va-section va-split" aria-labelledby="va-faq-title">
