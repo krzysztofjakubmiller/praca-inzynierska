@@ -6,10 +6,12 @@ import { darkShade, theme } from '@/theme'
 
 const route = useRoute()
 
-// Wizytówka jest zaprojektowana na jasne tło, a panel właściciela porównuje odczyt ze zdjęciem
-// strony arkusza, więc obie zostają jasne niezależnie od wyboru. Tę samą regułę ma skrypt
-// w index.html.
-const lightOnly = computed(() => /^\/(wizytowka|panel)(\/|$)/.test(route.path))
+// Motyw z ustawień konta dotyczy tylko aplikacji. Wizytówki, logowanie z ustawianiem hasła
+// i płatność mają własne, stałe kolory, a panel właściciela porównuje odczyt ze zdjęciem
+// strony arkusza, więc zostaje jasny. Tę samą regułę ma skrypt w index.html.
+const FIXED_LOOK =
+  /^\/(wizytowka3?|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/
+const lightOnly = computed(() => FIXED_LOOK.test(route.path))
 
 watchEffect(() => {
   const root = document.documentElement

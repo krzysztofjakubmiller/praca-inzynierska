@@ -7,12 +7,14 @@
     <meta name="theme-color" content="#f2f3f0">
     <title></title>
     <script>
-      // Ciemny motyw przed pierwszym malowaniem, żeby strona nie mignęła na jasno. Wizytówka
-      // i panel zostają jasne; resztę ustawia potem App.vue.
+      // Ciemny motyw przed pierwszym malowaniem, żeby strona nie mignęła na jasno. Strony ze
+      // stałym wyglądem pomija ta sama reguła co w App.vue, która potem ustawia resztę.
       try {
         if (
           localStorage.getItem('motyw') === 'dark' &&
-          !/^\/(wizytowka|panel)(\/|$)/.test(location.pathname)
+          !/^\/(wizytowka3?|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/.test(
+            location.pathname,
+          )
         ) {
           document.documentElement.dataset.theme = 'dark'
           const shade = localStorage.getItem('odcien-motywu')

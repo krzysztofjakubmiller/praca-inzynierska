@@ -11,7 +11,11 @@ function makeRouter() {
     history: createMemoryHistory(),
     routes: [
       { path: '/konto', name: 'account', component: Page },
+      { path: '/matura-podstawowa', name: 'map', component: Page },
       { path: '/wizytowka', name: 'landing', component: Page },
+      { path: '/wizytowka3/a35', name: 'landing-3', component: Page },
+      { path: '/logowanie', name: 'login', component: Page },
+      { path: '/platnosc', name: 'payment', component: Page },
       { path: '/panel', name: 'panel', component: Page, meta: { panel: true } },
     ],
   })
@@ -36,16 +40,19 @@ afterEach(async () => {
 })
 
 describe('App theme', () => {
-  it('darkens the app pages', async () => {
-    await open('/konto')
+  it.each(['/konto', '/matura-podstawowa'])('darkens the app page %s', async (path) => {
+    await open(path)
 
     expect(document.documentElement.dataset.theme).toBe('dark')
     expect(document.documentElement.dataset.shade).toBe('grey')
   })
 
-  it.each(['/wizytowka', '/panel'])('keeps %s light', async (path) => {
-    await open(path)
+  it.each(['/wizytowka', '/wizytowka3/a35', '/logowanie', '/platnosc', '/panel'])(
+    'keeps %s in its own colors',
+    async (path) => {
+      await open(path)
 
-    expect(document.documentElement.dataset.theme).toBeUndefined()
-  })
+      expect(document.documentElement.dataset.theme).toBeUndefined()
+    },
+  )
 })
