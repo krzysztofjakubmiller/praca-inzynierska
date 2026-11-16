@@ -73,7 +73,13 @@ onBeforeUnmount(() => {
       </div>
       <ul class="board__rows">
         <li v-for="exam in EXAMS" :key="exam.id">
-          <a class="board__row" :href="`#${exam.id}`" :style="{ '--exam': `var(--board-${exam.id})` }">
+          <!-- Nazwa linku jest stała, bo pola tablicy są puste, dopóki nie widać jej na ekranie. -->
+          <a
+            class="board__row"
+            :href="`#${exam.id}`"
+            :aria-label="`${exam.name}, ${info(exam)}`"
+            :style="{ '--exam': `var(--board-${exam.id})` }"
+          >
             <span class="board__solid" aria-hidden="true">
               <SolidFigure :kind="exam.solid" :drag="false" :fill="0.94" :weight="0.085" :spin="0" />
             </span>
