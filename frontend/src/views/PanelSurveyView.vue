@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import PanelTabs from '@/components/panel/PanelTabs.vue'
-import { LIKERT, PAGES, ROLES, type Role } from '@/landing2/survey'
+import { LIKERT, PAGES, ROLES } from '@/landing2/survey'
 import { panelApi, type SurveyResults } from '@/panel/api'
 import { useProblems } from '@/panel/format'
 import '@/assets/panel.css'
@@ -39,13 +39,18 @@ const roles = computed(() => {
   return byDevice
 })
 
-const shownRole = ref<Role | 'wszyscy'>('wszyscy')
+const ALL_ROLES: string[] = ROLES.map((role) => role.id)
+const ALL_PAGES: string[] = PAGES.map((page) => page.id)
+const shownRoles = ref([...ALL_ROLES])
+const shownPages = ref([...ALL_PAGES])
 
-function shown(deviceId: string): boolean {
-  return shownRole.value === 'wszyscy' || roles.value.get(deviceId) === shownRole.value
+function toggleAll(selected: string[], all: string[]): string[] {
+  return selected.length === all.length ? [] : [...all]
 }
 
-const shownPages = ref<string[]>(PAGES.map((page) => page.id))
+function shown(deviceId: string): boolean {
+  return shownRoles.value.includes(roles.value.get(deviceId) ?? '')
+}
 
 const answers = computed(() =>
   results.value.answers.filter(
@@ -62,26 +67,28 @@ function roleName(deviceId: string): string {
 
 // Jedna linia na wizytówkę, od najwyżej ocenianej.
 const summary = computed(() =>
-  PAGES.filter((page) => shownPages.value.includes(page.id)).map((page) => {
-    const rows = answers.value.filter((row) => row.page === page.id)
-    const points = podiums.value.reduce((sum, podium) => {
-      const place = podium.pages.indexOf(page.id)
-      return sum + (PODIUM_POINTS[place] ?? 0)
-    }, 0)
-    const looks = rows.map((row) => row.looks)
-    return {
-      ...page,
-      count: rows.length,
-      looksMean: looks.length ? looks.reduce((sum, value) => sum + value, 0) / looks.length : 0,
-      looks: average(looks),
-      quality: average(given(rows.map((row) => row.quality))),
-      trust: average(given(rows.map((row) => row.trust))),
-      buying: average(rows.map((row) => row.buying)),
-      scrolled: average(rows.map((row) => row.scrolled)),
-      seconds: average(rows.map((row) => row.seconds)),
-      points,
-    }
-  }).sort((first, second) => second.looksMean - first.looksMean),
+  PAGES.filter((page) => shownPages.value.includes(page.id))
+    .map((page) => {
+      const rows = answers.value.filter((row) => row.page === page.id)
+      const points = podiums.value.reduce((sum, podium) => {
+        const place = podium.pages.indexOf(page.id)
+        return sum + (PODIUM_POINTS[place] ?? 0)
+      }, 0)
+      const looks = rows.map((row) => row.looks)
+      return {
+        ...page,
+        count: rows.length,
+        looksMean: looks.length ? looks.reduce((sum, value) => sum + value, 0) / looks.length : 0,
+        looks: average(looks),
+        quality: average(given(rows.map((row) => row.quality))),
+        trust: average(given(rows.map((row) => row.trust))),
+        buying: average(rows.map((row) => row.buying)),
+        scrolled: average(rows.map((row) => row.scrolled)),
+        seconds: average(rows.map((row) => row.seconds)),
+        points,
+      }
+    })
+    .sort((first, second) => second.looksMean - first.looksMean),
 )
 
 function pageName(id: string): string {
@@ -122,18 +129,34 @@ function when(moment: string) {
         <button class="button button--quiet" type="button" @click="download">
           Pobierz wyniki (JSON)
         </button>
-        <label class="survey__filter">
-          Kto ocenia
-          <select v-model="shownRole">
-            <option value="wszyscy">wszyscy</option>
-            <option v-for="item in ROLES" :key="item.id" :value="item.id">
-              {{ item.name.toLowerCase() }}
-            </option>
-          </select>
-        </label>
       </div>
-      <fieldset class="survey__pages">
-        <legend>Strony</legend>
+      <fieldset class="survey__pick">
+        <legend>
+          Kto ocenia
+          <button
+            class="button button--quiet"
+            type="button"
+            @click="shownRoles = toggleAll(shownRoles, ALL_ROLES)"
+          >
+            {{ shownRoles.length === ALL_ROLES.length ? 'Odznacz wszystkie' : 'Zaznacz wszystkie' }}
+          </button>
+        </legend>
+        <label v-for="item in ROLES" :key="item.id">
+          <input v-model="shownRoles" type="checkbox" :value="item.id" />
+          {{ item.name }}
+        </label>
+      </fieldset>
+      <fieldset class="survey__pick">
+        <legend>
+          Strony
+          <button
+            class="button button--quiet"
+            type="button"
+            @click="shownPages = toggleAll(shownPages, ALL_PAGES)"
+          >
+            {{ shownPages.length === ALL_PAGES.length ? 'Odznacz wszystkie' : 'Zaznacz wszystkie' }}
+          </button>
+        </legend>
         <label v-for="page in PAGES" :key="page.id">
           <input v-model="shownPages" type="checkbox" :value="page.id" />
           {{ page.id.toUpperCase() }}. {{ page.name }}
@@ -252,13 +275,7 @@ function when(moment: string) {
   gap: 1rem;
 }
 
-.panel .survey__filter {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.survey__pages {
+.survey__pick {
   display: flex;
   flex-wrap: wrap;
   gap: 0.4rem 1rem;
@@ -267,13 +284,16 @@ function when(moment: string) {
   border: 0;
 }
 
-.survey__pages legend {
+.survey__pick legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   margin-bottom: 0.4rem;
   color: var(--ink-soft);
   font-weight: 650;
 }
 
-.survey__pages label {
+.survey__pick label {
   display: flex;
   align-items: center;
   gap: 0.35rem;
