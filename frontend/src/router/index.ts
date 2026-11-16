@@ -155,6 +155,12 @@ const router = createRouter({
       meta: { title: 'Stacje w kolorze 3.0' },
     },
     {
+      path: '/wizytowka3/a35/:printer(przyciski|dotyk)',
+      component: () => import('@/views/landing3/PageA35.vue'),
+      props: true,
+      meta: { title: 'Stacje w kolorze 3.5' },
+    },
+    {
       path: '/wizytowka3/b',
       component: () => import('@/views/landing3/PageB.vue'),
       meta: { title: 'Tablica odjazdów 3.0' },
@@ -182,7 +188,7 @@ const router = createRouter({
       meta: { title: 'Mapa tematów: wariant' },
     },
     {
-      path: '/wizytowka3/bilet/:variant(1|2|3|4|5)',
+      path: '/wizytowka3/bilet/:variant(1|2|3|4|5|6)',
       component: () => import('@/views/landing3/TicketLab.vue'),
       props: true,
       meta: { title: 'Bilet: wariant' },

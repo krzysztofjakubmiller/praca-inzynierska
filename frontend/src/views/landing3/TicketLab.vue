@@ -7,8 +7,9 @@ import PriceTable from '@/components/landing3/tickets/PriceTable.vue'
 import StampTicket from '@/components/landing3/tickets/StampTicket.vue'
 import TicketStack from '@/components/landing3/tickets/TicketStack.vue'
 import TouchValidator from '@/components/landing3/tickets/TouchValidator.vue'
+import TrackTrio from '@/components/landing3/tickets/TrackTrio.vue'
 
-// Jeden z pięciu sposobów pokazania biletu na wizytówce. Na prawdziwej stronie zabranie biletu
+// Jeden ze sposobów pokazania biletu na wizytówce. Na prawdziwej stronie zabranie biletu
 // prowadzi do zakupu; tutaj zostaje tylko potwierdzenie, żeby dało się próbować dalej.
 const props = defineProps<{ variant: string }>()
 
@@ -18,6 +19,7 @@ const TEXTS: Record<string, string> = {
   '3': 'Trzy bilety, po jednym na egzamin. Wysuń ten, którego potrzebujesz.',
   '4': 'Wybierz bilet i skasuj go, tak jak w tramwaju.',
   '5': 'Wszystkie ceny w jednym miejscu. Wybierz pozycję, a zobaczysz swój bilet.',
+  '6': 'Pasek przy napisie „Start” da się złapać. Na każdym bilecie zachowuje się inaczej.',
 }
 
 const taken = ref(false)
@@ -41,7 +43,8 @@ watch(
       <TouchValidator v-else-if="variant === '2'" @taken="taken = true" />
       <TicketStack v-else-if="variant === '3'" @taken="taken = true" />
       <StampTicket v-else-if="variant === '4'" @taken="taken = true" />
-      <PriceTable v-else class="bay__wide" @taken="taken = true" />
+      <PriceTable v-else-if="variant === '5'" class="bay__wide" @taken="taken = true" />
+      <TrackTrio v-else @taken="taken = true" />
     </section>
   </LabShell>
 </template>
@@ -112,8 +115,14 @@ watch(
   --ground: #fff;
 }
 
+/* Trzy bilety obok siebie potrzebują szerszego pola niż jeden kasownik. */
+.bay--6 {
+  --ground: #e6e9f2;
+  padding-inline: max(var(--gutter), calc((100vw - 78rem) / 2));
+}
+
 @media (min-width: 56rem) {
-  .bay:not(.bay--5) {
+  .bay:not(.bay--5, .bay--6) {
     grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     column-gap: var(--gutter);
   }
@@ -123,7 +132,7 @@ watch(
     top: 2rem;
   }
 
-  .bay--5 .bay__head {
+  :is(.bay--5, .bay--6) .bay__head {
     position: static;
   }
 }
