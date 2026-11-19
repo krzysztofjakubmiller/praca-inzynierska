@@ -310,8 +310,9 @@ defineExpose({ drawing, focusStation })
 
 <style scoped>
 .metro-map {
-  --paper-mm: rgb(40 120 110 / 0.07);
-  --paper-cm: rgb(40 120 110 / 0.13);
+  /* Kratka z koloru tekstu, więc w każdym motywie ma odcień tła. */
+  --paper-mm: color-mix(in srgb, var(--ink) 6%, transparent);
+  --paper-cm: color-mix(in srgb, var(--ink) 11%, transparent);
 
   position: relative;
   display: flex;
@@ -329,11 +330,6 @@ defineExpose({ drawing, focusStation })
 
 .metro-map__spacer {
   flex: none;
-}
-
-:global(:root[data-theme='dark']) .metro-map {
-  --paper-mm: rgb(160 220 210 / 0.045);
-  --paper-cm: rgb(160 220 210 / 0.09);
 }
 
 /* Papier milimetrowy pod mapą z rysunkami: kratka co 11 px i grubsza co 55 px. Odstęp od
