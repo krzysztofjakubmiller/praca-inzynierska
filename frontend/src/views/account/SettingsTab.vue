@@ -389,8 +389,8 @@ function chooseDifficulties(event: Event) {
 }
 
 .settings__choice input:checked + span {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .settings__choice input:focus-visible + span {

@@ -73,7 +73,7 @@ async function sendComment() {
 }
 
 .ai-feedback [aria-pressed='true'] {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--ink);
+  color: var(--ground);
 }
 </style>

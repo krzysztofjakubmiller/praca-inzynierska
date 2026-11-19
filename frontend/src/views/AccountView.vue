@@ -58,7 +58,7 @@ onMounted(async () => {
 
 <template>
   <div class="account">
-    <header class="account__top">
+    <header class="account__top app-bar">
       <RouterLink
         class="account__back"
         :to="{ name: examPage }"
@@ -199,8 +199,8 @@ onMounted(async () => {
 }
 
 .account__tab[aria-current='page'] {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .account__tab:focus-visible {

@@ -64,10 +64,6 @@
   --correct: #13733a;
   --map-outline: #7c8297;
 
-  --primary: #16224f;
-  --primary-raised: #333e66;
-  --on-primary: #ffffff;
-
   --card-shadow: 0 1px 1px rgb(22 34 79 / 0.06), 0 12px 24px -8px rgb(22 34 79 / 0.14);
   --sheet-shadow: 0 -10px 24px rgb(22 34 79 / 0.14);
   --drawer-shadow: 10px 0 24px rgb(22 34 79 / 0.14);
@@ -98,10 +94,6 @@
 
   --map-outline: #646979;
   --map-last: #fe8e66;
-
-  --primary: var(--ink);
-  --primary-raised: var(--ink-raised);
-  --on-primary: var(--ground);
 
   --card-shadow: 0 0 0 1px var(--hairline);
   --sheet-shadow: 0 -10px 24px rgb(0 0 0 / 0.35);
@@ -222,11 +214,10 @@ canvas {
   gap: 0.65em;
   min-height: 3rem;
   padding: 0.7em 1.3em 0.72em 1.4em;
-  /* Strony ze stałym wyglądem nie mają --primary, więc ich przycisk ma kolor tuszu. */
-  border: 2px solid var(--primary, var(--ink));
+  border: 2px solid var(--ink);
   border-radius: 999px;
-  background: var(--primary, var(--ink));
-  color: var(--on-primary, var(--ground));
+  background: var(--ink);
+  color: var(--ground);
   font: inherit;
   font-weight: 650;
   line-height: 1.1;
@@ -240,8 +231,7 @@ canvas {
 
 .button:hover {
   --nudge: 0.2em;
-  border-color: var(--primary-raised, var(--ink));
-  background: var(--primary-raised, var(--ink-raised));
+  background: var(--ink-raised);
 }
 
 .button:active {
@@ -249,13 +239,11 @@ canvas {
 }
 
 .button--quiet {
-  border-color: var(--ink);
   background: transparent;
   color: var(--ink);
 }
 
 .button--quiet:hover {
-  border-color: var(--ink);
   background: var(--ink);
   color: var(--ground);
 }
@@ -267,13 +255,30 @@ canvas {
 }
 
 .button:disabled:hover {
-  border-color: var(--primary, var(--ink));
-  background: var(--primary, var(--ink));
+  background: var(--ink);
 }
 
 .button--quiet:disabled:hover {
   background: transparent;
   color: var(--ink);
+}
+
+/* Górny pasek ekranu w jasnym motywie jest ciemny jak pasek nawigacji wizytówki. Odwrócone
+   zmienne przestawiają na jasne wszystko, co w nim leży: tekst, przyciski i przełączniki. */
+:root[data-theme='light'] .app-bar {
+  --ground: #101421;
+  --ink: #ffffff;
+  --ink-raised: #e8ecf8;
+  --ink-soft: #c5cbe0;
+  --hairline: rgb(255 255 255 / 0.24);
+  border-bottom-color: transparent;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+/* Nagłówki aplikacji zwężone jak na wizytówce. */
+:root[data-theme] :is(h1, h2) {
+  font-stretch: 88%;
 }
 
 .icon-button {

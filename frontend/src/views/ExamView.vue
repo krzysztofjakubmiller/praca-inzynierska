@@ -151,7 +151,7 @@ function closeOutside(event: MouseEvent) {
         <PassengerSymbol />
       </defs>
     </svg>
-    <header class="exam-page__top">
+    <header class="exam-page__top app-bar">
       <button
         v-if="!desktop"
         ref="menuButton"
@@ -430,8 +430,8 @@ function closeOutside(event: MouseEvent) {
 }
 
 .exam-page__views button[aria-pressed='true'] {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .exam-page__chip {
@@ -458,9 +458,9 @@ function closeOutside(event: MouseEvent) {
 }
 
 .exam-page__chip[aria-expanded='true'] {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--on-primary);
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 /* Na dotyk pole kliknięcia sięga 44 px wysokości, choć pigułka zostaje niższa. */

@@ -346,8 +346,8 @@ watch(topics, loadNext)
 }
 
 .practice__switch button[aria-pressed='true'] {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--ink);
+  color: var(--ground);
 }
 
 .practice__switch button:disabled {
