@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { confirmEmail } from '@/account'
-import '@/assets/auth.css'
+import AuthShell from '@/components/account/AuthShell.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,12 +26,12 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main class="auth">
-    <h1>Potwierdzenie adresu</h1>
+  <AuthShell>
+    <h1 class="as-title auth__title">Potwierdzenie adresu</h1>
     <p v-if="!problem">Zakładamy konto.</p>
     <template v-else>
       <p class="auth__problem" role="alert">{{ problem }}</p>
       <p><RouterLink :to="{ name: 'register' }">Zarejestruj się jeszcze raz</RouterLink></p>
     </template>
-  </main>
+  </AuthShell>
 </template>

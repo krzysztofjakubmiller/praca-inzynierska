@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { tryPassword, type PasswordKind } from '@/access'
+import AuthShell from '@/components/account/AuthShell.vue'
 
 const props = defineProps<{ kind: PasswordKind }>()
 
@@ -31,89 +32,52 @@ async function enter() {
 </script>
 
 <template>
-  <main class="access">
+  <AuthShell>
     <template v-if="kind === 'panel'">
-      <h1>Panel właściciela</h1>
+      <h1 class="as-title auth__title">Panel właściciela</h1>
       <p>Panel ma osobne hasło.</p>
     </template>
     <template v-else>
       <section class="access__survey">
-        <h1>Wypełnij ankietę</h1>
+        <h1 class="as-title auth__title">Wypełnij ankietę</h1>
         <p>Pomóż wybrać wygląd strony głównej. Bez hasła i bez zakładania konta.</p>
-        <RouterLink class="button" :to="{ name: 'survey' }">Wypełnij ankietę</RouterLink>
+        <RouterLink class="button as-cta" :to="{ name: 'survey' }">Wypełnij ankietę</RouterLink>
       </section>
-      <h2>Wpisz hasło dostępu</h2>
+      <h2 class="access__heading">Wpisz hasło dostępu</h2>
       <p>Aplikacja jest w budowie, reszta stron otwiera się tylko z hasłem.</p>
     </template>
-    <form class="access__form" @submit.prevent="enter">
+    <form class="auth__form" @submit.prevent="enter">
       <label>
-        Hasło
+        <span class="as-label">Hasło</span>
         <input v-model="password" type="password" autocomplete="current-password" required />
       </label>
-      <button class="button" type="submit" :disabled="checking">Wejdź</button>
+      <!-- Przy ankiecie główny przycisk prowadzi do ankiety, więc wejście z hasłem jest spokojne. -->
+      <button
+        class="button"
+        :class="kind === 'panel' ? 'as-cta' : 'button--quiet'"
+        type="submit"
+        :disabled="checking"
+      >
+        Wejdź
+      </button>
     </form>
     <p v-if="checking">Sprawdzam hasło.</p>
-    <p v-if="problem" class="access__problem" role="alert">{{ problem }}</p>
-  </main>
+    <p v-if="problem" class="auth__problem" role="alert">{{ problem }}</p>
+  </AuthShell>
 </template>
 
 <style scoped>
-.access {
-  display: grid;
-  gap: 1.25rem;
-  max-width: 28rem;
-  margin-inline: auto;
-  padding: var(--gutter);
-}
-
-.access h1 {
-  font-size: 2rem;
-  font-weight: 800;
-}
-
-.access h2 {
-  font-size: 1.35rem;
-  font-weight: 750;
-}
-
 .access__survey {
   display: grid;
   gap: 1rem;
   justify-items: start;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
   padding-bottom: 2rem;
   border-bottom: 1px solid var(--hairline);
 }
 
-.access__form {
-  display: grid;
-  gap: 1rem;
-  justify-items: start;
-}
-
-.access__form label {
-  display: grid;
-  gap: 0.35rem;
-  width: 100%;
-  font-weight: 600;
-}
-
-.access__form input {
-  padding: 0.55em 0.7em;
-  border: 1px solid var(--ink-soft);
-  border-radius: 0.5rem;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-}
-
-.access__form .button:disabled {
-  opacity: 0.4;
-  cursor: wait;
-}
-
-.access__problem {
-  color: var(--danger);
-  font-weight: 600;
+.access__heading {
+  font-size: 1.35rem;
+  font-weight: 750;
 }
 </style>

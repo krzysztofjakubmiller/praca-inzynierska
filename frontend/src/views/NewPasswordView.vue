@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { setPassword } from '@/account'
 import PasswordField from '@/components/account/PasswordField.vue'
-import '@/assets/auth.css'
+import AuthShell from '@/components/account/AuthShell.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -36,17 +36,17 @@ async function savePassword() {
 </script>
 
 <template>
-  <main class="auth">
-    <h1>Nowe hasło</h1>
+  <AuthShell>
+    <h1 class="as-title auth__title">Nowe hasło</h1>
     <form class="auth__form" @submit.prevent="savePassword">
       <PasswordField id="password" v-model="password" label="Hasło" autocomplete="new-password">
         <p class="auth__note">Co najmniej 12 znaków.</p>
       </PasswordField>
-      <button class="button" type="submit" :disabled="sending">Zapisz hasło</button>
+      <button class="button as-cta" type="submit" :disabled="sending">Zapisz hasło</button>
     </form>
     <p v-if="problem" class="auth__problem" role="alert">{{ problem }}</p>
     <p v-if="linkExpired">
       <RouterLink :to="{ name: 'password-link' }">Poproś o nowy link</RouterLink>
     </p>
-  </main>
+  </AuthShell>
 </template>

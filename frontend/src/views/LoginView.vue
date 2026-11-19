@@ -215,16 +215,6 @@ function submitGoogle(credential: string) {
   justify-items: stretch;
 }
 
-.login :deep(input:not([type='checkbox'])) {
-  min-height: 3.25rem;
-  padding: 0 1rem;
-  border: 2px solid var(--ink);
-  border-radius: 0.8rem;
-  background: var(--surface);
-  color: var(--ink);
-  caret-color: var(--accent);
-}
-
 .login__enter {
   width: 100%;
 }

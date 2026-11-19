@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { requestPasswordLink } from '@/account'
-import '@/assets/auth.css'
+import AuthShell from '@/components/account/AuthShell.vue'
 
 const route = useRoute()
 
@@ -30,8 +30,8 @@ async function sendLink() {
 </script>
 
 <template>
-  <main class="auth">
-    <h1>Ustaw hasło</h1>
+  <AuthShell>
+    <h1 class="as-title auth__title">Ustaw hasło</h1>
     <template v-if="sentTo">
       <p role="status">Wysłaliśmy link na adres {{ sentTo }}. Kliknij go, żeby ustawić hasło.</p>
       <p class="auth__note">Link jest ważny godzinę. Jeśli maila nie ma, zajrzyj do spamu.</p>
@@ -43,13 +43,13 @@ async function sendLink() {
       </p>
       <form class="auth__form" @submit.prevent="sendLink">
         <label>
-          E-mail
+          <span class="as-label">Adres e-mail</span>
           <input v-model="email" type="email" autocomplete="email" required />
         </label>
-        <button class="button" type="submit" :disabled="sending">Wyślij link</button>
+        <button class="button as-cta" type="submit" :disabled="sending">Wyślij link</button>
       </form>
       <p v-if="problem" class="auth__problem" role="alert">{{ problem }}</p>
     </template>
     <p><RouterLink :to="{ name: 'login' }">Wróć do logowania</RouterLink></p>
-  </main>
+  </AuthShell>
 </template>
