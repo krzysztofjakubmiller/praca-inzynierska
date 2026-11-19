@@ -56,7 +56,7 @@ describe('App theme', () => {
     expect(document.documentElement.dataset.shade).toBeUndefined()
   })
 
-  it.each(['/wizytowka', '/wizytowka3/a35', '/ankieta', '/logowanie', '/platnosc', '/panel'])(
+  it.each(['/wizytowka', '/wizytowka3/a35', '/ankieta', '/logowanie', '/platnosc'])(
     'keeps %s in its own colors',
     async (path) => {
       await open(path)
@@ -64,4 +64,11 @@ describe('App theme', () => {
       expect(document.documentElement.dataset.theme).toBeUndefined()
     },
   )
+
+  it('keeps the owner panel light in the dark theme', async () => {
+    await open('/panel')
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.shade).toBeUndefined()
+  })
 })

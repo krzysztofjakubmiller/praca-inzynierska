@@ -44,7 +44,7 @@
 }
 
 /*
- * Kolory powyżej zostają dla stron ze stałym wyglądem (wizytówki, ankieta, panel). Ekrany
+ * Kolory powyżej zostają dla stron ze stałym wyglądem (wizytówki, ankieta, logowanie). Ekrany
  * aplikacji dostają od App.vue atrybut data-theme i biorą paletę wizytówki 3.5 z reguł niżej.
  */
 :root[data-theme] {
@@ -299,7 +299,7 @@ canvas {
 
 /* Wzory w zadaniach tą samą czcionką co tekst, jak na wizytówce. Litery i cyfry biorą Mona Sans,
    a duże nawiasy, pierwiastki i symbole sum zostają w czcionkach KaTeX, bo ich wielkość KaTeX
-   dobiera do wysokości wzoru. Panel ma zwykły wygląd KaTeX, żeby sprawdzać zapis z arkuszem. */
+   dobiera do wysokości wzoru. */
 :root[data-theme] .katex,
 :root[data-theme] .katex :is(.mathnormal, .mathit, .mathrm, .textrm, .boldsymbol) {
   font-family: var(--font-sans);

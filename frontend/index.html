@@ -14,11 +14,12 @@
       // stałym wyglądem pomija ta sama reguła co w App.vue, która potem ustawia resztę.
       try {
         if (
-          !/^\/(wizytowka3?|ankieta|style|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/.test(
+          !/^\/(wizytowka3?|ankieta|style|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/.test(
             location.pathname,
           )
         ) {
-          const dark = localStorage.getItem('motyw') === 'dark'
+          const dark =
+            !/^\/panel(\/|$)/.test(location.pathname) && localStorage.getItem('motyw') === 'dark'
           document.documentElement.dataset.theme = dark ? 'dark' : 'light'
           if (dark) {
             const shade = localStorage.getItem('odcien-motywu')
