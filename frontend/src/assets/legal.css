@@ -1,14 +1,17 @@
 .legal {
   display: grid;
   gap: 1rem;
-  max-width: 42rem;
-  margin-inline: auto;
-  padding: var(--gutter);
+  width: min(100% - 2 * var(--gutter), 42rem);
+  margin: var(--gutter) auto;
+  padding: clamp(1.25rem, 0.9rem + 2vw, 2.5rem);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
   line-height: 1.55;
 }
 
 .legal h1 {
-  font-size: 2rem;
+  font-size: clamp(2rem, 1.6rem + 2vw, 2.75rem);
   font-weight: 800;
 }
 

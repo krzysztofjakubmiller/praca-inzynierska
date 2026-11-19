@@ -33,8 +33,7 @@ function goBack() {
 .soon__title {
   font-size: clamp(3rem, 1.4rem + 6.4vw, 6rem);
   font-weight: 800;
-  font-stretch: 112%;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.02em;
 }
 
 .soon__text {
