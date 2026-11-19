@@ -297,6 +297,19 @@ canvas {
   background: var(--hairline);
 }
 
+/* Wzory w zadaniach tą samą czcionką co tekst, jak na wizytówce. Litery i cyfry biorą Mona Sans,
+   a duże nawiasy, pierwiastki i symbole sum zostają w czcionkach KaTeX, bo ich wielkość KaTeX
+   dobiera do wysokości wzoru. Panel ma zwykły wygląd KaTeX, żeby sprawdzać zapis z arkuszem. */
+:root[data-theme] .katex,
+:root[data-theme] .katex :is(.mathnormal, .mathit, .mathrm, .textrm, .boldsymbol) {
+  font-family: var(--font-sans);
+}
+
+:root[data-theme] .katex {
+  font-size: 1.08em;
+  font-weight: 600;
+}
+
 /* Klawiatura wzorów (MathLive) w kolorach aplikacji. Bez tego bierze jasny albo ciemny wygląd
    z ustawień systemu, a nie z motywu wybranego w profilu. :root podnosi pierwszeństwo nad
    regułami ciemnego motywu biblioteki. */
