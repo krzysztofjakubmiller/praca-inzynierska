@@ -305,7 +305,7 @@ function chooseDifficulties(event: Event) {
 <style scoped>
 .settings {
   display: grid;
-  gap: 2.25rem;
+  gap: 1.25rem;
   max-width: 34rem;
 }
 
@@ -319,13 +319,15 @@ function chooseDifficulties(event: Event) {
 .settings__group {
   display: grid;
   gap: 1.5rem;
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .settings__heading {
-  padding-bottom: 0.6rem;
-  border-bottom: 1px solid var(--hairline);
-  font-size: 1.0625rem;
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 750;
 }
 
 .settings__field {
