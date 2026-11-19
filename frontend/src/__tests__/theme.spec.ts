@@ -36,11 +36,11 @@ afterEach(() => {
 })
 
 describe('theme without an account', () => {
-  it('starts light with the grey shade', async () => {
+  it('starts light with the navy shade', async () => {
     const { theme, darkShade } = await freshModules()
 
     expect(theme.value).toBe('light')
-    expect(darkShade.value).toBe('grey')
+    expect(darkShade.value).toBe('navy')
   })
 
   it('remembers the choice in the browser', async () => {

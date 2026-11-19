@@ -74,16 +74,18 @@
 }
 
 /*
- * Ciemny motyw: te same odcienie z odwróconą jasnością (liczone w OKLCH), a nie negatyw.
- * Linie mapy mają osobne, jaśniejsze wersje, żeby wyglądały jak te same linie.
+ * Ciemny motyw ma trzy odcienie do wyboru w ustawieniach konta. Grafitowy wziął kolor obudowy
+ * kasownika z wizytówki; czarny ma czysto czarne tło na ekrany OLED. Karty są jaśniejsze od tła,
+ * bo na ciemnym tle cień jest niewidoczny.
  */
 :root[data-theme='dark'] {
-  --ground: #111210;
-  --surface: #080807;
-  --ink: #ebece9;
-  --ink-raised: #d0d1ce;
-  --ink-soft: #a8abaf;
-  --hairline: rgb(235 236 233 / 0.14);
+  --ground: #14161d;
+  --surface: #1e212b;
+  --ink: #f4f5f7;
+  --ink-raised: #d6d8de;
+  --ink-soft: #a9adbb;
+  --hairline: rgb(244 245 247 / 0.14);
+  --track: rgb(244 245 247 / 0.14);
   --danger: #ff8b7b;
   --correct: #22c55e;
 
@@ -94,14 +96,13 @@
   --line-5: #ef8f50;
   --line-6: #cba1fb;
 
-  --map-outline: #626460;
+  --map-outline: #646979;
   --map-last: #fe8e66;
 
   --primary: var(--ink);
   --primary-raised: var(--ink-raised);
   --on-primary: var(--ground);
 
-  /* Na ciemnym tle cień jest niewidoczny, więc kartę odcina cienka kreska. */
   --card-shadow: 0 0 0 1px var(--hairline);
   --sheet-shadow: 0 -10px 24px rgb(0 0 0 / 0.35);
   --drawer-shadow: 10px 0 24px rgb(0 0 0 / 0.35);
@@ -109,28 +110,39 @@
   color-scheme: dark;
 }
 
-/* Czarny odcień ciemnego motywu do wyboru w ustawieniach konta. */
 :root[data-theme='dark'][data-shade='black'] {
-  --ground: #070706;
-  --surface: #020202;
+  --ground: #000000;
+  --surface: #0e0f13;
 }
 
-/* Granatowy odcień w kolorze wizytówki. Linie mapy mają jaśniejsze wersje, żeby odcinały
-   się od granatu. */
+/* Granat wizytówki. Linie mapy i kolory egzaminów mają jaśniejsze odcienie, żeby odcinały się
+   od tła. */
 :root[data-theme='dark'][data-shade='navy'] {
   --ground: #16224f;
-  --surface: #101a3f;
-  --ink: #fff;
+  --surface: #1f2c61;
+  --ink: #ffffff;
   --ink-raised: #e8ecf8;
   --ink-soft: #c5cbe0;
   --hairline: rgb(255 255 255 / 0.24);
-  --map-outline: #a5add0;
+  --track: rgb(255 255 255 / 0.2);
+  --danger: #ffb4a8;
+  --correct: #7be0a6;
+
+  --exam-e8: #7fb0ff;
+  --exam-matura-podstawowa: #4fd58d;
+  --exam-matura-rozszerzona: #ff7a69;
+
   --line-1: #ffd35c;
   --line-2: #7fb0ff;
   --line-3: #4fd58d;
   --line-4: #ff7a69;
   --line-5: #ffa867;
   --line-6: #cdb2ff;
+
+  --map-outline: #8d9bcb;
+  --map-last: #ff7a69;
+
+  scrollbar-color: #5c6aa3 var(--ground);
 }
 
 @media (prefers-reduced-motion: no-preference) {

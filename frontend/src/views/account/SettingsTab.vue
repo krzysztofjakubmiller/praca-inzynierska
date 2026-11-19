@@ -20,9 +20,9 @@ const THEMES: { value: Theme; label: string }[] = [
   { value: 'dark', label: 'Ciemny' },
 ]
 const SHADES: { value: DarkShade; label: string }[] = [
-  { value: 'grey', label: 'Ciemnoszary' },
-  { value: 'black', label: 'Czarny' },
   { value: 'navy', label: 'Granatowy' },
+  { value: 'grey', label: 'Grafitowy' },
+  { value: 'black', label: 'Czarny' },
 ]
 const REVIEWS: { value: DailyReviews; label: string }[] = [
   { value: 'malo', label: 'mało' },
@@ -407,11 +407,11 @@ function chooseDifficulties(event: Event) {
 }
 
 .settings__swatch--grey {
-  background: #111210;
+  background: #14161d;
 }
 
 .settings__swatch--black {
-  background: #070706;
+  background: #000000;
 }
 
 .settings__swatch--navy {

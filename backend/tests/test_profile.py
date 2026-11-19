@@ -76,7 +76,7 @@ def test_new_account_gets_the_default_profile(client, account):
         "exam_year": year,
         "target_percent": None,
         "theme": "light",
-        "dark_shade": "grey",
+        "dark_shade": "navy",
         "daily_reviews": "srednio",
         "learning_difficulties": "brak",
         "exam_years": [year, year + 1, year + 2],

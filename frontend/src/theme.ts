@@ -29,7 +29,7 @@ function store(key: string, value: string): void {
 // pokazać właściwy motyw, zanim przyjdzie profil z serwera.
 const saved = ref({
   theme: stored<Theme>(THEME_KEY, ['light', 'dark'], 'light'),
-  shade: stored<DarkShade>(SHADE_KEY, ['grey', 'black', 'navy'], 'grey'),
+  shade: stored<DarkShade>(SHADE_KEY, ['grey', 'black', 'navy'], 'navy'),
 })
 
 export const theme = computed<Theme>(() => profile.value?.theme ?? saved.value.theme)

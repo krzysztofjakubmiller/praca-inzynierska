@@ -91,7 +91,7 @@ def read_profile(
             exam_year=default_exam_year(date.today()),
             target_percent=None,
             theme="light",
-            dark_shade="grey",
+            dark_shade="navy",
             daily_reviews="srednio",
             learning_difficulties="brak",
         )

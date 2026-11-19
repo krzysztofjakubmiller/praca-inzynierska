@@ -45,7 +45,7 @@ describe('App theme', () => {
     await open(path)
 
     expect(document.documentElement.dataset.theme).toBe('dark')
-    expect(document.documentElement.dataset.shade).toBe('grey')
+    expect(document.documentElement.dataset.shade).toBe('navy')
   })
 
   it('marks a light app page so it takes the app palette', async () => {
