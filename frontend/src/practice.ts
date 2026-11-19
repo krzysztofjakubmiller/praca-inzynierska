@@ -282,6 +282,25 @@ export async function loadProgress(exam: string): Promise<MapProgress<string> | 
   }
 }
 
+// Polecenia, które CKE powtarza w każdym arkuszu („Dokończ zdanie. Wybierz…”). Stoją w treści
+// osobną linią, zwykle między opisem a pytaniem.
+const INSTRUCTION =
+  /^(?:Dokończ zdanie|Oceń prawdziwość|Uzupełnij (?:zdani|poniższe|tabel)|Zapisz obliczenia|Przyporządkuj)[^\n]*$/m
+
+/** Treść podzielona na zwykły tekst i formułki CKE, które ekran zadania pokazuje mniejsze. */
+export function splitInstructions(content: string): { text: string; instruction: boolean }[] {
+  const parts: { text: string; instruction: boolean }[] = []
+  let rest = content
+  for (let found = INSTRUCTION.exec(rest); found; found = INSTRUCTION.exec(rest)) {
+    const before = rest.slice(0, found.index).trim()
+    if (before) parts.push({ text: before, instruction: false })
+    parts.push({ text: found[0], instruction: true })
+    rest = rest.slice(found.index + found[0].length)
+  }
+  if (rest.trim()) parts.push({ text: rest.trim(), instruction: false })
+  return parts
+}
+
 /** Np. „Maj 2024, zad. 9.1”. */
 export function taskSource(task: PracticeTask): string {
   const number = task.subnumber ? `${task.number}.${task.subnumber}` : `${task.number}`

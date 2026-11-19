@@ -20,6 +20,7 @@ import {
   checkSolution,
   rateSolution,
   Rejected,
+  splitInstructions,
   taskSource,
   type Checked,
   type Graded,
@@ -49,6 +50,7 @@ const RATINGS: { rating: Rating; name: string; shape: Difficulty }[] = [
 const choices = computed(() =>
   Object.entries(props.task.choices ?? {}).map(([label, text]) => ({ label, text })),
 )
+const contentParts = computed(() => splitInstructions(props.task.content))
 const figures = computed(() => Object.values(props.task.figures ?? {}))
 const range = computed(() => numberLineRange(figures.value))
 const span = computed(() => coordinatePlaneSpan(figures.value))
@@ -184,70 +186,79 @@ const keyText = computed(() => {
 
 <template>
   <article class="practice-task" :style="{ '--figure-color': `var(--exam-${task.exam})` }">
-    <p class="practice-task__meta">
-      {{ task.topic_name }} · {{ taskSource(task) }} · {{ task.max_points }} pkt
-    </p>
+    <div class="practice-task__card">
+      <p class="practice-task__meta">
+        {{ task.topic_name }} · {{ taskSource(task) }} · {{ task.max_points }} pkt
+      </p>
 
-    <MathText :text="task.content" class="practice-task__content" />
-    <TaskFigure
-      v-if="task.figures?.content"
-      :figure="task.figures.content"
-      :range="range"
-      :span="span"
-    />
-    <!-- Na tablicy rysunek leży na samej tablicy, więc w treści zostaje sam tekst. -->
-    <TaskWhiteboard ref="whiteboard" :chat="!demo" @ask="tutor?.open()">
-      <template #task>
-        <MathText :text="task.content" />
-      </template>
-      <template v-if="task.figures?.content" #figure>
-        <TaskFigure :figure="task.figures.content" :range="range" :span="span" quiet />
-      </template>
-    </TaskWhiteboard>
-
-    <div ref="answer">
-      <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
-        <button
-          v-for="choice in choices"
-          :key="choice.label"
-          type="button"
-          class="practice-task__choice"
-          :class="`practice-task__choice--${resultOf(choice.label)}`"
-          :aria-pressed="picked === choice.label"
-          :disabled="checked !== null"
-          @click="picked = choice.label"
-        >
-          <strong class="practice-task__label">{{ choice.label }}.</strong>
-          <span class="practice-task__choice-body">
-            <MathText :text="choice.text" />
-            <TaskFigure
-              v-if="task.figures?.[choice.label]"
-              :figure="task.figures[choice.label]!"
-              :range="range"
-              :span="span"
-            />
-          </span>
-          <span v-if="resultOf(choice.label)" class="practice-task__sign" aria-hidden="true">
-            {{ resultOf(choice.label) === 'correct' ? '✓' : '✗' }}
-          </span>
-        </button>
+      <div class="practice-task__content">
+        <MathText
+          v-for="(part, index) in contentParts"
+          :key="index"
+          :text="part.text"
+          :class="{ 'practice-task__instruction': part.instruction }"
+        />
       </div>
-      <TrueFalseTable
-        v-else-if="format === 'prawda-falsz'"
-        :choices="choices"
-        :picked="picked"
-        :answer="checked?.answer"
-        @pick="pickTrueFalse"
+      <TaskFigure
+        v-if="task.figures?.content"
+        :figure="task.figures.content"
+        :range="range"
+        :span="span"
       />
-      <MatchingTable
-        v-else-if="format === 'dobieranie'"
-        :choices="choices"
-        :connector="task.connector ?? ''"
-        :picked="picked"
-        :answer="checked?.answer"
-        @pick="pickMatching"
-      />
-      <OpenAnswer v-else :task="task" @done="check" />
+      <!-- Na tablicy rysunek leży na samej tablicy, więc w treści zostaje sam tekst. -->
+      <TaskWhiteboard ref="whiteboard" :chat="!demo" @ask="tutor?.open()">
+        <template #task>
+          <MathText :text="task.content" />
+        </template>
+        <template v-if="task.figures?.content" #figure>
+          <TaskFigure :figure="task.figures.content" :range="range" :span="span" quiet />
+        </template>
+      </TaskWhiteboard>
+
+      <div ref="answer">
+        <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
+          <button
+            v-for="choice in choices"
+            :key="choice.label"
+            type="button"
+            class="practice-task__choice"
+            :class="`practice-task__choice--${resultOf(choice.label)}`"
+            :aria-pressed="picked === choice.label"
+            :disabled="checked !== null"
+            @click="picked = choice.label"
+          >
+            <strong class="practice-task__label">{{ choice.label }}.</strong>
+            <span class="practice-task__choice-body">
+              <MathText :text="choice.text" />
+              <TaskFigure
+                v-if="task.figures?.[choice.label]"
+                :figure="task.figures[choice.label]!"
+                :range="range"
+                :span="span"
+              />
+            </span>
+            <span v-if="resultOf(choice.label)" class="practice-task__sign" aria-hidden="true">
+              {{ resultOf(choice.label) === 'correct' ? '✓' : '✗' }}
+            </span>
+          </button>
+        </div>
+        <TrueFalseTable
+          v-else-if="format === 'prawda-falsz'"
+          :choices="choices"
+          :picked="picked"
+          :answer="checked?.answer"
+          @pick="pickTrueFalse"
+        />
+        <MatchingTable
+          v-else-if="format === 'dobieranie'"
+          :choices="choices"
+          :connector="task.connector ?? ''"
+          :picked="picked"
+          :answer="checked?.answer"
+          @pick="pickMatching"
+        />
+        <OpenAnswer v-else :task="task" @done="check" />
+      </div>
     </div>
 
     <template v-if="graded">
@@ -367,14 +378,33 @@ const keyText = computed(() => {
   max-width: 44rem;
 }
 
+/* Zadanie na karcie jak na wizytówce; pulpit z wynikiem zostaje pod kartą. */
+.practice-task__card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
 .practice-task__meta {
   color: var(--ink-soft);
   font-size: 0.875rem;
 }
 
 .practice-task__content {
-  font-size: 1.0625rem;
+  display: grid;
+  gap: 0.6rem;
+  font-size: 1.125rem;
   line-height: 1.55;
+}
+
+/* Formułka CKE jest dla ucznia tłem, a nie treścią zadania. */
+.practice-task__instruction {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
 }
 
 .practice-task__choices {

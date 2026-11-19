@@ -6,6 +6,7 @@ import {
   randomTask,
   rateSolution,
   Rejected,
+  splitInstructions,
   taskSource,
   type PracticeTask,
 } from '@/practice'
@@ -117,5 +118,33 @@ describe('taskSource', () => {
     expect(taskSource({ ...TASK, source: 'Próbny', number: 9, subnumber: 1 })).toBe(
       'Próbny 2024, zad. 9.1',
     )
+  })
+})
+
+describe('splitInstructions', () => {
+  it('separates the CKE instruction from the description and the question', () => {
+    const content =
+      'Dana jest prosta $y=2x$.\nDokończ zdanie. Wybierz właściwą odpowiedź spośród podanych.\nLiczba $a$ jest równa'
+    expect(splitInstructions(content)).toEqual([
+      { text: 'Dana jest prosta $y=2x$.', instruction: false },
+      {
+        text: 'Dokończ zdanie. Wybierz właściwą odpowiedź spośród podanych.',
+        instruction: true,
+      },
+      { text: 'Liczba $a$ jest równa', instruction: false },
+    ])
+  })
+
+  it('leaves content without an instruction as one piece', () => {
+    expect(splitInstructions('Oblicz $2+2$.')).toEqual([
+      { text: 'Oblicz $2+2$.', instruction: false },
+    ])
+  })
+
+  it('finds an instruction at the end', () => {
+    expect(splitInstructions('Wykaż, że $a>0$.\nZapisz obliczenia.')).toEqual([
+      { text: 'Wykaż, że $a>0$.', instruction: false },
+      { text: 'Zapisz obliczenia.', instruction: true },
+    ])
   })
 })

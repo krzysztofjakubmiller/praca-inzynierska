@@ -108,10 +108,10 @@ watch(value, (text) => {
 
   width: 100%;
   min-width: 0;
-  min-height: 2.75rem;
-  padding: 0.35em 0.5em;
-  border: 1px solid var(--ink-soft);
-  border-radius: 0.5rem;
+  min-height: 3.25rem;
+  padding: 0.35em 0.6em;
+  border: 2px solid var(--ink);
+  border-radius: 0.8rem;
   background: var(--surface);
   color: var(--ink);
   font-size: 1.25rem;

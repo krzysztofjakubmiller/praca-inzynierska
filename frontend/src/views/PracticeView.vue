@@ -39,6 +39,9 @@ const count = ref(0)
 const leftToday = ref(0)
 const topicTotal = ref(0)
 const more = ref(false)
+// count liczy też bieżące zadanie, więc to, które jest na ekranie, ma numer o jeden większy
+// od liczby zrobionych.
+const position = computed(() => topicTotal.value - count.value + 1)
 const topics = ref<string[]>([])
 
 // Każdy temat raz, na pierwszej linii, jak w widoku listy.
@@ -119,7 +122,7 @@ watch(topics, loadNext)
 
 <template>
   <div class="practice">
-    <header class="practice__top">
+    <header class="practice__top app-bar">
       <RouterLink
         class="practice__back"
         :to="`/${exam}`"
@@ -165,17 +168,30 @@ watch(topics, loadNext)
       <p v-if="problem" class="practice__problem" role="alert">{{ problem }}</p>
 
       <template v-else-if="task">
-        <p v-if="mode === 'cwiczenie'" class="practice__count">Nierobione w temacie: {{ count }}</p>
+        <div v-if="mode === 'cwiczenie'" class="practice__progress">
+          <p class="practice__count">
+            Zadanie <strong>{{ position }} z {{ topicTotal }}</strong>
+          </p>
+          <div
+            class="practice__track"
+            role="progressbar"
+            aria-label="Zrobione zadania z tematu"
+            :aria-valuenow="topicTotal - count"
+            aria-valuemin="0"
+            :aria-valuemax="topicTotal"
+          >
+            <span
+              :style="{
+                width: `${((topicTotal - count) / topicTotal) * 100}%`,
+                background: `var(--exam-${exam})`,
+              }"
+            />
+          </div>
+        </div>
         <p v-else-if="mode === 'powtorka' && !more" class="practice__count">
           Na dziś zostało: {{ leftToday }}
         </p>
-        <PracticeTask
-          :key="task.id"
-          class="practice__task"
-          :task="task"
-          :mode="mode"
-          @next="done"
-        >
+        <PracticeTask :key="task.id" class="practice__task" :task="task" :mode="mode" @next="done">
           <template #actions>
             <button type="button" class="button button--quiet" @click="skip">Pomiń</button>
           </template>
@@ -280,6 +296,28 @@ watch(topics, loadNext)
 .practice__note {
   color: var(--ink-soft);
   font-size: 0.875rem;
+}
+
+.practice__progress {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.practice__progress .practice__count {
+  color: var(--ink);
+  font-size: 0.9375rem;
+}
+
+.practice__track {
+  height: 0.3rem;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+
+.practice__track span {
+  display: block;
+  height: 100%;
 }
 
 .practice__problem {
