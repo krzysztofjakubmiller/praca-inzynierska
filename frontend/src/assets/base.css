@@ -263,17 +263,14 @@ canvas {
   color: var(--ink);
 }
 
-/* Górny pasek ekranu w jasnym motywie jest ciemny jak pasek nawigacji wizytówki. Odwrócone
-   zmienne przestawiają na jasne wszystko, co w nim leży: tekst, przyciski i przełączniki. */
+/* Górny pasek ekranu w jasnym motywie jest biały i odcina się od tła cieniem kart.
+   z-index, żeby cień leżał na treści pod paskiem, a nie pod nią. */
 :root[data-theme='light'] .app-bar {
-  --ground: #101421;
-  --ink: #ffffff;
-  --ink-raised: #e8ecf8;
-  --ink-soft: #c5cbe0;
-  --hairline: rgb(255 255 255 / 0.24);
+  position: relative;
+  z-index: 1;
   border-bottom-color: transparent;
-  background: var(--ground);
-  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 /* Nagłówki aplikacji zwężone jak na wizytówce. */
