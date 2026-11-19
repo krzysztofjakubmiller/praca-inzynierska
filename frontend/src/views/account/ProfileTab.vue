@@ -129,8 +129,10 @@ async function logOutAndGoToLogin() {
   display: grid;
   justify-items: start;
   gap: 1rem;
-  padding-top: 1.75rem;
-  border-top: 1px solid var(--hairline);
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .profile-tab__heading {
@@ -146,7 +148,9 @@ async function logOutAndGoToLogin() {
 
 .profile-tab__account :deep(.security) {
   max-width: 28rem;
-  margin-top: 1.25rem;
+  margin-top: 0.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hairline);
 }
 
 @container (min-width: 44rem) {
