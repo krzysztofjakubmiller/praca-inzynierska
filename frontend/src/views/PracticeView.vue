@@ -309,9 +309,9 @@ watch(topics, loadNext)
   display: grid;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
+  border-radius: var(--radius-small);
   background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .practice__filters summary {
@@ -346,8 +346,8 @@ watch(topics, loadNext)
 }
 
 .practice__switch button[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .practice__switch button:disabled {

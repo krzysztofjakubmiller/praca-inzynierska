@@ -34,9 +34,9 @@ onBeforeUnmount(() => observer?.disconnect())
 .stat-card {
   min-width: 0;
   padding: 1rem 1rem 1.125rem;
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
+  border-radius: var(--radius-small);
   background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .stat-card__title {

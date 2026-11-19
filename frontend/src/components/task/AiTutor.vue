@@ -372,7 +372,7 @@ defineExpose({ open })
   border-radius: 1.25rem 1.25rem 0 0;
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 -10px 24px rgb(29 31 34 / 0.12);
+  box-shadow: var(--sheet-shadow);
   transition: transform 0.2s ease-out;
 }
 

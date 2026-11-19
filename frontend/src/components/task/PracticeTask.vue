@@ -456,7 +456,7 @@ const keyText = computed(() => {
   border-top: 1px solid var(--hairline);
   border-radius: 1.25rem 1.25rem 0 0;
   background: var(--surface);
-  box-shadow: 0 -10px 24px rgb(29 31 34 / 0.12);
+  box-shadow: var(--sheet-shadow);
 }
 
 .practice-task__actions {

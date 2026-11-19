@@ -342,9 +342,10 @@ defineExpose({ focusStation })
   display: grid;
   gap: 0.3rem;
   padding: 0.875rem 1rem 1rem;
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-small);
   background: var(--surface);
+  box-shadow: var(--card-shadow);
   transition: border-color 0.2s ease;
 }
 
@@ -355,7 +356,9 @@ defineExpose({ focusStation })
 .topic-card--selected,
 .topic-card--selected:hover {
   border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  box-shadow:
+    inset 0 0 0 1px var(--ink),
+    var(--card-shadow);
 }
 
 .topic-card:has(.topic-card__open:focus-visible) {

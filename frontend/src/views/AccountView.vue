@@ -199,8 +199,8 @@ onMounted(async () => {
 }
 
 .account__tab[aria-current='page'] {
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .account__tab:focus-visible {

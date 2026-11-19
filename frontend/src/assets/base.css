@@ -35,10 +35,42 @@
   --header-h: 3.5rem;
   --sheet-pad: clamp(1.25rem, 0.9rem + 1.6vw, 2rem);
 
+  --radius-small: 1rem;
+
   color-scheme: light;
   scrollbar-color: var(--ink-soft) var(--ground);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/*
+ * Kolory powyżej zostają dla stron ze stałym wyglądem (wizytówki, ankieta, panel). Ekrany
+ * aplikacji dostają od App.vue atrybut data-theme i biorą paletę wizytówki 3.5 z reguł niżej.
+ */
+:root[data-theme] {
+  --exam-e8: #2a66d6;
+  --exam-matura-podstawowa: #168344;
+  --exam-matura-rozszerzona: #d42f23;
+}
+
+:root[data-theme='light'] {
+  --ground: #e6e9f2;
+  --surface: #ffffff;
+  --ink: #101421;
+  --ink-raised: #2b3147;
+  --ink-soft: #4a5270;
+  --hairline: rgb(22 34 79 / 0.16);
+  --track: rgb(22 34 79 / 0.14);
+  --correct: #13733a;
+  --map-outline: #7c8297;
+
+  --primary: #16224f;
+  --primary-raised: #333e66;
+  --on-primary: #ffffff;
+
+  --card-shadow: 0 1px 1px rgb(22 34 79 / 0.06), 0 12px 24px -8px rgb(22 34 79 / 0.14);
+  --sheet-shadow: 0 -10px 24px rgb(22 34 79 / 0.14);
+  --drawer-shadow: 10px 0 24px rgb(22 34 79 / 0.14);
 }
 
 /*
@@ -64,6 +96,15 @@
 
   --map-outline: #626460;
   --map-last: #fe8e66;
+
+  --primary: var(--ink);
+  --primary-raised: var(--ink-raised);
+  --on-primary: var(--ground);
+
+  /* Na ciemnym tle cień jest niewidoczny, więc kartę odcina cienka kreska. */
+  --card-shadow: 0 0 0 1px var(--hairline);
+  --sheet-shadow: 0 -10px 24px rgb(0 0 0 / 0.35);
+  --drawer-shadow: 10px 0 24px rgb(0 0 0 / 0.35);
 
   color-scheme: dark;
 }
@@ -169,10 +210,11 @@ canvas {
   gap: 0.65em;
   min-height: 3rem;
   padding: 0.7em 1.3em 0.72em 1.4em;
-  border: 2px solid var(--ink);
+  /* Strony ze stałym wyglądem nie mają --primary, więc ich przycisk ma kolor tuszu. */
+  border: 2px solid var(--primary, var(--ink));
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--primary, var(--ink));
+  color: var(--on-primary, var(--ground));
   font: inherit;
   font-weight: 650;
   line-height: 1.1;
@@ -186,7 +228,8 @@ canvas {
 
 .button:hover {
   --nudge: 0.2em;
-  background: var(--ink-raised);
+  border-color: var(--primary-raised, var(--ink));
+  background: var(--primary-raised, var(--ink-raised));
 }
 
 .button:active {
@@ -194,11 +237,13 @@ canvas {
 }
 
 .button--quiet {
+  border-color: var(--ink);
   background: transparent;
   color: var(--ink);
 }
 
 .button--quiet:hover {
+  border-color: var(--ink);
   background: var(--ink);
   color: var(--ground);
 }
@@ -210,7 +255,8 @@ canvas {
 }
 
 .button:disabled:hover {
-  background: var(--ink);
+  border-color: var(--primary, var(--ink));
+  background: var(--primary, var(--ink));
 }
 
 .button--quiet:disabled:hover {

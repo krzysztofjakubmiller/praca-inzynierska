@@ -26,9 +26,9 @@ defineProps<{ examId: Exam['id'] }>()
   justify-items: start;
   gap: 1rem;
   padding: 1.25rem 1.25rem 1.5rem;
-  border: 1px solid var(--hairline);
-  border-radius: 1rem;
+  border-radius: var(--radius-small);
   background: var(--surface);
+  box-shadow: var(--card-shadow);
 }
 
 .no-data__route {

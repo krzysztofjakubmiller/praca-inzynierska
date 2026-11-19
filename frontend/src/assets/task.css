@@ -21,8 +21,8 @@
 }
 
 .answer-mark[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .answer-mark:disabled {

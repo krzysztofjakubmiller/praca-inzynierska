@@ -430,8 +430,8 @@ function closeOutside(event: MouseEvent) {
 }
 
 .exam-page__views button[aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--ground);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 .exam-page__chip {
@@ -458,9 +458,9 @@ function closeOutside(event: MouseEvent) {
 }
 
 .exam-page__chip[aria-expanded='true'] {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--ground);
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--on-primary);
 }
 
 /* Na dotyk pole kliknięcia sięga 44 px wysokości, choć pigułka zostaje niższa. */
@@ -568,7 +568,7 @@ function closeOutside(event: MouseEvent) {
   border-right: 1px solid var(--hairline);
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 10px 0 24px rgb(29 31 34 / 0.12);
+  box-shadow: var(--drawer-shadow);
   scrollbar-width: thin;
 }
 
@@ -588,7 +588,7 @@ function closeOutside(event: MouseEvent) {
   overflow-y: auto;
   border-top: 1px solid var(--hairline);
   border-radius: 1.25rem 1.25rem 0 0;
-  box-shadow: 0 -10px 24px rgb(29 31 34 / 0.12);
+  box-shadow: var(--sheet-shadow);
 }
 
 @media (min-width: 48rem) and (orientation: landscape) {

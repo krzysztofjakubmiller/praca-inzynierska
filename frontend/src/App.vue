@@ -6,17 +6,20 @@ import { darkShade, theme } from '@/theme'
 
 const route = useRoute()
 
-// Motyw z ustawień konta dotyczy tylko aplikacji. Wizytówki, logowanie z ustawianiem hasła
-// i płatność mają własne, stałe kolory, a panel właściciela porównuje odczyt ze zdjęciem
+// Motyw z ustawień konta dotyczy tylko aplikacji. Wizytówki z ankietą, logowanie z ustawianiem
+// hasła i płatność mają własne, stałe kolory, a panel właściciela porównuje odczyt ze zdjęciem
 // strony arkusza, więc zostaje jasny. Tę samą regułę ma skrypt w index.html.
 const FIXED_LOOK =
-  /^\/(wizytowka3?|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/
-const lightOnly = computed(() => FIXED_LOOK.test(route.path))
+  /^\/(wizytowka3?|ankieta|style|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/
+const fixedLook = computed(() => FIXED_LOOK.test(route.path))
 
 watchEffect(() => {
   const root = document.documentElement
-  if (lightOnly.value || theme.value === 'light') {
+  if (fixedLook.value) {
     delete root.dataset.theme
+    delete root.dataset.shade
+  } else if (theme.value === 'light') {
+    root.dataset.theme = 'light'
     delete root.dataset.shade
   } else {
     root.dataset.theme = 'dark'

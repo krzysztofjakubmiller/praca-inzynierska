@@ -14,6 +14,7 @@ function makeRouter() {
       { path: '/matura-podstawowa', name: 'map', component: Page },
       { path: '/wizytowka', name: 'landing', component: Page },
       { path: '/wizytowka3/a35', name: 'landing-3', component: Page },
+      { path: '/ankieta', name: 'survey', component: Page },
       { path: '/logowanie', name: 'login', component: Page },
       { path: '/platnosc', name: 'payment', component: Page },
       { path: '/panel', name: 'panel', component: Page, meta: { panel: true } },
@@ -47,7 +48,15 @@ describe('App theme', () => {
     expect(document.documentElement.dataset.shade).toBe('grey')
   })
 
-  it.each(['/wizytowka', '/wizytowka3/a35', '/logowanie', '/platnosc', '/panel'])(
+  it('marks a light app page so it takes the app palette', async () => {
+    await setTheme('light')
+    await open('/konto')
+
+    expect(document.documentElement.dataset.theme).toBe('light')
+    expect(document.documentElement.dataset.shade).toBeUndefined()
+  })
+
+  it.each(['/wizytowka', '/wizytowka3/a35', '/ankieta', '/logowanie', '/platnosc', '/panel'])(
     'keeps %s in its own colors',
     async (path) => {
       await open(path)

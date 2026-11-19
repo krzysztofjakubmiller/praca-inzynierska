@@ -10,19 +10,21 @@
     <meta name="apple-mobile-web-app-title" content="Matma po kolei">
     <title></title>
     <script>
-      // Ciemny motyw przed pierwszym malowaniem, żeby strona nie mignęła na jasno. Strony ze
+      // Motyw przed pierwszym malowaniem, żeby strona nie mignęła w innych kolorach. Strony ze
       // stałym wyglądem pomija ta sama reguła co w App.vue, która potem ustawia resztę.
       try {
         if (
-          localStorage.getItem('motyw') === 'dark' &&
-          !/^\/(wizytowka3?|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/.test(
+          !/^\/(wizytowka3?|ankieta|style|panel|logowanie|rejestracja|platnosc|potwierdz-adres|nie-pamietam-hasla|nowe-haslo)(\/|$)/.test(
             location.pathname,
           )
         ) {
-          document.documentElement.dataset.theme = 'dark'
-          const shade = localStorage.getItem('odcien-motywu')
-          document.documentElement.dataset.shade =
-            shade === 'black' || shade === 'navy' ? shade : 'grey'
+          const dark = localStorage.getItem('motyw') === 'dark'
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+          if (dark) {
+            const shade = localStorage.getItem('odcien-motywu')
+            document.documentElement.dataset.shade =
+              shade === 'black' || shade === 'navy' ? shade : 'grey'
+          }
         }
       } catch {}
     </script>
