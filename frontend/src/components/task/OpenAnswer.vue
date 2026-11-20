@@ -14,7 +14,7 @@ const answers = ref(results.value.map(() => ''))
 const readable = ref<(boolean | null)[]>(results.value.map(() => null))
 const sent = ref(false)
 
-const ready = computed(() => readable.value.every((ok) => ok === true))
+const ready = computed(() => !sent.value && readable.value.every((ok) => ok === true))
 
 function label(index: number): string {
   const result = results.value[index]!
@@ -26,6 +26,9 @@ function send() {
   sent.value = true
   emit('done', { answers: answers.value.map((answer) => answer.trim()) })
 }
+
+// Przycisk wysyłki stoi w rzędzie przycisków zadania, razem z „Zapytaj Dyżurnego”.
+defineExpose({ ready, send })
 </script>
 
 <template>
@@ -43,19 +46,11 @@ function send() {
         :label="label(index)"
         :disabled="sent"
       />
-      <button
-        type="button"
-        class="button open-answer__send"
-        :disabled="!ready || sent"
-        @click="send"
-      >
-        Wyślij wynik
-      </button>
     </template>
     <template v-else>
       <p class="open-answer__intro">
         To zadanie na dowodzenie. Rozwiąż je w zeszycie albo na tablicy i oddaj dyżurnemu
-        przyciskiem na dole.
+        przyciskiem poniżej.
       </p>
     </template>
   </div>
@@ -69,9 +64,6 @@ function send() {
 
 .open-answer__intro {
   color: var(--ink-soft);
-}
-
-.open-answer__send {
-  justify-self: start;
+  font-size: 0.9375rem;
 }
 </style>

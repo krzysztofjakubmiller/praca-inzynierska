@@ -95,9 +95,12 @@ watch(value, (text) => {
 .answer-input {
   display: grid;
   gap: 0.4rem;
+  max-width: 24rem;
 }
 
 .answer-input__label {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
   font-weight: 650;
 }
 
@@ -112,9 +115,9 @@ watch(value, (text) => {
   padding: 0.35em 0.6em;
   border: 2px solid var(--ink);
   border-radius: 0.8rem;
-  background: var(--surface);
+  background: var(--ground);
   color: var(--ink);
-  font-size: 1.25rem;
+  font-size: 1.4rem;
 }
 
 .answer-input__field:focus-within {

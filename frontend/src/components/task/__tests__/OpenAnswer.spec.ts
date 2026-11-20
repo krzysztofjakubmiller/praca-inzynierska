@@ -57,7 +57,6 @@ describe('OpenAnswer', () => {
     const wrapper = mount(OpenAnswer, { props: { task: TASK } })
     await flushPromises()
     const [first, second] = wrapper.findAll('math-field')
-    const send = wrapper.findAll('button').find((found) => found.text() === 'Wyślij wynik')!
 
     expect(wrapper.findAll('label').map((found) => found.text())).toEqual([
       'Część 1 (1 pkt)',
@@ -66,10 +65,11 @@ describe('OpenAnswer', () => {
     await type(first!, '6{,}38')
     await type(second!, '(-3;1')
     expect(wrapper.text()).toContain('Nie rozumiem tego zapisu')
-    expect(send.attributes('disabled')).toBeDefined()
+    expect(wrapper.vm.ready).toBe(false)
 
     await type(second!, '\\left(-3;1\\right)')
-    await send.trigger('click')
+    expect(wrapper.vm.ready).toBe(true)
+    wrapper.vm.send()
 
     expect(wrapper.emitted('done')![0]).toEqual([
       { answers: ['6{,}38', '(-3;1)'] },

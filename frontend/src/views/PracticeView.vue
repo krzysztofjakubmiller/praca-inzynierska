@@ -130,9 +130,36 @@ watch(topics, loadNext)
       >
         <AppIcon name="chevron-left" class="practice__chevron" />
         <StationMarker :shape="examInfo.solid" class="practice__marker" />
-        <span class="practice__title">{{ title }}</span>
+        <span class="practice__exam">{{ examInfo.name }}</span>
       </RouterLink>
     </header>
+
+    <div class="practice__bar">
+      <h1 class="practice__title">{{ title }}</h1>
+      <p v-if="task && mode === 'cwiczenie'" class="practice__count">
+        <span>Zadanie</span> <strong>{{ position }} z {{ topicTotal }}</strong>
+      </p>
+      <p v-else-if="task && mode === 'powtorka' && !more" class="practice__count">
+        <span>Na dziś zostało</span> <strong>{{ leftToday }}</strong>
+      </p>
+      <div
+        v-if="mode === 'cwiczenie' && topicTotal"
+        class="practice__track"
+        role="progressbar"
+        aria-label="Zrobione zadania z tematu"
+        :aria-valuenow="topicTotal - count"
+        aria-valuemin="0"
+        :aria-valuemax="topicTotal"
+      >
+        <span
+          :style="{
+            width: `${((topicTotal - count) / topicTotal) * 100}%`,
+            background: `var(--exam-${exam})`,
+          }"
+        />
+      </div>
+      <div v-else class="practice__track" />
+    </div>
 
     <main class="practice__main">
       <details v-if="mode === 'losowe'" class="practice__filters">
@@ -167,59 +194,34 @@ watch(topics, loadNext)
 
       <p v-if="problem" class="practice__problem" role="alert">{{ problem }}</p>
 
-      <template v-else-if="task">
-        <div v-if="mode === 'cwiczenie'" class="practice__progress">
-          <p class="practice__count">
-            Zadanie <strong>{{ position }} z {{ topicTotal }}</strong>
-          </p>
-          <div
-            class="practice__track"
-            role="progressbar"
-            aria-label="Zrobione zadania z tematu"
-            :aria-valuenow="topicTotal - count"
-            aria-valuemin="0"
-            :aria-valuemax="topicTotal"
-          >
-            <span
-              :style="{
-                width: `${((topicTotal - count) / topicTotal) * 100}%`,
-                background: `var(--exam-${exam})`,
-              }"
-            />
-          </div>
-        </div>
-        <p v-else-if="mode === 'powtorka' && !more" class="practice__count">
-          Na dziś zostało: {{ leftToday }}
-        </p>
-        <PracticeTask :key="task.id" class="practice__task" :task="task" :mode="mode" @next="done">
-          <template #actions>
-            <button type="button" class="button button--quiet" @click="skip">Pomiń</button>
-          </template>
-        </PracticeTask>
-      </template>
+      <PracticeTask v-else-if="task" :key="task.id" :task="task" :mode="mode" @next="done">
+        <template #actions>
+          <button type="button" class="practice__skip" @click="skip">Pomiń</button>
+        </template>
+      </PracticeTask>
 
       <section v-else-if="loaded" class="practice__empty">
         <template v-if="mode === 'cwiczenie' && !topicTotal">
-          <h1>W tym temacie nie ma jeszcze zadań</h1>
+          <h2>W tym temacie nie ma jeszcze zadań</h2>
           <p>Zadania z arkuszy dochodzą temat po temacie.</p>
           <RouterLink class="button" :to="`/${exam}`">Wróć do mapy</RouterLink>
         </template>
         <template v-else-if="mode === 'cwiczenie'">
-          <h1>Wszystkie zadania z tego tematu są zrobione</h1>
+          <h2>Wszystkie zadania z tego tematu są zrobione</h2>
           <p>Wrócą w powtórkach, kiedy przyjdzie na nie pora.</p>
           <RouterLink class="button" :to="`/${exam}`">Wróć do mapy</RouterLink>
         </template>
         <template v-else-if="mode === 'losowe' && topics.length">
-          <h1>W wybranych działach nie ma jeszcze zrobionych zadań</h1>
+          <h2>W wybranych działach nie ma jeszcze zrobionych zadań</h2>
           <p>Losowe zadania pochodzą z tematów, w których już coś było robione.</p>
         </template>
         <template v-else-if="!count">
-          <h1>Nie ma jeszcze czego powtarzać</h1>
+          <h2>Nie ma jeszcze czego powtarzać</h2>
           <p>Tu wracają zrobione już zadania. Zacznij od „Ćwicz” przy temacie na mapie.</p>
           <RouterLink class="button" :to="`/${exam}`">Wróć do mapy</RouterLink>
         </template>
         <template v-else>
-          <h1>Na dziś wystarczy</h1>
+          <h2>Na dziś wystarczy</h2>
           <p>Powtórki na dziś są zrobione. Możesz robić dalej zadania, które wrócą najwcześniej.</p>
           <button type="button" class="button" @click="keepGoing">Rób dalej</button>
         </template>
@@ -271,53 +273,92 @@ watch(topics, loadNext)
   font-size: 1.1rem;
 }
 
-.practice__title {
+.practice__exam {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.practice__main {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  min-height: calc(100svh - var(--header-h));
-  max-width: 44rem;
-  margin-inline: auto;
-  /* Bez odstępu na dole: pulpit zadania ma przylegać do krawędzi ekranu. */
-  padding: 1.5rem var(--gutter) 0;
-}
-
-.practice__task {
-  flex: 1;
-}
-
-.practice__count,
-.practice__note {
-  color: var(--ink-soft);
-  font-size: 0.875rem;
-}
-
-.practice__progress {
+/* Temat dużym zwężonym krojem, licznik po prawej, pod spodem tor przez całą szerokość ekranu. */
+.practice__bar {
   display: grid;
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  padding: clamp(1rem, 0.7rem + 1.2vw, 1.75rem) var(--gutter) 0;
 }
 
-.practice__progress .practice__count {
-  color: var(--ink);
+.practice__title {
+  font-size: clamp(1.6rem, 1.2rem + 1.8vw, 2.6rem);
+  font-weight: 800;
+  font-stretch: 76%;
+  letter-spacing: 0.003em;
+  line-height: 0.95;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.practice__count {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  color: var(--ink-soft);
   font-size: 0.9375rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.practice__count strong {
+  color: var(--ink);
+  font-size: clamp(1.35rem, 1.2rem + 0.6vw, 1.75rem);
+  font-weight: 800;
+  font-stretch: 82%;
+  font-variant-numeric: tabular-nums;
 }
 
 .practice__track {
+  grid-column: 1 / -1;
   height: 0.3rem;
-  border-radius: 999px;
+  margin-inline: calc(-1 * var(--gutter));
   background: var(--track);
-  overflow: hidden;
 }
 
 .practice__track span {
   display: block;
   height: 100%;
+}
+
+.practice__main {
+  display: grid;
+  gap: 1.25rem;
+  align-content: start;
+  max-width: 48rem;
+  margin-inline: auto;
+  padding: clamp(1.25rem, 0.9rem + 2vw, 3rem) var(--gutter) 4rem;
+}
+
+.practice__note {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+/* Pomijanie to wyjście awaryjne, więc stoi z boku jako zwykły tekst, a nie trzeci przycisk. */
+.practice__skip {
+  min-height: 2.75rem;
+  margin-left: auto;
+  padding: 0 0.25rem;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.practice__skip:hover {
+  color: var(--ink);
 }
 
 .practice__problem {
@@ -332,7 +373,7 @@ watch(topics, loadNext)
   padding-bottom: 3rem;
 }
 
-.practice__empty h1 {
+.practice__empty h2 {
   font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
   font-weight: 750;
   font-stretch: 90%;

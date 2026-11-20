@@ -46,6 +46,9 @@ function button(wrapper: ReturnType<typeof mount>, text: string) {
   return wrapper.findAll('button').find((found) => found.text().includes(text))!
 }
 
+// jsdom nie przewija strony.
+Element.prototype.scrollIntoView = vi.fn<Element['scrollIntoView']>()
+
 afterEach(() => vi.unstubAllGlobals())
 
 // Tablica ma własne testy, a jsdom nie ma płótna ani ResizeObserver, więc tu jej nie ma.

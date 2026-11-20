@@ -301,6 +301,19 @@ export function splitInstructions(content: string): { text: string; instruction:
   return parts
 }
 
+// Krótkie polecenie („Oblicz log₂ 32 + log₃ 9”) stoi na ekranie zadania dużym krojem. Liczą się
+// znaki, które widać: polecenia LaTeX-a, nawiasy klamrowe i znaki $ nie zajmują miejsca.
+const SHORT_CONTENT = 70
+
+export function isShortContent(content: string): boolean {
+  const visible = splitInstructions(content)
+    .filter((part) => !part.instruction)
+    .map((part) => part.text.replace(/\\[a-zA-Z]+|[{}$^_\\]/g, '').replace(/\s+/g, ' '))
+    .join(' ')
+    .trim()
+  return visible.length <= SHORT_CONTENT
+}
+
 /** Np. „Maj 2024, zad. 9.1”. */
 export function taskSource(task: PracticeTask): string {
   const number = task.subnumber ? `${task.number}.${task.subnumber}` : `${task.number}`

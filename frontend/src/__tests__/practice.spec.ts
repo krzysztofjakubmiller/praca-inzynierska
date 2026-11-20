@@ -6,6 +6,7 @@ import {
   randomTask,
   rateSolution,
   Rejected,
+  isShortContent,
   splitInstructions,
   taskSource,
   type PracticeTask,
@@ -146,5 +147,19 @@ describe('splitInstructions', () => {
       { text: 'Wykaż, że $a>0$.', instruction: false },
       { text: 'Zapisz obliczenia.', instruction: true },
     ])
+  })
+})
+
+describe('isShortContent', () => {
+  it('counts only visible characters, without LaTeX commands and the CKE instruction', () => {
+    const content =
+      'Dokończ zdanie. Wybierz właściwą odpowiedź spośród podanych.\nLiczba $\\frac{5^{12}+5^{13}}{5^{12}}$ jest równa'
+    expect(isShortContent(content)).toBe(true)
+  })
+
+  it('treats a task description as long', () => {
+    const content =
+      'Ciąg $(a_n)$ jest określony wzorem $a_n = 2n + 1$ dla każdej liczby naturalnej $n \\geq 1$. Oblicz sumę dwudziestu początkowych wyrazów tego ciągu.'
+    expect(isShortContent(content)).toBe(false)
   })
 })

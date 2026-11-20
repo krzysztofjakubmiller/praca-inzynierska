@@ -3,10 +3,8 @@ import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import TaskFigure from '@/components/figures/TaskFigure.vue'
 import StationIcon from '@/components/map/StationIcon.vue'
 import AiFeedback from '@/components/task/AiFeedback.vue'
-import AppIcon from '@/components/AppIcon.vue'
 import AiSolution from '@/components/task/AiSolution.vue'
 import AiTutor from '@/components/task/AiTutor.vue'
-import AiTutorAvatar from '@/components/task/AiTutorAvatar.vue'
 import MatchingTable from '@/components/task/MatchingTable.vue'
 import MathText from '@/components/task/MathText.vue'
 import OpenAnswer from '@/components/task/OpenAnswer.vue'
@@ -18,6 +16,7 @@ import type { Difficulty } from '@/maps/types'
 import {
   checkDemoTask,
   checkSolution,
+  isShortContent,
   rateSolution,
   Rejected,
   splitInstructions,
@@ -51,6 +50,7 @@ const choices = computed(() =>
   Object.entries(props.task.choices ?? {}).map(([label, text]) => ({ label, text })),
 )
 const contentParts = computed(() => splitInstructions(props.task.content))
+const short = computed(() => isShortContent(props.task.content) && !props.task.figures?.content)
 const figures = computed(() => Object.values(props.task.figures ?? {}))
 const range = computed(() => numberLineRange(figures.value))
 const span = computed(() => coordinatePlaneSpan(figures.value))
@@ -69,8 +69,8 @@ let boardSent: number | null = null
 let boardGraded: number | null = null
 const whiteboard = useTemplateRef<InstanceType<typeof TaskWhiteboard>>('whiteboard')
 const tutor = useTemplateRef<InstanceType<typeof AiTutor>>('tutor')
-const answer = useTemplateRef<HTMLElement>('answer')
-const dock = useTemplateRef<HTMLElement>('dock')
+const openAnswer = useTemplateRef<InstanceType<typeof OpenAnswer>>('openAnswer')
+const outcome = useTemplateRef<HTMLElement>('outcome')
 
 const isOpen = computed(() => format.value === 'otwarte')
 const isProof = computed(() => isOpen.value && !props.task.results?.length)
@@ -138,15 +138,11 @@ function onGraded(result: Graded) {
   emit('checked')
 }
 
-// Po sprawdzeniu pulpit z oceną trudności rośnie i zasłaniał odpowiedzi, a kolory dobrej
-// i złej odpowiedzi są pierwszym, co uczeń chce zobaczyć. Strona przewija się tak, żeby
-// odpowiedzi kończyły się tuż nad pulpitem.
-async function showAnswers() {
+// Wynik i ocena trudności pojawiają się pod odpowiedziami, a przy długim zadaniu ten dół karty
+// jest już poza ekranem.
+async function showOutcome() {
   await nextTick()
-  if (!answer.value || !dock.value) return
-  const hidden =
-    answer.value.getBoundingClientRect().bottom - dock.value.getBoundingClientRect().top
-  if (hidden > -12) window.scrollBy({ top: hidden + 12, behavior: 'smooth' })
+  outcome.value?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 }
 
 function check(given: { answer: string } | { answers: string[] }) {
@@ -157,7 +153,7 @@ function check(given: { answer: string } | { answers: string[] }) {
         ? await checkDemoTask(given.answer)
         : await checkSolution(props.task.id, props.mode, given)
     emit('checked')
-    showAnswers()
+    showOutcome()
   })
 }
 
@@ -184,6 +180,7 @@ const keyText = computed(() => {
 })
 </script>
 
+
 <template>
   <article class="practice-task" :style="{ '--figure-color': `var(--exam-${task.exam})` }">
     <div class="practice-task__card">
@@ -191,7 +188,7 @@ const keyText = computed(() => {
         {{ task.topic_name }} · {{ taskSource(task) }} · {{ task.max_points }} pkt
       </p>
 
-      <div class="practice-task__content">
+      <div class="practice-task__content" :class="{ 'practice-task__content--short': short }">
         <MathText
           v-for="(part, index) in contentParts"
           :key="index"
@@ -215,50 +212,141 @@ const keyText = computed(() => {
         </template>
       </TaskWhiteboard>
 
-      <div ref="answer">
-        <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
-          <button
-            v-for="choice in choices"
-            :key="choice.label"
-            type="button"
-            class="practice-task__choice"
-            :class="`practice-task__choice--${resultOf(choice.label)}`"
-            :aria-pressed="picked === choice.label"
-            :disabled="checked !== null"
-            @click="picked = choice.label"
-          >
-            <strong class="practice-task__label">{{ choice.label }}.</strong>
-            <span class="practice-task__choice-body">
-              <MathText :text="choice.text" />
-              <TaskFigure
-                v-if="task.figures?.[choice.label]"
-                :figure="task.figures[choice.label]!"
-                :range="range"
-                :span="span"
-              />
-            </span>
-            <span v-if="resultOf(choice.label)" class="practice-task__sign" aria-hidden="true">
-              {{ resultOf(choice.label) === 'correct' ? '✓' : '✗' }}
-            </span>
-          </button>
-        </div>
-        <TrueFalseTable
-          v-else-if="format === 'prawda-falsz'"
-          :choices="choices"
-          :picked="picked"
-          :answer="checked?.answer"
-          @pick="pickTrueFalse"
-        />
-        <MatchingTable
-          v-else-if="format === 'dobieranie'"
-          :choices="choices"
-          :connector="task.connector ?? ''"
-          :picked="picked"
-          :answer="checked?.answer"
-          @pick="pickMatching"
-        />
-        <OpenAnswer v-else :task="task" @done="check" />
+      <div v-if="format === 'wielokrotny-wybor'" class="practice-task__choices">
+        <button
+          v-for="choice in choices"
+          :key="choice.label"
+          type="button"
+          class="practice-task__choice"
+          :class="`practice-task__choice--${resultOf(choice.label)}`"
+          :aria-pressed="picked === choice.label"
+          :disabled="checked !== null"
+          @click="picked = choice.label"
+        >
+          <strong class="practice-task__label">{{ choice.label }}.</strong>
+          <span class="practice-task__choice-body">
+            <MathText :text="choice.text" />
+            <TaskFigure
+              v-if="task.figures?.[choice.label]"
+              :figure="task.figures[choice.label]!"
+              :range="range"
+              :span="span"
+            />
+          </span>
+          <span v-if="resultOf(choice.label)" class="practice-task__sign" aria-hidden="true">
+            {{ resultOf(choice.label) === 'correct' ? '✓' : '✗' }}
+          </span>
+        </button>
       </div>
+      <TrueFalseTable
+        v-else-if="format === 'prawda-falsz'"
+        :choices="choices"
+        :picked="picked"
+        :answer="checked?.answer"
+        @pick="pickTrueFalse"
+      />
+      <MatchingTable
+        v-else-if="format === 'dobieranie'"
+        :choices="choices"
+        :connector="task.connector ?? ''"
+        :picked="picked"
+        :answer="checked?.answer"
+        @pick="pickMatching"
+      />
+      <OpenAnswer v-else ref="openAnswer" :task="task" @done="check" />
+
+      <div v-if="!checked" class="practice-task__actions">
+        <button
+          v-if="!isOpen"
+          type="button"
+          class="button"
+          :disabled="!complete || busy"
+          @click="check({ answer: picked })"
+        >
+          Sprawdź
+        </button>
+        <button
+          v-else-if="!isProof"
+          type="button"
+          class="button"
+          :disabled="!openAnswer?.ready || busy"
+          @click="openAnswer?.send()"
+        >
+          Wyślij wynik
+        </button>
+        <button v-else-if="!demo" type="button" class="button" @click="tutor?.open()">
+          Oddaj dowód dyżurnemu
+        </button>
+        <button
+          v-if="!demo && !isProof"
+          type="button"
+          class="button button--quiet"
+          @click="tutor?.open()"
+        >
+          Zapytaj Dyżurnego
+        </button>
+        <slot name="actions" />
+      </div>
+
+      <div v-else ref="outcome" class="practice-task__outcome">
+        <p
+          class="practice-task__result"
+          :class="correct ? 'practice-task__result--right' : 'practice-task__result--wrong'"
+          role="status"
+        >
+          <template v-if="correct">Dobrze</template>
+          <template v-else-if="isOpen">
+            {{ checked.points }} z {{ checked.max_points }} pkt<template v-if="!isProof"
+              >. Poprawny wynik: <MathText :text="checked.answer"
+            /></template>
+          </template>
+          <template v-else>Źle. Poprawna odpowiedź: {{ keyText }}</template>
+        </p>
+        <p v-if="grading && !demo" class="practice-task__hint">
+          Masz rozwiązanie na kartce albo tablicy?
+          <button type="button" class="practice-task__link" @click="tutor?.open()">
+            Wyślij je dyżurnemu</button
+          >, a dostaniesz punkty za to, co jest dobrze.
+        </p>
+        <button
+          v-if="!demo"
+          type="button"
+          class="button button--quiet practice-task__explain"
+          @click="tutor?.open()"
+        >
+          Zapytaj Dyżurnego
+        </button>
+
+        <template v-if="afterExam">
+          <p class="practice-task__after-exam" role="status">
+            Opanowane. To zadanie nie wróci już przed maturą.
+          </p>
+          <button type="button" class="button practice-task__next" @click="emit('next')">
+            Dalej
+          </button>
+        </template>
+        <fieldset v-else-if="!demo" class="practice-task__rating">
+          <legend class="practice-task__question">Jak trudne było to zadanie?</legend>
+          <p class="practice-task__hint">Wybierz, a od razu przejdziesz do następnego.</p>
+          <div class="practice-task__ratings">
+            <button
+              v-for="option in RATINGS"
+              :key="option.rating"
+              type="button"
+              class="button button--quiet practice-task__rate"
+              :disabled="busy || rated || (option.rating === 'latwy' && !correct)"
+              @click="rate(option.rating)"
+            >
+              <StationIcon :difficulty="option.shape" :share="1" />
+              {{ option.name }}
+            </button>
+          </div>
+        </fieldset>
+      </div>
+
+      <p v-for="problem in problems" :key="problem" class="practice-task__problem" role="alert">
+        {{ problem }}
+      </p>
     </div>
 
     <template v-if="graded">
@@ -282,150 +370,79 @@ const keyText = computed(() => {
       :grading="grading"
       @graded="onGraded"
     />
-
-    <!-- Pulpit przyklejony do dołu ekranu: wynik i ocena trudności zostają pod kciukiem także
-         przy długim zadaniu i długiej rozmowie z AI. -->
-    <div
-      v-if="checked || !isOpen || !demo || $slots.actions"
-      ref="dock"
-      class="practice-task__dock"
-    >
-      <div v-if="!checked" class="practice-task__actions">
-        <button
-          v-if="!isOpen"
-          type="button"
-          class="button practice-task__check"
-          :disabled="!complete || busy"
-          @click="check({ answer: picked })"
-        >
-          Sprawdź
-        </button>
-        <button
-          v-else-if="isProof && !demo"
-          type="button"
-          class="button practice-task__check"
-          @click="tutor?.open()"
-        >
-          Oddaj dowód dyżurnemu
-        </button>
-        <slot name="actions" />
-      </div>
-
-      <template v-else>
-        <p class="practice-task__result" role="status">
-          <template v-if="correct">Dobrze</template>
-          <template v-else-if="isOpen">
-            {{ checked.points }} z {{ checked.max_points }} pkt<template v-if="!isProof"
-              >. Poprawny wynik: <MathText :text="checked.answer"
-            /></template>
-          </template>
-          <template v-else>Źle. Poprawna odpowiedź: {{ keyText }}</template>
-        </p>
-        <p v-if="grading && !demo" class="practice-task__hint">
-          Masz rozwiązanie na kartce albo tablicy?
-          <button type="button" class="practice-task__link" @click="tutor?.open()">
-            Wyślij je dyżurnemu</button
-          >, a dostaniesz punkty za to, co jest dobrze.
-        </p>
-
-        <template v-if="afterExam">
-          <p class="practice-task__after-exam" role="status">
-            Opanowane. To zadanie nie wróci już przed maturą.
-          </p>
-          <button type="button" class="button practice-task__check" @click="emit('next')">
-            Dalej
-          </button>
-        </template>
-        <fieldset v-else-if="!demo" class="practice-task__rating">
-          <legend class="practice-task__question">Jak trudne było to zadanie?</legend>
-          <p class="practice-task__hint">Wybierz, a od razu przejdziesz do następnego.</p>
-          <div class="practice-task__ratings">
-            <button
-              v-for="option in RATINGS"
-              :key="option.rating"
-              type="button"
-              class="button button--quiet practice-task__rate"
-              :disabled="busy || rated || (option.rating === 'latwy' && !correct)"
-              @click="rate(option.rating)"
-            >
-              <StationIcon :difficulty="option.shape" :share="1" />
-              {{ option.name }}
-            </button>
-          </div>
-        </fieldset>
-      </template>
-
-      <p v-for="problem in problems" :key="problem" class="practice-task__problem" role="alert">
-        {{ problem }}
-      </p>
-
-      <button v-if="!demo" type="button" class="practice-task__ask" @click="tutor?.open()">
-        <AiTutorAvatar />
-        Zapytaj dyżurnego
-        <AppIcon name="chevron-right" class="practice-task__ask-arrow" />
-      </button>
-    </div>
   </article>
 </template>
 
 <style scoped>
-/* Kolumna flex, a nie siatka: gdy strona da zadaniu więcej miejsca, niż zajmuje treść, pulpit
-   schodzi na sam dół (margin-top: auto). */
 .practice-task {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   gap: 1.25rem;
-  max-width: 44rem;
 }
 
-/* Zadanie na karcie jak na wizytówce; pulpit z wynikiem zostaje pod kartą. */
+/* Zadanie, odpowiedź i przyciski na jednej karcie, jak na wizytówce. */
 .practice-task__card {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-  padding: clamp(1.25rem, 1rem + 1.5vw, 2rem);
-  border-radius: var(--radius-small);
+  display: grid;
+  gap: 1.5rem;
+  padding: clamp(1.25rem, 0.9rem + 1.8vw, 2.5rem);
+  border-radius: 1.25rem;
   background: var(--surface);
   box-shadow: var(--card-shadow);
 }
 
 .practice-task__meta {
   color: var(--ink-soft);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+  font-weight: 650;
 }
 
 .practice-task__content {
   display: grid;
-  gap: 0.6rem;
-  font-size: 1.125rem;
+  gap: 0.75rem;
+  font-size: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
   line-height: 1.55;
+}
+
+/* Krótkie polecenie stoi dużym, mocnym krojem jak „Oblicz log₂ 32 + log₃ 9” na wizytówce. */
+.practice-task__content--short {
+  font-size: clamp(1.5rem, 1.1rem + 1.8vw, 2.25rem);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
 }
 
 /* Formułka CKE jest dla ucznia tłem, a nie treścią zadania. */
 .practice-task__instruction {
   color: var(--ink-soft);
   font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.45;
 }
 
 .practice-task__choices {
   display: grid;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
+/* Odpowiedzi w tym samym kształcie co pole wyniku: tło strony, a wybrana z obwódką tuszem. */
 .practice-task__choice {
   display: grid;
-  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
   align-items: start;
-  gap: 0.5rem;
-  min-height: 3rem;
-  padding: 0.75rem 1rem;
-  border: 2px solid var(--hairline);
-  border-radius: 1rem;
-  background: var(--surface);
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding: 0.8rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 0.8rem;
+  background: var(--ground);
   color: var(--ink);
   font: inherit;
+  font-size: 1.125rem;
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .practice-task__choice:hover:enabled {
@@ -434,6 +451,7 @@ const keyText = computed(() => {
 
 .practice-task__choice[aria-pressed='true'] {
   border-color: var(--ink);
+  background: var(--surface);
 }
 
 .practice-task__choice:disabled {
@@ -472,42 +490,41 @@ const keyText = computed(() => {
 }
 
 .practice-task__label {
-  font-weight: 750;
-}
-
-.practice-task__dock {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  display: grid;
-  gap: 0.75rem;
-  margin: auto calc(-1 * var(--gutter)) 0;
-  padding: 1rem var(--gutter) calc(1rem + env(safe-area-inset-bottom));
-  border-top: 1px solid var(--hairline);
-  border-radius: 1.25rem 1.25rem 0 0;
-  background: var(--surface);
-  box-shadow: var(--sheet-shadow);
+  font-weight: 800;
 }
 
 .practice-task__actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.6rem;
 }
 
-.practice-task__check {
-  justify-self: start;
+.practice-task__outcome {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  /* Przewinięcie do wyniku zostawia nad nim trochę zadania. */
+  scroll-margin-block: 1.5rem;
+}
+
+.practice-task__result {
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, 1.5rem);
+  font-weight: 750;
+  line-height: 1.3;
+}
+
+.practice-task__result--right {
+  color: var(--correct);
+}
+
+.practice-task__result--wrong {
+  color: var(--danger);
 }
 
 .practice-task__problem {
   color: var(--danger);
   font-weight: 600;
-}
-
-.practice-task__result {
-  font-size: 1.25rem;
-  font-weight: 750;
-  line-height: 1.3;
 }
 
 .practice-task__after-exam {
@@ -523,14 +540,18 @@ const keyText = computed(() => {
 }
 
 .practice-task__rating {
+  justify-self: stretch;
   margin: 0;
-  padding: 0;
+  padding: 1.25rem 0 0;
   border: 0;
+  border-top: 1px solid var(--hairline);
 }
 
 .practice-task__question {
+  float: left;
+  width: 100%;
   padding: 0;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .practice-task__link {
@@ -545,44 +566,18 @@ const keyText = computed(() => {
 }
 
 .practice-task__hint {
-  margin-bottom: 0.625rem;
   color: var(--ink-soft);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
+}
+
+.practice-task__rating .practice-task__hint {
+  margin-block: 0.25rem 0.75rem;
 }
 
 .practice-task__ratings {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-}
-
-/* Zwinięta rozmowa: wygląda jak pole do pisania, żeby było jasne, że tu się pyta. */
-.practice-task__ask {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  min-height: 3rem;
-  padding: 0 0.875rem 0 0.75rem;
-  border: 1.5px solid var(--hairline);
-  border-radius: 999px;
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition: border-color 0.2s ease;
-}
-
-.practice-task__ask:hover {
-  border-color: var(--ink);
-}
-
-.practice-task__ask-arrow {
-  width: 1.25rem;
-  height: 1.25rem;
-  margin-left: auto;
-  rotate: -90deg;
 }
 
 .practice-task__rate {
