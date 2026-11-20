@@ -3,6 +3,7 @@ import { computed, onMounted, provide, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { loadAccount, type Account } from '@/account'
 import AccountStation from '@/components/account/AccountStation.vue'
+import ServerProblem from '@/components/ServerProblem.vue'
 import { EXAMS } from '@/config/exams'
 import { accountExamId } from '@/lastExam'
 import { profile, refreshProfile } from '@/profile'
@@ -13,6 +14,7 @@ const route = useRoute()
 
 const account = ref<Account | null>(null)
 const problem = ref('')
+const offline = ref(false)
 
 const exam = computed(() => EXAMS.find((item) => item.id === accountExamId.value)!)
 // Data z profilu dla poziomu matury, której jest konto; E8 nie ma jeszcze daty w profilu.
@@ -50,11 +52,12 @@ const tabs = computed(() =>
   ].map((tab) => ({ ...tab, current: route.name === tab.name })),
 )
 
-onMounted(async () => {
+async function load() {
+  offline.value = false
   try {
     account.value = await loadAccount()
   } catch {
-    problem.value = 'Serwer nie odpowiada. Spróbuj za chwilę.'
+    offline.value = true
     return
   }
   if (!account.value) {
@@ -66,7 +69,9 @@ onMounted(async () => {
   } catch {
     problem.value = 'Nie udało się wczytać ustawień. Spróbuj za chwilę.'
   }
-})
+}
+
+onMounted(load)
 </script>
 
 <template>
@@ -82,6 +87,7 @@ onMounted(async () => {
     />
 
     <main class="account__main">
+      <ServerProblem v-if="offline" @retry="load" />
       <p v-if="problem" class="account__problem" role="alert">{{ problem }}</p>
       <RouterView v-if="account" :account="account" />
     </main>

@@ -11,6 +11,7 @@ import StationPanel from '@/components/map/StationPanel.vue'
 import TopicList from '@/components/map/TopicList.vue'
 import { useMapView } from '@/composables/useMapView'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import ServerProblem from '@/components/ServerProblem.vue'
 import { EXAMS } from '@/config/exams'
 import type { DiagnosticSheets } from '@/maps/nextStep'
 import type { MapProgress, TopicMap } from '@/maps/types'
@@ -27,16 +28,22 @@ const props = defineProps<{
 
 const ownProgress = ref<MapProgress<string> | null>(null)
 const shownProgress = computed(() => ownProgress.value ?? props.progress)
+const offline = ref(false)
 
-// Gdy serwer nie odpowie, zalogowany uczeń widzi pustą mapę, a nie cudzy przykładowy postęp.
-watch(
-  () => props.map.examId,
-  async (examId) => {
-    ownProgress.value = null
-    ownProgress.value = await loadProgress(examId).catch(() => ({ topics: {} }))
-  },
-  { immediate: true },
-)
+// Gdy serwer nie odpowie, zalogowany uczeń widzi pustą mapę, a nie cudzy przykładowy postęp,
+// i nad nią komunikat z ponowieniem, żeby nie myślał, że postęp zniknął.
+async function loadOwnProgress() {
+  ownProgress.value = null
+  offline.value = false
+  try {
+    ownProgress.value = await loadProgress(props.map.examId)
+  } catch {
+    ownProgress.value = { topics: {} }
+    offline.value = true
+  }
+}
+
+watch(() => props.map.examId, loadOwnProgress, { immediate: true })
 
 const exam = computed(() => EXAMS.find((item) => item.id === props.map.examId)!)
 const { view, setView } = useMapView()
@@ -296,8 +303,10 @@ function closeOutside(event: MouseEvent) {
       </main>
     </div>
 
+    <ServerProblem v-if="offline" class="exam-page__offline" @retry="loadOwnProgress" />
+
     <NextStepButton
-      v-if="floatingPill"
+      v-else-if="floatingPill"
       class="exam-page__next"
       :map="map"
       :progress="shownProgress"
@@ -491,6 +500,16 @@ function closeOutside(event: MouseEvent) {
   max-width: calc(100% - 2 * var(--gutter));
   /* transform, a nie translate, bo translate zajmuje już wciśnięty przycisk. */
   transform: translateX(-50%);
+}
+
+.exam-page__offline {
+  position: fixed;
+  right: var(--gutter);
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: var(--gutter);
+  z-index: 6;
+  max-width: 26rem;
+  margin-inline: auto;
 }
 
 .exam-side__next {

@@ -51,6 +51,20 @@ describe('App', () => {
     expect(await page('/wizytowka')).toBe(await page('/wizytowka3/a35'))
   }, 20000)
 
+  it('shows a retry instead of an empty page when a page file does not load', async () => {
+    router.addRoute({
+      path: '/bez-serwera',
+      component: () => Promise.reject(new TypeError('Failed to fetch dynamically imported module')),
+    })
+    const wrapper = mount(App, { global: { plugins: [router] } })
+    await router.push('/bez-serwera').catch(() => {})
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Serwer nie odpowiada')
+    expect(wrapper.find('button').text()).toBe('Spróbuj ponownie')
+    wrapper.unmount()
+  })
+
   it('shows the coming soon page at /wkrotce', async () => {
     const wrapper = await renderAt('/wkrotce')
     expect(wrapper.find('h1').text()).toBe('Wkrótce')

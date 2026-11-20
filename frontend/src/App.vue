@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, watchEffect } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, onMounted, ref, watchEffect } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import ServerProblem from '@/components/ServerProblem.vue'
 import { refreshProfile } from '@/profile'
 import { darkShade, theme } from '@/theme'
 
 const route = useRoute()
+const router = useRouter()
+
+// Każda strona aplikacji to osobny plik pobierany przy pierwszym wejściu. Bez serwera, albo po
+// wdrożeniu nowej wersji, gdy stary plik zniknął, przejście się nie udaje i zostawała pusta strona.
+// Ponowienie wczytuje adres od nowa, razem z aktualną wersją aplikacji.
+const failedPath = ref<string | null>(null)
+router.onError((_error, to) => {
+  failedPath.value = to.fullPath
+})
+
+function reload() {
+  window.location.assign(failedPath.value!)
+}
 
 // Motyw z ustawień konta dotyczy tylko aplikacji. Wizytówki z ankietą, logowanie z ustawianiem
 // hasła i płatność mają własne, stałe kolory. Panel właściciela ma kolory aplikacji, ale zawsze
@@ -41,5 +55,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <RouterView />
+  <main v-if="failedPath" class="app-problem">
+    <ServerProblem @retry="reload" />
+  </main>
+  <RouterView v-else />
 </template>
+
+<style scoped>
+.app-problem {
+  display: grid;
+  align-content: center;
+  min-height: 100svh;
+  max-width: 30rem;
+  margin-inline: auto;
+  padding: var(--gutter);
+}
+</style>

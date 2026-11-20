@@ -91,6 +91,19 @@ describe('account page', () => {
     expect(fetch).toHaveBeenCalledWith('/api/account/logout', expect.anything())
   })
 
+  it('offers a retry when the server does not answer', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    const page = await renderAt('/konto')
+    expect(page.text()).toContain('Serwer nie odpowiada')
+
+    backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
+    await button(page, 'Spróbuj ponownie').trigger('click')
+    await flushPromises()
+
+    expect(page.text()).not.toContain('Serwer nie odpowiada')
+    expect(page.text()).toContain('Zalogowano jako ola@example.com')
+  })
+
   it('shows the account even when the profile does not load', async () => {
     backend({ '/api/account': [200, ACCOUNT] })
 

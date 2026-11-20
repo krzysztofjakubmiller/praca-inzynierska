@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import PracticeTask from '@/components/task/PracticeTask.vue'
+import ServerProblem from '@/components/ServerProblem.vue'
 import { EXAMS } from '@/config/exams'
 import { TOPIC_MAPS } from '@/maps'
 import { listGroups } from '@/maps/order'
@@ -32,6 +33,7 @@ const title = computed(() => {
 const task = ref<Task | null>(null)
 const loaded = ref(false)
 const problem = ref('')
+const offline = ref(false)
 // Ostatnie 3 pominięte albo zrobione zadania nie wracają od razu.
 const recent = ref<number[]>([])
 // Ćwiczenie: ile nierobionych zostało. Powtórki i losowe: ile zadań ma uczeń w powtórkach.
@@ -81,6 +83,7 @@ async function fetchNext(): Promise<Task | null> {
 
 async function loadNext() {
   problem.value = ''
+  offline.value = false
   try {
     task.value = await fetchNext()
     loaded.value = true
@@ -90,10 +93,8 @@ async function loadNext() {
       await router.replace({ name: 'login', query: { dalej: router.currentRoute.value.fullPath } })
       return
     }
-    problem.value =
-      error instanceof Rejected
-        ? error.problems.join(' ')
-        : 'Serwer nie odpowiada. Spróbuj za chwilę.'
+    if (error instanceof Rejected) problem.value = error.problems.join(' ')
+    else offline.value = true
   }
 }
 
@@ -192,7 +193,8 @@ watch(topics, loadNext)
         </fieldset>
       </details>
 
-      <p v-if="problem" class="practice__problem" role="alert">{{ problem }}</p>
+      <ServerProblem v-if="offline" @retry="loadNext" />
+      <p v-else-if="problem" class="practice__problem" role="alert">{{ problem }}</p>
 
       <PracticeTask v-else-if="task" :key="task.id" :task="task" :mode="mode" @next="done">
         <template #actions>
