@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import type { Account } from '@/account'
 import AccountTicket from '@/components/account/AccountTicket.vue'
 import { EXAMS } from '@/config/exams'
-import { profileExamId } from '@/profile'
+import { accountExamId } from '@/lastExam'
 import { purchaseRoute } from '@/purchase'
 import { TICKET_NAMES, annualTicketEnd, formatPrice } from '@/utils/tickets'
 
@@ -13,8 +13,8 @@ defineProps<{ account: Account }>()
 const router = useRouter()
 
 // Backend nie sprzedaje jeszcze biletów, więc zakładka pokazuje bilet do kupienia na egzamin
-// ucznia, z cenami, i pustą historię. Gdy płatności ruszą, tu pojawi się kupiony bilet.
-const exam = computed(() => EXAMS.find((item) => item.id === profileExamId.value)!)
+// konta, z cenami, i pustą historię. Gdy płatności ruszą, tu pojawi się kupiony bilet.
+const exam = computed(() => EXAMS.find((item) => item.id === accountExamId.value)!)
 const annualEnd = new Intl.DateTimeFormat('pl-PL', {
   day: 'numeric',
   month: 'long',

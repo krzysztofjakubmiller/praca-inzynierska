@@ -4,7 +4,8 @@ import { useRoute, useRouter } from 'vue-router'
 import { loadAccount, type Account } from '@/account'
 import AccountStation from '@/components/account/AccountStation.vue'
 import { EXAMS } from '@/config/exams'
-import { profile, profileExamId, refreshProfile } from '@/profile'
+import { accountExamId } from '@/lastExam'
+import { profile, refreshProfile } from '@/profile'
 import { ACCOUNT_STATS, currentStreak, localToday, useStudentStats } from '@/stats/stats'
 
 const router = useRouter()
@@ -13,8 +14,13 @@ const route = useRoute()
 const account = ref<Account | null>(null)
 const problem = ref('')
 
-const exam = computed(() => EXAMS.find((item) => item.id === profileExamId.value)!)
-const level = computed(() => profile.value?.level ?? 'podstawowa')
+const exam = computed(() => EXAMS.find((item) => item.id === accountExamId.value)!)
+// Data z profilu dla poziomu matury, której jest konto; E8 nie ma jeszcze daty w profilu.
+const examDate = computed(() => {
+  if (exam.value.id === 'matura-rozszerzona') return profile.value?.exam_dates.rozszerzona
+  if (exam.value.id === 'matura-podstawowa') return profile.value?.exam_dates.podstawowa
+  return undefined
+})
 
 const studentStats = useStudentStats(() => exam.value.id)
 provide(ACCOUNT_STATS, studentStats)
@@ -68,7 +74,7 @@ onMounted(async () => {
     <AccountStation
       :exam="exam"
       :email="account?.email"
-      :exam-date="profile?.exam_dates[level]"
+      :exam-date="examDate"
       :today="localToday()"
       :target="profile?.target_percent"
       :study="study"

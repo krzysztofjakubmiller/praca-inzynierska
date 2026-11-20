@@ -5,12 +5,11 @@ import AppIcon from '@/components/AppIcon.vue'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import type { Exam } from '@/config/exams'
-import { PRODUCT_NAME } from '@/config/product'
 import { daysBetween, longDate, plural } from '@/stats/stats'
 import { setTheme, theme } from '@/theme'
 
 // Góra konta jak stacja egzaminu na wizytówce: pole w kolorze egzaminu, jego bryła, dni do
-// egzaminu i zakładki konta na dolnej krawędzi. Kolor i bryła idą za egzaminem ucznia.
+// egzaminu i zakładki konta na dolnej krawędzi. Strzałka w pigułce wraca na mapę tego egzaminu.
 const props = defineProps<{
   exam: Exam
   email?: string
@@ -51,7 +50,11 @@ const travelled = computed(() => {
     aria-labelledby="station-title"
   >
     <header class="station__top">
-      <RouterLink class="station__mark" :to="examPage">{{ PRODUCT_NAME }}</RouterLink>
+      <RouterLink class="station__back" :to="examPage">
+        <AppIcon name="chevron-left" class="station__chevron" />
+        <StationMarker :shape="exam.solid" class="station__marker" />
+        <span class="station__exam">{{ exam.name }}</span>
+      </RouterLink>
       <span v-if="email" class="station__email">{{ email }}</span>
       <button
         type="button"
@@ -62,7 +65,6 @@ const travelled = computed(() => {
       >
         <AppIcon name="theme" />
       </button>
-      <RouterLink class="station__map" :to="examPage">Mapa tematów</RouterLink>
     </header>
 
     <StationMarker :shape="exam.solid" class="station__solid" />
@@ -173,11 +175,41 @@ const travelled = computed(() => {
   box-shadow: 0 8px 24px -10px rgb(0 0 0 / 0.5);
 }
 
-.station__mark {
-  margin-right: auto;
-  font-weight: 800;
-  font-stretch: 88%;
+/* Powrót na mapę: strzałka, znak egzaminu i jego nazwa, jak w nagłówku dawnego konta. */
+.station__back {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  margin: 0 auto 0 -0.6rem;
+  padding: 0 0.9rem 0 0.4rem;
+  border-radius: 999px;
+  font-weight: 750;
   text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.station__back:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+
+.station__chevron {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.station .station__marker {
+  --marker-fill: var(--field);
+  --marker-stroke: #fff;
+  flex: none;
+  font-size: 1.05rem;
+}
+
+.station__exam {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -194,20 +226,6 @@ const travelled = computed(() => {
 
 .station__theme:hover {
   background: rgb(255 255 255 / 0.14);
-}
-
-.station__map {
-  display: flex;
-  align-items: center;
-  min-height: 2.5rem;
-  padding-inline: 1rem;
-  border-radius: 999px;
-  background: #fff;
-  color: #101421;
-  font-size: 0.9375rem;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
 }
 
 /* Bryła egzaminu jako duży, nieruchomy znak w tle pola. Rozmiar idzie z font-size, bo znacznik

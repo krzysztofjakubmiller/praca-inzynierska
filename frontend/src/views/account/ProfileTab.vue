@@ -8,7 +8,8 @@ import ForecastRange from '@/components/stats/ForecastRange.vue'
 import LineProgress from '@/components/stats/LineProgress.vue'
 import StatCard from '@/components/stats/StatCard.vue'
 import WeekNumbers from '@/components/stats/WeekNumbers.vue'
-import { profile, profileExamId } from '@/profile'
+import { accountExamId } from '@/lastExam'
+import { profile } from '@/profile'
 import { ACCOUNT_STATS } from '@/stats/stats'
 
 defineProps<{ account: Account }>()
@@ -77,13 +78,12 @@ async function logOutAndGoToLogin() {
       </StatCard>
       <RouterLink
         class="button button--quiet profile-tab__more"
-        :to="{ name: 'account-progress', params: { exam: profileExamId } }"
+        :to="{ name: 'account-progress', params: { exam: accountExamId } }"
       >
         Cały postęp
       </RouterLink>
     </div>
-    <NoDataYet v-else-if="loaded" :exam-id="profileExamId" />
-
+    <NoDataYet v-else-if="loaded" :exam-id="accountExamId" />
   </div>
 </template>
 

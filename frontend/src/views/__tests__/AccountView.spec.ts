@@ -1,6 +1,7 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, type VueWrapper } from '@vue/test-utils'
 import App from '@/App.vue'
+import { lastExam } from '@/lastExam'
 import { profile } from '@/profile'
 import router from '@/router'
 import { stubBrowser } from './browserStubs'
@@ -50,6 +51,8 @@ beforeEach(stubBrowser)
 afterEach(() => {
   wrapper?.unmount()
   profile.value = null
+  lastExam.value = null
+  localStorage.removeItem('ostatni-egzamin')
   vi.unstubAllGlobals()
 })
 
@@ -138,6 +141,19 @@ describe('account page', () => {
 
     expect(station().attributes('style')).toContain('--exam-matura-rozszerzona')
     expect(station().text()).toContain('Matura rozszerzona, 11 maja 2027')
+  })
+})
+
+describe('last used exam', () => {
+  it('shows the account in the colours of the last opened map and goes back to it', async () => {
+    backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
+    await router.push('/matura-rozszerzona')
+
+    const page = await renderAt('/konto')
+
+    expect(page.find('.station').attributes('style')).toContain('--exam-matura-rozszerzona')
+    expect(page.find('.station').text()).toContain('Matura rozszerzona, 11 maja 2027')
+    expect(page.find('.station__back').attributes('href')).toBe('/matura-rozszerzona')
   })
 })
 

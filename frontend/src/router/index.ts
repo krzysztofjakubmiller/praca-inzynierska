@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { savedPassword } from '@/access'
 import type { Exam } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
+import { rememberExam } from '@/lastExam'
 import { blockedClicks } from '@/landing2/survey'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
@@ -366,6 +367,7 @@ router.afterEach((to, _from, failure) => {
   // Na stronie egzaminu ikona karty to kształt jego stacji z mapy, wszędzie indziej litera M.
   const icon = document.querySelector<HTMLLinkElement>('link[rel="icon"]')
   if (icon) icon.href = to.meta.exam ? `/favicon-${to.meta.exam}.svg` : '/favicon.svg'
+  if (to.meta.exam) rememberExam(to.meta.exam)
 })
 
 export default router

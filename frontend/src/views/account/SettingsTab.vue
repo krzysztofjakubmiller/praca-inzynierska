@@ -7,6 +7,7 @@ import {
   type LearningDifficulties,
   type ProfileSettings,
 } from '@/profile'
+import { rememberExam } from '@/lastExam'
 import { setDarkShade, setTheme, type DarkShade, type Theme } from '@/theme'
 
 type Field = keyof ProfileSettings
@@ -63,6 +64,15 @@ async function save(field: Field, changes: Partial<ProfileSettings>) {
     showSaved(field)
   } catch {
     problems.value = { ...problems.value, [field]: 'Serwer nie odpowiada. Spróbuj za chwilę.' }
+  }
+}
+
+// Zmiana poziomu to przejście na drugą maturę, więc konto przełącza się na nią od razu, tak jak
+// po otwarciu jej mapy.
+async function chooseLevel(level: (typeof LEVELS)[number]['value']) {
+  await save('level', { level })
+  if (!problems.value.level) {
+    rememberExam(level === 'rozszerzona' ? 'matura-rozszerzona' : 'matura-podstawowa')
   }
 }
 
@@ -131,7 +141,7 @@ function chooseDifficulties(event: Event) {
               name="level"
               :value="item.value"
               :checked="profile.level === item.value"
-              @change="save('level', { level: item.value })"
+              @change="chooseLevel(item.value)"
             />
             <span>{{ item.label }}</span>
           </label>
