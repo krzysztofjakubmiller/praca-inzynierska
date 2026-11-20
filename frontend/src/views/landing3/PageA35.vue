@@ -168,10 +168,7 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
               <span v-for="word in exam.name.split(' ')" :key="word">{{ word }}</span>
             </h2>
             <p v-reveal="80" class="va-station__text">{{ tidy(exam.description) }}</p>
-            <p v-reveal="140" class="va-station__days">
-              Do egzaminu <strong>{{ daysLeft(exam) }}</strong>
-            </p>
-            <div v-reveal="200" class="va-actions">
+            <div v-reveal="140" class="va-actions">
               <a class="button" href="#mapa" @click="map = exam.id">
                 Mapa tematów
                 <ArrowIcon down />
@@ -184,6 +181,9 @@ onBeforeUnmount(() => window.clearTimeout(pickTimer))
                 Bilet od {{ formatPrice(exam.prices.monthly) }}
               </a>
             </div>
+            <p v-reveal="200" class="va-station__days">
+              Do egzaminu <strong>{{ daysLeft(exam) }}</strong>
+            </p>
           </div>
         </section>
       </div>
