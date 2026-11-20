@@ -81,6 +81,13 @@ const router = createRouter({
       ],
     },
     {
+      path: '/konto2/:variant(1|2|3|4)?',
+      name: 'account-drafts',
+      component: () => import('@/views/account2/Account2View.vue'),
+      props: (route) => ({ variant: route.params.variant || '1' }),
+      meta: { title: 'Wersje konta' },
+    },
+    {
       path: '/demo/postep/:exam(matura-podstawowa|matura-rozszerzona)',
       name: 'demo-progress',
       component: () => import('@/views/DemoProgressView.vue'),

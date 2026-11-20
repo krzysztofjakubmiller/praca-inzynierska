@@ -1,0 +1,407 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import ArrowIcon from '@/components/landing/ArrowIcon.vue'
+import StationMarker from '@/components/landing/StationMarker.vue'
+import ProgressCharts from '@/components/stats/ProgressCharts.vue'
+import { PRODUCT_NAME } from '@/config/product'
+import ProfileCharts from './ProfileCharts.vue'
+import SettingsPreview from './SettingsPreview.vue'
+import {
+  DAYS_LEFT_TEXT,
+  EMAIL,
+  EXAM,
+  EXAM_DATE,
+  LIMIT,
+  REVIEWS_TODAY_TEXT,
+  SCORE,
+  STATS,
+  STREAK_TEXT,
+  TABS,
+  TARGET,
+  TICKET,
+  WEEK_TASKS,
+  type Tab,
+} from './demo'
+
+// Wersja 2: konto zaczyna się od biletu ucznia, takiego jak w kasowniku na wizytówce. Bilet
+// zbiera to, co stałe (egzamin, ważność, adres), a obok jest to, co zmienia się co dzień.
+const tab = ref<Tab>('profil')
+</script>
+
+<template>
+  <div class="pass">
+    <header class="pass__top">
+      <RouterLink class="pass__mark" :to="{ name: 'landing' }">{{ PRODUCT_NAME }}</RouterLink>
+      <nav class="pass__tabs" aria-label="Konto">
+        <button
+          v-for="item in TABS"
+          :key="item.id"
+          type="button"
+          class="pass__tab"
+          :aria-pressed="tab === item.id"
+          @click="tab = item.id"
+        >
+          {{ item.label }}
+        </button>
+      </nav>
+      <RouterLink class="pass__map" :to="{ name: 'basic-matura' }">Mapa</RouterLink>
+    </header>
+
+    <div class="pass__layout">
+      <aside class="pass__side">
+        <article
+          class="pass__ticket"
+          :style="{ '--exam': `var(--exam-${EXAM.id})` }"
+          aria-labelledby="pass-exam"
+        >
+          <div class="pass__main">
+            <div class="pass__line" aria-hidden="true">
+              <span class="pass__track" />
+              <StationMarker :shape="EXAM.solid" class="pass__marker" />
+            </div>
+            <h1 id="pass-exam" class="pass__exam">{{ EXAM.name }}</h1>
+            <dl class="pass__facts">
+              <div>
+                <dt>Bilet</dt>
+                <dd>{{ TICKET.name }}</dd>
+              </div>
+              <div>
+                <dt>Ważny do</dt>
+                <dd>{{ TICKET.until }}</dd>
+              </div>
+              <div>
+                <dt>Matura</dt>
+                <dd>{{ EXAM_DATE }}</dd>
+              </div>
+              <div>
+                <dt>Zostało</dt>
+                <dd>{{ DAYS_LEFT_TEXT }}</dd>
+              </div>
+            </dl>
+          </div>
+          <div class="pass__stub">
+            <p class="pass__owner">{{ EMAIL }}</p>
+            <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
+              Przedłuż bilet
+            </RouterLink>
+          </div>
+        </article>
+        <div class="pass__account">
+          <button type="button" class="pass__link">Zmień hasło</button>
+          <button type="button" class="pass__link">Wyloguj</button>
+        </div>
+      </aside>
+
+      <main class="pass__content">
+        <template v-if="tab === 'profil'">
+          <section class="pass__today" aria-labelledby="pass-today">
+            <h2 id="pass-today" class="pass__title">Na dziś {{ REVIEWS_TODAY_TEXT }}</h2>
+            <ul class="pass__numbers">
+              <li>
+                <strong>{{ STREAK_TEXT }}</strong>
+                <span>nauki z rzędu</span>
+              </li>
+              <li>
+                <strong>{{ WEEK_TASKS }}</strong>
+                <span>zadań w 7 dni</span>
+              </li>
+              <li>
+                <strong>{{ SCORE }}%</strong>
+                <span>skuteczności</span>
+              </li>
+            </ul>
+            <RouterLink class="button" :to="{ name: 'reviews', params: { exam: EXAM.id } }">
+              Zacznij powtórki
+              <ArrowIcon />
+            </RouterLink>
+          </section>
+          <ProfileCharts />
+        </template>
+        <ProgressCharts
+          v-else-if="tab === 'postep'"
+          :stats="STATS"
+          :target="TARGET"
+          :limit="LIMIT"
+        />
+        <SettingsPreview v-else class="pass__settings" />
+      </main>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.pass__top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  min-height: var(--header-h);
+  padding-inline: var(--gutter);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.pass__mark {
+  margin-right: auto;
+  font-weight: 800;
+  font-stretch: 88%;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Na telefonie zakładki schodzą do drugiego rzędu paska, bo obok nazwy i mapy się nie mieszczą. */
+.pass__tabs {
+  display: flex;
+  order: 1;
+  flex-basis: 100%;
+  margin-left: -0.6rem;
+}
+
+/* Zakładki jak przełącznik ekranów w makiecie aplikacji: aktywna jest podkreślona. */
+.pass__tab {
+  flex: none;
+  min-height: 2.75rem;
+  padding-inline: 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.pass__tab:hover {
+  color: var(--ink);
+}
+
+.pass__tab[aria-pressed='true'] {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 0.14em;
+  text-underline-offset: 0.3em;
+}
+
+.pass__map {
+  display: flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.pass__layout {
+  display: grid;
+  gap: 2rem;
+  max-width: 72rem;
+  margin-inline: auto;
+  padding: clamp(1.25rem, 1rem + 2vw, 2.75rem) var(--gutter) 4rem;
+}
+
+.pass__side {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  width: min(100%, 24rem);
+}
+
+/* Bilet: biały papier z linią w kolorze egzaminu i oddzielonym kuponem na dole. */
+.pass__ticket {
+  --pad: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  --notch: 0.7rem;
+  position: relative;
+  display: grid;
+  border-radius: 1.25rem;
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+.pass__main {
+  display: grid;
+  gap: 1.1rem;
+  padding: var(--pad);
+}
+
+/* Linia dochodzi do środka znacznika, a jego wypełnienie zakrywa jej koniec. */
+.pass__line {
+  display: flex;
+  align-items: center;
+  margin-left: calc(-1 * var(--pad));
+}
+
+.pass__track {
+  flex: 0 0 min(45%, 10rem);
+  height: 0.5rem;
+  background: var(--exam);
+}
+
+.pass__ticket .pass__marker {
+  --marker-fill: var(--exam);
+  --marker-stroke: var(--exam);
+  margin-left: -0.8rem;
+  font-size: 1.6rem;
+}
+
+.pass__exam {
+  font-size: clamp(2.1rem, 1.6rem + 2vw, 2.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.pass__facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem 1rem;
+  margin: 0;
+}
+
+.pass__facts dt {
+  color: var(--ink-soft);
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.pass__facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* Kupon oddziela perforacja z dwoma wycięciami w kolorze tła strony. */
+.pass__stub {
+  position: relative;
+  display: grid;
+  gap: 0.75rem;
+  justify-items: start;
+  padding: var(--pad);
+  border-top: 2px dashed var(--hairline);
+}
+
+.pass__stub::before,
+.pass__stub::after {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--notch) - 1px);
+  width: calc(2 * var(--notch));
+  height: calc(2 * var(--notch));
+  border-radius: 50%;
+  background: var(--ground);
+}
+
+.pass__stub::before {
+  left: calc(-1 * var(--notch));
+}
+
+.pass__stub::after {
+  right: calc(-1 * var(--notch));
+}
+
+.pass__owner {
+  color: var(--ink-soft);
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+
+.pass__account {
+  display: flex;
+  gap: 1.5rem;
+  padding-inline: 0.25rem;
+}
+
+.pass__link {
+  min-height: 2.75rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.pass__link:hover {
+  color: var(--ink);
+}
+
+.pass__content {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
+  min-width: 0;
+}
+
+.pass__today {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: start;
+}
+
+.pass__title {
+  font-size: clamp(2.25rem, 1.5rem + 3vw, 3.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.92;
+  text-transform: uppercase;
+}
+
+.pass__numbers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  padding: 0;
+  list-style: none;
+}
+
+.pass__numbers li {
+  display: grid;
+}
+
+.pass__numbers strong {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-stretch: 82%;
+  font-variant-numeric: tabular-nums;
+}
+
+.pass__numbers span {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+}
+
+.pass__settings {
+  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  border-radius: var(--radius-small);
+  background: var(--surface);
+  box-shadow: var(--card-shadow);
+}
+
+@media (min-width: 40rem) {
+  .pass__tabs {
+    order: 0;
+    flex-basis: auto;
+    margin: 0 auto 0 0;
+  }
+}
+
+@media (min-width: 60rem) {
+  .pass__layout {
+    grid-template-columns: 22rem minmax(0, 1fr);
+    gap: 2.5rem;
+  }
+
+  .pass__side {
+    position: sticky;
+    top: 1.5rem;
+  }
+}
+</style>
