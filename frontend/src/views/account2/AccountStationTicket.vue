@@ -5,7 +5,7 @@ import ProfileCharts from './ProfileCharts.vue'
 import SettingsPreview from './SettingsPreview.vue'
 import StationField from './StationField.vue'
 import TicketPass from './TicketPass.vue'
-import { LIMIT, STATS, TARGET, TICKET, type Tab } from './demo'
+import { LIMIT, STATS, TABS, TARGET, TICKET, type Tab } from './demo'
 
 // Wersja 5: stacja z wersji 1 na górze i bilet z wersji 2 obok wykresów. Bilet zastępuje osobną
 // kartę „Konto”: jest na nim adres ucznia, a pod nim zmiana hasła i wylogowanie. Dni do matury
@@ -21,7 +21,7 @@ const FACTS = [
 
 <template>
   <div>
-    <StationField v-model:tab="tab" />
+    <StationField v-model:tab="tab" :tabs="TABS" />
 
     <div class="mixed" :class="{ 'mixed--profile': tab === 'profil' }">
       <main class="mixed__main">

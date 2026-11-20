@@ -84,7 +84,7 @@ const router = createRouter({
       path: '/konto2/:variant(1|2|3|4|5)?',
       name: 'account-drafts',
       component: () => import('@/views/account2/Account2View.vue'),
-      props: (route) => ({ variant: route.params.variant || '5' }),
+      props: (route) => ({ variant: route.params.variant || '1' }),
       meta: { title: 'Wersje konta' },
     },
     {

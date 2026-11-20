@@ -1,6 +1,7 @@
 import { EXAMS } from '@/config/exams'
 import { DEMO_REVIEW_LIMIT, DEMO_TARGET, demoProgressStats } from '@/stats/demoStats'
 import { currentStreak, daysBetween, longDate, plural, shiftDay } from '@/stats/stats'
+import { TICKET_NAMES, formatPrice } from '@/utils/tickets'
 
 // Wymyślony uczeń do wersji konta pod /konto2. Postęp jest ten sam co na stronie demo, więc
 // wykresy pokazują prawdziwe komponenty z sensownymi liczbami. Bilet jest zmyślony: konto
@@ -26,12 +27,19 @@ export const LAST_SHEET = [...STATS.sheets]
   .find((sheet) => sheet.percent !== undefined)?.percent
 export const NEXT_SHEET = STATS.sheets.find((sheet) => sheet.percent === undefined)
 
+// Bilet miesięczny kupiony tydzień temu, a przed nim poprzedni, też miesięczny.
 const TICKET_DAYS = 23
 export const TICKET = {
-  name: 'Bilet miesięczny',
+  name: TICKET_NAMES.monthly,
+  price: `${formatPrice(EXAM.prices.monthly)} miesięcznie`,
   until: longDate(shiftDay(STATS.today, TICKET_DAYS)),
   left: `${TICKET_DAYS} ${plural(TICKET_DAYS, 'dzień', 'dni', 'dni')}`,
 }
+export const PAYMENTS = [7, 37].map((daysAgo) => ({
+  date: longDate(shiftDay(STATS.today, -daysAgo)),
+  name: TICKET_NAMES.monthly,
+  amount: formatPrice(EXAM.prices.monthly),
+}))
 
 // Odcinek trasy od początku roku szkolnego do matury, jak w odliczaniu na obecnym profilu.
 export const ROUTE_START = `${Number(STATS.examDate.slice(0, 4)) - 1}-09-01`
@@ -46,4 +54,12 @@ export const TABS = [
   { id: 'ustawienia', label: 'Ustawienia' },
 ] as const
 
-export type Tab = (typeof TABS)[number]['id']
+// Wersja 1 ma jeszcze zakładkę z biletem i historią płatności.
+export const TABS_WITH_PAYMENTS = [
+  TABS[0],
+  TABS[1],
+  { id: 'platnosci', label: 'Płatności' },
+  TABS[2],
+] as const
+
+export type Tab = (typeof TABS_WITH_PAYMENTS)[number]['id']

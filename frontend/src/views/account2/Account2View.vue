@@ -6,8 +6,8 @@ import AccountStation from './AccountStation.vue'
 import AccountStationTicket from './AccountStationTicket.vue'
 import AccountTicket from './AccountTicket.vue'
 
-// Wersje wyglądu konta do wyboru, na wymyślonych danych. Piąta łączy dwie najlepiej ocenione,
-// więc otwiera się jako pierwsza. Przełącznik u góry nie jest częścią żadnej z nich.
+// Wersje wyglądu konta do wyboru, na wymyślonych danych. Wybrana jest pierwsza, więc to ona
+// otwiera się pod /konto2. Przełącznik u góry nie jest częścią żadnej z nich.
 const props = defineProps<{ variant: string }>()
 
 const VARIANTS = [

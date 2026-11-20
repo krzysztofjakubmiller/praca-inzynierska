@@ -9,13 +9,14 @@ import {
   EXAM_DATE,
   REVIEWS_TODAY_TEXT,
   STREAK_TEXT,
-  TABS,
   TRAVELLED,
   type Tab,
 } from './demo'
 
 // Góra konta jako stacja egzaminu z wizytówki: pole w kolorze egzaminu z liczbą dni do matury
 // i zakładkami konta na dolnej krawędzi.
+defineProps<{ tabs: readonly { id: Tab; label: string }[] }>()
+
 const tab = defineModel<Tab>('tab', { required: true })
 </script>
 
@@ -58,7 +59,7 @@ const tab = defineModel<Tab>('tab', { required: true })
 
       <nav class="station__tabs" aria-label="Konto">
         <button
-          v-for="item in TABS"
+          v-for="item in tabs"
           :key="item.id"
           type="button"
           class="station__tab"
