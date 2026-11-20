@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router'
 import { logOut, type Account } from '@/account'
 import AccountSecurity from '@/components/account/AccountSecurity.vue'
 import NoDataYet from '@/components/profile/NoDataYet.vue'
-import ActivityHeatmap from '@/components/stats/ActivityHeatmap.vue'
 import ForecastRange from '@/components/stats/ForecastRange.vue'
 import LineProgress from '@/components/stats/LineProgress.vue'
 import StatCard from '@/components/stats/StatCard.vue'
@@ -37,10 +36,19 @@ async function logOutAndGoToLogin() {
 
 <template>
   <div class="profile-tab">
+    <section class="profile-tab__account" aria-labelledby="account-heading">
+      <h2 id="account-heading" class="profile-tab__heading">Konto</h2>
+      <p>Zalogowano jako {{ account.email }}</p>
+      <button class="button button--quiet" type="button" @click="logOutAndGoToLogin">
+        Wyloguj
+      </button>
+      <p v-if="problem" class="profile-tab__problem" role="alert">{{ problem }}</p>
+      <AccountSecurity :has-password="account.has_password" />
+    </section>
+
     <div v-if="stats" class="profile-tab__charts">
       <StatCard
         v-slot="{ width }"
-        class="profile-tab__wide"
         title="Ostatnie 4 tygodnie"
         note="Dni nauki z rzędu łączy linia. Liczby pod spodem dotyczą ostatnich 7 dni."
       >
@@ -64,10 +72,7 @@ async function logOutAndGoToLogin() {
           :width="width"
         />
       </StatCard>
-      <StatCard v-slot="{ width }" title="Kalendarz nauki" note="Kafelek to dzień.">
-        <ActivityHeatmap :days="stats.days" :today="stats.today" :width="width" />
-      </StatCard>
-      <StatCard class="profile-tab__wide" title="Linie mapy">
+      <StatCard title="Linie mapy">
         <LineProgress :lines="stats.lines" />
       </StatCard>
       <RouterLink
@@ -79,15 +84,6 @@ async function logOutAndGoToLogin() {
     </div>
     <NoDataYet v-else-if="loaded" :exam-id="profileExamId" />
 
-    <section class="profile-tab__account" aria-labelledby="account-heading">
-      <h2 id="account-heading" class="profile-tab__heading">Konto</h2>
-      <p>Zalogowano jako {{ account.email }}</p>
-      <button class="button button--quiet" type="button" @click="logOutAndGoToLogin">
-        Wyloguj
-      </button>
-      <p v-if="problem" class="profile-tab__problem" role="alert">{{ problem }}</p>
-      <AccountSecurity :has-password="account.has_password" />
-    </section>
   </div>
 </template>
 
@@ -95,7 +91,6 @@ async function logOutAndGoToLogin() {
 .profile-tab {
   display: grid;
   gap: 1.75rem;
-  container-type: inline-size;
 }
 
 .profile-tab__charts {
@@ -133,16 +128,5 @@ async function logOutAndGoToLogin() {
   margin-top: 0.5rem;
   padding-top: 1.5rem;
   border-top: 1px solid var(--hairline);
-}
-
-@container (min-width: 44rem) {
-  .profile-tab__charts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .profile-tab__wide,
-  .profile-tab__more {
-    grid-column: 1 / -1;
-  }
 }
 </style>

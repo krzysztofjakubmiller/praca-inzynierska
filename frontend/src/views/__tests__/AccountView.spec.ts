@@ -116,13 +116,13 @@ describe('account page', () => {
     expect(link?.attributes('href')).toBe('/demo/postep/matura-podstawowa')
   })
 
-  it('has tabs for the profile, progress, payments and settings', async () => {
+  it('has tabs for the profile, settings, progress and payments', async () => {
     backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
 
     const page = await renderAt('/konto/ustawienia')
 
     const tabs = page.findAll('nav[aria-label="Konto"] a')
-    expect(tabs.map((tab) => tab.text())).toEqual(['Profil', 'Postęp', 'Płatności', 'Ustawienia'])
+    expect(tabs.map((tab) => tab.text())).toEqual(['Profil', 'Ustawienia', 'Postęp', 'Płatności'])
     expect(page.find('[aria-current="page"]').text()).toBe('Ustawienia')
   })
 

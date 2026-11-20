@@ -30,17 +30,17 @@ const study = computed(() => {
   }
 })
 
-// Kolejne zakładki (np. prace domowe) dochodzą tutaj; pasek na telefonie przewija się w bok.
+// Kolejne zakładki (np. prace domowe) dochodzą tutaj.
 const tabs = computed(() =>
   [
     { label: 'Profil', to: { name: 'account' }, name: 'account' },
+    { label: 'Ustawienia', to: { name: 'account-settings' }, name: 'account-settings' },
     {
       label: 'Postęp',
       to: { name: 'account-progress', params: { exam: exam.value.id } },
       name: 'account-progress',
     },
     { label: 'Płatności', to: { name: 'account-payments' }, name: 'account-payments' },
-    { label: 'Ustawienia', to: { name: 'account-settings' }, name: 'account-settings' },
   ].map((tab) => ({ ...tab, current: route.name === tab.name })),
 )
 
