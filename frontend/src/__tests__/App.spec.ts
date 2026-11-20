@@ -3,7 +3,6 @@ import { beforeAll, describe, it, expect, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 import App from '../App.vue'
 import router from '@/router'
-import { EXAMS } from '@/config/exams'
 import { PRODUCT_NAME } from '@/config/product'
 
 beforeAll(() => {
@@ -44,17 +43,13 @@ describe('App', () => {
     expect(document.title).toBe(`Strony · ${PRODUCT_NAME}`)
   })
 
-  it('shows the landing page at /wizytowka', async () => {
-    const wrapper = await renderAt('/wizytowka')
-    expect(wrapper.find('h1').text()).toBe(PRODUCT_NAME)
-    expect(wrapper.findAll('h2').map((heading) => heading.text())).toEqual([
-      ...EXAMS.map((exam) => exam.name),
-      'Jak to działa',
-      'Bilety',
-    ])
-    expect(wrapper.findAll('.ticket')).toHaveLength(EXAMS.length)
-    expect(document.title).toBe(PRODUCT_NAME)
-  })
+  // Wizytówka 3.5 ma płótna i animacje, których jsdom nie wyrysuje, więc sprawdzamy sam adres.
+  it('shows the chosen landing page at /wizytowka', async () => {
+    type Loader = () => Promise<{ default: unknown }>
+    const page = async (path: string) =>
+      (await (router.resolve(path).matched[0]!.components!.default as Loader)()).default
+    expect(await page('/wizytowka')).toBe(await page('/wizytowka3/a35'))
+  }, 20000)
 
   it('shows the coming soon page at /wkrotce', async () => {
     const wrapper = await renderAt('/wkrotce')

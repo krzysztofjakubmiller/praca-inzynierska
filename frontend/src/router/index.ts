@@ -6,7 +6,6 @@ import { blockedClicks } from '@/landing2/survey'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { BASIC_DEMO_PROGRESS, BASIC_DEMO_SHEETS } from '@/maps/basic/demoProgress'
 import { EXTENDED_DEMO_PROGRESS, EXTENDED_DEMO_SHEETS } from '@/maps/extended/demoProgress'
-import LandingView from '@/views/LandingView.vue'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -125,9 +124,10 @@ const router = createRouter({
       meta: { title: 'Polityka prywatności', public: true },
     },
     {
+      // Wybrana wizytówka 3.5. Poprzednia strona została tylko w ankiecie, jako wariant E.
       path: '/wizytowka',
       name: 'landing',
-      component: LandingView,
+      component: () => import('@/views/landing3/PageA35.vue'),
     },
     {
       path: '/ankieta',
