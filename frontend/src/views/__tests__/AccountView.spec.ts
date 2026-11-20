@@ -192,6 +192,19 @@ describe('settings', () => {
     expect(page.text()).toContain('Zapisano')
   })
 
+  it('saves the number of reviews from the tiles', async () => {
+    backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
+    const page = await renderAt('/konto/ustawienia')
+
+    await page.find('input[value="duzo"]').setValue(true)
+    await flushPromises()
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/profile',
+      expect.objectContaining({ method: 'PUT', body: expect.stringContaining('"duzo"') }),
+    )
+  })
+
   it('shows the dark background choice only with the dark theme', async () => {
     backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
     const page = await renderAt('/konto/ustawienia')

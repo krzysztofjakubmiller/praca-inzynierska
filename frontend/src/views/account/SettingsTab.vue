@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
+import StationMarker from '@/components/landing/StationMarker.vue'
+import { EXAMS } from '@/config/exams'
 import {
   profile,
   updateProfile,
@@ -13,8 +15,18 @@ import { setDarkShade, setTheme, type DarkShade, type Theme } from '@/theme'
 type Field = keyof ProfileSettings
 
 const LEVELS = [
-  { value: 'podstawowa', label: 'Podstawowa' },
-  { value: 'rozszerzona', label: 'Rozszerzona' },
+  {
+    value: 'podstawowa',
+    label: 'Podstawowa',
+    note: 'Tylko poziom podstawowy.',
+    exam: EXAMS.find((exam) => exam.id === 'matura-podstawowa')!,
+  },
+  {
+    value: 'rozszerzona',
+    label: 'Rozszerzona',
+    note: 'Oba poziomy, mapą jest rozszerzenie.',
+    exam: EXAMS.find((exam) => exam.id === 'matura-rozszerzona')!,
+  },
 ] as const
 const THEMES: { value: Theme; label: string }[] = [
   { value: 'light', label: 'Jasny' },
@@ -26,24 +38,24 @@ const SHADES: { value: DarkShade; label: string }[] = [
   { value: 'black', label: 'Czarny' },
 ]
 const REVIEWS: { value: DailyReviews; label: string }[] = [
-  { value: 'malo', label: 'mało' },
-  { value: 'srednio', label: 'średnio' },
-  { value: 'duzo', label: 'dużo' },
+  { value: 'malo', label: 'Mało' },
+  { value: 'srednio', label: 'Średnio' },
+  { value: 'duzo', label: 'Dużo' },
 ]
 const DIFFICULTIES: { value: LearningDifficulties; label: string; hint: string }[] = [
   {
     value: 'brak',
-    label: 'brak',
+    label: 'Brak',
     hint: 'AI ocenia rozwiązania według standardowych zasad CKE.',
   },
   {
     value: 'specyficzne',
-    label: 'specyficzne trudności',
+    label: 'Specyficzne trudności',
     hint: 'Masz opinię poradni o dysleksji, dysgrafii albo dysortografii. AI uwzględnia przy ocenie kryteria CKE dla specyficznych trudności.',
   },
   {
     value: 'dyskalkulia',
-    label: 'dyskalkulia',
+    label: 'Dyskalkulia',
     hint: 'Masz opinię poradni o dyskalkulii. AI ocenia przede wszystkim według zasad CKE dla osób z dyskalkulią.',
   },
 ]
@@ -109,118 +121,119 @@ function saveTarget() {
   }
   save('target_percent', { target_percent: value })
 }
-
-const reviewIndex = computed(() =>
-  REVIEWS.findIndex((item) => item.value === profile.value?.daily_reviews),
-)
-function chooseReviews(event: Event) {
-  const item = REVIEWS[Number((event.target as HTMLInputElement).value)]!
-  save('daily_reviews', { daily_reviews: item.value })
-}
-
-const difficultyIndex = computed(() =>
-  DIFFICULTIES.findIndex((item) => item.value === profile.value?.learning_difficulties),
-)
-function chooseDifficulties(event: Event) {
-  const item = DIFFICULTIES[Number((event.target as HTMLInputElement).value)]!
-  save('learning_difficulties', { learning_difficulties: item.value })
-}
 </script>
 
 <template>
   <div v-if="profile" class="settings">
-    <section class="settings__group" aria-labelledby="settings-learning">
+    <section class="settings__group settings__group--wide" aria-labelledby="settings-learning">
       <h2 id="settings-learning" class="settings__heading">Matura</h2>
 
-      <fieldset class="settings__field">
-        <legend>Poziom</legend>
-        <div class="settings__choice">
-          <label v-for="item in LEVELS" :key="item.value">
-            <input
-              type="radio"
-              name="level"
-              :value="item.value"
-              :checked="profile.level === item.value"
-              @change="chooseLevel(item.value)"
-            />
-            <span>{{ item.label }}</span>
-          </label>
+      <div class="settings__matura">
+        <div class="settings__field">
+          <p id="settings-level" class="settings__label">Poziom</p>
+          <div class="settings__tiles" role="radiogroup" aria-labelledby="settings-level">
+            <label
+              v-for="item in LEVELS"
+              :key="item.value"
+              class="settings__tile"
+              :style="{ '--marker-fill': `var(--exam-${item.exam.id})` }"
+            >
+              <input
+                type="radio"
+                name="level"
+                :value="item.value"
+                :checked="profile.level === item.value"
+                @change="chooseLevel(item.value)"
+              />
+              <span class="settings__tile-body">
+                <StationMarker :shape="item.exam.solid" class="settings__tile-marker" />
+                <strong>{{ item.label }}</strong>
+                <span class="settings__tile-note">{{ item.note }}</span>
+              </span>
+            </label>
+          </div>
+          <p v-if="saved === 'level'" class="settings__saved" role="status">Zapisano</p>
+          <p v-if="problems.level" class="settings__problem" role="alert">{{ problems.level }}</p>
         </div>
-        <p class="settings__hint">Rozszerzona oznacza naukę obu poziomów.</p>
-        <p v-if="saved === 'level'" class="settings__saved" role="status">Zapisano</p>
-        <p v-if="problems.level" class="settings__problem" role="alert">{{ problems.level }}</p>
-      </fieldset>
 
-      <fieldset class="settings__field">
-        <legend>Rok matury</legend>
-        <div class="settings__choice">
-          <label v-for="year in profile.exam_years" :key="year">
-            <input
-              type="radio"
-              name="exam-year"
-              :value="year"
-              :checked="profile.exam_year === year"
-              @change="save('exam_year', { exam_year: year })"
-            />
-            <span>{{ year }}</span>
-          </label>
-        </div>
-        <p v-if="saved === 'exam_year'" class="settings__saved" role="status">Zapisano</p>
-        <p v-if="problems.exam_year" class="settings__problem" role="alert">
-          {{ problems.exam_year }}
-        </p>
-      </fieldset>
+        <div class="settings__side">
+          <div class="settings__field">
+            <p id="settings-year" class="settings__label">Rok matury</p>
+            <div class="settings__choice" role="radiogroup" aria-labelledby="settings-year">
+              <label v-for="year in profile.exam_years" :key="year">
+                <input
+                  type="radio"
+                  name="exam-year"
+                  :value="year"
+                  :checked="profile.exam_year === year"
+                  @change="save('exam_year', { exam_year: year })"
+                />
+                <span>{{ year }}</span>
+              </label>
+            </div>
+            <p v-if="saved === 'exam_year'" class="settings__saved" role="status">Zapisano</p>
+            <p v-if="problems.exam_year" class="settings__problem" role="alert">
+              {{ problems.exam_year }}
+            </p>
+          </div>
 
-      <div class="settings__field">
-        <label class="settings__label" for="target">Cel</label>
-        <div class="settings__target">
-          <input
-            id="target"
-            v-model="targetText"
-            class="settings__input"
-            type="text"
-            inputmode="numeric"
-            maxlength="3"
-            placeholder="bez celu"
-            aria-describedby="target-hint"
-            @change="saveTarget"
-          />
-          <span class="settings__unit" aria-hidden="true">%</span>
+          <div class="settings__field">
+            <label class="settings__label" for="target">Cel</label>
+            <div class="settings__target">
+              <input
+                id="target"
+                v-model="targetText"
+                class="settings__input"
+                type="text"
+                inputmode="numeric"
+                maxlength="3"
+                placeholder="brak"
+                aria-describedby="target-hint"
+                @change="saveTarget"
+              />
+              <span class="settings__unit" aria-hidden="true">%</span>
+            </div>
+            <p id="target-hint" class="settings__hint">
+              Wynik, do którego dążysz. Pokazuje się na wykresach arkuszy i prognozy. Możesz
+              zostawić puste.
+            </p>
+            <p v-if="saved === 'target_percent'" class="settings__saved" role="status">Zapisano</p>
+            <p v-if="problems.target_percent" class="settings__problem" role="alert">
+              {{ problems.target_percent }}
+            </p>
+          </div>
         </div>
-        <p id="target-hint" class="settings__hint">
-          Wynik, do którego dążysz. Pokazuje się na wykresach arkuszy i prognozy. Możesz zostawić
-          puste.
-        </p>
-        <p v-if="saved === 'target_percent'" class="settings__saved" role="status">Zapisano</p>
-        <p v-if="problems.target_percent" class="settings__problem" role="alert">
-          {{ problems.target_percent }}
-        </p>
       </div>
     </section>
 
     <section class="settings__group" aria-labelledby="settings-reviews">
       <h2 id="settings-reviews" class="settings__heading">Powtórki</h2>
       <div class="settings__field">
-        <label class="settings__label" for="daily-reviews">Ile powtórek dziennie</label>
-        <input
-          id="daily-reviews"
-          class="settings__range"
-          type="range"
-          min="0"
-          max="2"
-          step="1"
-          :value="reviewIndex"
-          :aria-valuetext="`${REVIEWS[reviewIndex]?.label}, do ${profile.daily_review_limit} dziennie`"
-          @change="chooseReviews"
-        />
-        <div class="settings__ticks" aria-hidden="true">
-          <span
-            v-for="item in REVIEWS"
-            :key="item.value"
-            :class="{ 'settings__tick--on': item.value === profile.daily_reviews }"
-          >
-            {{ item.label }}
-          </span>
+        <p id="settings-daily" class="settings__label">Ile powtórek dziennie</p>
+        <div
+          class="settings__tiles settings__tiles--row"
+          role="radiogroup"
+          aria-labelledby="settings-daily"
+        >
+          <label v-for="(item, index) in REVIEWS" :key="item.value" class="settings__tile">
+            <input
+              type="radio"
+              name="daily-reviews"
+              :value="item.value"
+              :checked="profile.daily_reviews === item.value"
+              @change="save('daily_reviews', { daily_reviews: item.value })"
+            />
+            <span class="settings__tile-body settings__tile-body--center">
+              <span class="settings__bars" aria-hidden="true">
+                <span
+                  v-for="bar in 3"
+                  :key="bar"
+                  :class="{ 'settings__bar--on': bar <= index + 1 }"
+                />
+              </span>
+              <strong>{{ item.label }}</strong>
+            </span>
+          </label>
         </div>
         <p class="settings__hint">
           Najwięcej {{ profile.daily_review_limit }} powtórek jednego dnia. Resztę aplikacja
@@ -233,48 +246,16 @@ function chooseDifficulties(event: Event) {
       </div>
     </section>
 
-    <section class="settings__group" aria-labelledby="settings-difficulties">
-      <h2 id="settings-difficulties" class="settings__heading">Ocena rozwiązań</h2>
-      <div class="settings__field">
-        <label class="settings__label" for="learning-difficulties">
-          Opinia poradni o trudnościach w uczeniu się
-        </label>
-        <input
-          id="learning-difficulties"
-          class="settings__range"
-          type="range"
-          min="0"
-          max="2"
-          step="1"
-          :value="difficultyIndex"
-          :aria-valuetext="DIFFICULTIES[difficultyIndex]?.label"
-          @change="chooseDifficulties"
-        />
-        <div class="settings__ticks" aria-hidden="true">
-          <span
-            v-for="item in DIFFICULTIES"
-            :key="item.value"
-            :class="{ 'settings__tick--on': item.value === profile.learning_difficulties }"
-          >
-            {{ item.label }}
-          </span>
-        </div>
-        <p class="settings__hint">{{ DIFFICULTIES[difficultyIndex]?.hint }}</p>
-        <p v-if="saved === 'learning_difficulties'" class="settings__saved" role="status">
-          Zapisano
-        </p>
-        <p v-if="problems.learning_difficulties" class="settings__problem" role="alert">
-          {{ problems.learning_difficulties }}
-        </p>
-      </div>
-    </section>
-
     <section class="settings__group" aria-labelledby="settings-look">
       <h2 id="settings-look" class="settings__heading">Wygląd</h2>
-      <fieldset class="settings__field">
-        <legend>Motyw</legend>
-        <div class="settings__choice">
-          <label v-for="item in THEMES" :key="item.value">
+      <div class="settings__field">
+        <p id="settings-theme" class="settings__label">Motyw</p>
+        <div
+          class="settings__tiles settings__tiles--two"
+          role="radiogroup"
+          aria-labelledby="settings-theme"
+        >
+          <label v-for="item in THEMES" :key="item.value" class="settings__tile">
             <input
               type="radio"
               name="theme"
@@ -282,14 +263,20 @@ function chooseDifficulties(event: Event) {
               :checked="profile.theme === item.value"
               @change="chooseTheme(item.value)"
             />
-            <span>{{ item.label }}</span>
+            <span class="settings__tile-body">
+              <span class="settings__preview" :class="`settings__preview--${item.value}`">
+                <span />
+                <span />
+              </span>
+              <strong>{{ item.label }}</strong>
+            </span>
           </label>
         </div>
         <p v-if="saved === 'theme'" class="settings__saved" role="status">Zapisano</p>
-      </fieldset>
-      <fieldset v-if="profile.theme === 'dark'" class="settings__field">
-        <legend>Tło ciemnego motywu</legend>
-        <div class="settings__choice">
+      </div>
+      <div v-if="profile.theme === 'dark'" class="settings__field">
+        <p id="settings-shade" class="settings__label">Tło ciemnego motywu</p>
+        <div class="settings__choice" role="radiogroup" aria-labelledby="settings-shade">
           <label v-for="item in SHADES" :key="item.value">
             <input
               type="radio"
@@ -305,55 +292,243 @@ function chooseDifficulties(event: Event) {
           </label>
         </div>
         <p v-if="saved === 'dark_shade'" class="settings__saved" role="status">Zapisano</p>
-      </fieldset>
+      </div>
+    </section>
+
+    <section class="settings__group settings__group--wide" aria-labelledby="settings-difficulties">
+      <h2 id="settings-difficulties" class="settings__heading">Ocena rozwiązań</h2>
+      <div class="settings__field">
+        <p id="settings-opinion" class="settings__label">
+          Opinia poradni o trudnościach w uczeniu się
+        </p>
+        <div
+          class="settings__tiles settings__tiles--three"
+          role="radiogroup"
+          aria-labelledby="settings-opinion"
+        >
+          <label v-for="item in DIFFICULTIES" :key="item.value" class="settings__tile">
+            <input
+              type="radio"
+              name="learning-difficulties"
+              :value="item.value"
+              :checked="profile.learning_difficulties === item.value"
+              @change="save('learning_difficulties', { learning_difficulties: item.value })"
+            />
+            <span class="settings__tile-body">
+              <strong>{{ item.label }}</strong>
+              <span class="settings__tile-note">{{ item.hint }}</span>
+            </span>
+          </label>
+        </div>
+        <p v-if="saved === 'learning_difficulties'" class="settings__saved" role="status">
+          Zapisano
+        </p>
+        <p v-if="problems.learning_difficulties" class="settings__problem" role="alert">
+          {{ problems.learning_difficulties }}
+        </p>
+      </div>
     </section>
   </div>
 </template>
 
 <style scoped>
+/* Wariant A: karty w dwóch kolumnach, a wybory jako duże kafelki zamiast małych pigułek. */
 .settings {
   display: grid;
-  gap: 1.25rem;
-  max-width: 34rem;
+  gap: 1rem;
+  align-items: start;
 }
 
 .settings__group {
   display: grid;
   gap: 1.5rem;
-  padding: clamp(1.25rem, 1rem + 1vw, 1.75rem);
+  padding: clamp(1.25rem, 1rem + 1vw, 2rem);
   border-radius: var(--radius-small);
   background: var(--surface);
   box-shadow: var(--card-shadow);
 }
 
 .settings__heading {
-  font-size: 1.125rem;
-  font-weight: 750;
+  font-size: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.settings__matura {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.settings__side {
+  display: grid;
+  gap: 1.5rem;
+  align-content: start;
 }
 
 .settings__field {
   display: grid;
+  align-content: start;
   justify-items: start;
   gap: 0.6rem;
   min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
 }
 
-.settings__field legend,
 .settings__label {
-  margin-bottom: 0.6rem;
-  padding: 0;
   font-size: 0.9375rem;
   font-weight: 650;
 }
 
-.settings__label {
-  margin-bottom: 0;
+/* Kafelki: każdy to zwykły przycisk opcji, schowany pod kartą z opisem. */
+.settings__tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  justify-self: stretch;
 }
 
-/* Wybór jednej opcji jak przełącznik „Mapa | Lista”: pigułka z pigułkami w środku. */
+/* Opisy opinii poradni są długie, więc na telefonie kafelki stoją jeden pod drugim. */
+.settings__tiles--three {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Krótkie kafelki z ilością powtórek mieszczą się w rzędzie także na telefonie. */
+.settings__tiles.settings__tiles--row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.settings__tile {
+  position: relative;
+  display: grid;
+}
+
+.settings__tile input,
+.settings__choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.settings__tile-body {
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  min-height: 100%;
+  padding: 0.9rem 1rem;
+  border: 2px solid transparent;
+  border-radius: 0.9rem;
+  background: var(--ground);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.settings__tile-body--center {
+  justify-items: center;
+  text-align: center;
+}
+
+.settings__tile-body:hover {
+  border-color: var(--ink-soft);
+}
+
+.settings__tile input:checked + .settings__tile-body {
+  border-color: var(--ink);
+  background: var(--surface);
+}
+
+.settings__tile input:focus-visible + .settings__tile-body {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.settings__tile strong {
+  font-size: 1.0625rem;
+  font-weight: 750;
+}
+
+.settings__tile-note {
+  color: var(--ink-soft);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.settings__tile-marker {
+  margin-bottom: 0.35rem;
+  font-size: 1.6rem;
+}
+
+/* Słupki pokazują, ile powtórek przyjdzie: jeden, dwa albo trzy. */
+.settings__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.2rem;
+  height: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.settings__bars span {
+  width: 0.45rem;
+  border-radius: 0.15rem;
+  background: var(--track);
+}
+
+.settings__bars span:nth-child(1) {
+  height: 40%;
+}
+
+.settings__bars span:nth-child(2) {
+  height: 70%;
+}
+
+.settings__bars span:nth-child(3) {
+  height: 100%;
+}
+
+.settings__bars .settings__bar--on {
+  background: var(--ink);
+}
+
+/* Mały podgląd motywu: tło i karta w jego kolorach. */
+.settings__preview {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 0.3rem;
+  width: 100%;
+  height: 3.25rem;
+  margin-bottom: 0.35rem;
+  padding: 0.4rem;
+  border: 1px solid var(--hairline);
+  border-radius: 0.6rem;
+}
+
+.settings__preview span {
+  border-radius: 0.3rem;
+}
+
+.settings__preview--light {
+  background: #e6e9f2;
+}
+
+.settings__preview--light span {
+  background: #fff;
+}
+
+.settings__preview--dark {
+  background: #14161d;
+}
+
+.settings__preview--dark span {
+  background: #262a36;
+}
+
+.settings__preview span:first-child {
+  background: #168344;
+}
+
+/* Wybór roku i tła jak przełącznik „Mapa | Lista”: pigułka z pigułkami w środku. */
 .settings__choice {
   display: inline-flex;
   flex-wrap: wrap;
@@ -364,12 +539,6 @@ function chooseDifficulties(event: Event) {
 
 .settings__choice label {
   position: relative;
-}
-
-.settings__choice input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .settings__choice label > span {
@@ -421,19 +590,23 @@ function chooseDifficulties(event: Event) {
   background: #16224f;
 }
 
+/* Cel dużą cyfrą, jak liczby na wykresach. */
 .settings__target {
   position: relative;
 }
 
 .settings__input {
-  width: 8rem;
-  min-height: 2.75rem;
-  padding: 0 2.25rem 0 0.9rem;
-  border: 1.5px solid var(--ink-soft);
-  border-radius: 0.75rem;
-  background: var(--surface);
+  width: 7.5rem;
+  min-height: 3.5rem;
+  padding: 0 2.5rem 0 1rem;
+  border: 2px solid var(--ink);
+  border-radius: 0.8rem;
+  background: var(--ground);
   color: var(--ink);
   font: inherit;
+  font-size: 1.75rem;
+  font-weight: 800;
+  font-stretch: 82%;
   font-variant-numeric: tabular-nums;
 }
 
@@ -444,69 +617,15 @@ function chooseDifficulties(event: Event) {
 .settings__unit {
   position: absolute;
   top: 50%;
-  right: 0.9rem;
+  right: 1rem;
   color: var(--ink-soft);
-  font-weight: 600;
+  font-size: 1.25rem;
+  font-weight: 700;
   translate: 0 -50%;
 }
 
-/* Suwak jak odcinek linii: gruby tor z okrągłymi końcami, uchwyt to stacja. */
-.settings__range {
-  width: min(100%, 20rem);
-  height: 2.75rem;
-  margin: 0;
-  background: transparent;
-  cursor: pointer;
-  appearance: none;
-}
-
-.settings__range::-webkit-slider-runnable-track {
-  height: 7px;
-  border-radius: 999px;
-  background: var(--track);
-}
-
-.settings__range::-moz-range-track {
-  height: 7px;
-  border-radius: 999px;
-  background: var(--track);
-}
-
-.settings__range::-webkit-slider-thumb {
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-top: calc((7px - 1.5rem) / 2);
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  background: var(--surface);
-  appearance: none;
-}
-
-.settings__range::-moz-range-thumb {
-  box-sizing: border-box;
-  width: 1.5rem;
-  height: 1.5rem;
-  border: 3px solid var(--ink);
-  border-radius: 50%;
-  background: var(--surface);
-}
-
-.settings__ticks {
-  display: flex;
-  justify-content: space-between;
-  width: min(100%, 20rem);
-  margin-top: -0.5rem;
-  color: var(--ink-soft);
-  font-size: 0.875rem;
-}
-
-.settings__tick--on {
-  color: var(--ink);
-  font-weight: 700;
-}
-
 .settings__hint {
-  max-width: 44ch;
+  max-width: 48ch;
   color: var(--ink-soft);
   font-size: 0.875rem;
   line-height: 1.4;
@@ -522,5 +641,26 @@ function chooseDifficulties(event: Event) {
   color: var(--danger);
   font-size: 0.875rem;
   font-weight: 600;
+}
+
+@media (min-width: 40rem) {
+  .settings__tiles--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 56rem) {
+  .settings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings__group--wide {
+    grid-column: 1 / -1;
+  }
+
+  .settings__matura {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 2.5rem;
+  }
 }
 </style>
