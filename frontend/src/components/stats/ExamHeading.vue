@@ -3,11 +3,16 @@ import { computed } from 'vue'
 import StationMarker from '@/components/landing/StationMarker.vue'
 import { EXAMS, type Exam } from '@/config/exams'
 
-const props = defineProps<{
-  examId: Exam['id']
-  /** Trasa tej samej strony dla drugiego egzaminu; bez niej link się nie pojawia. */
-  otherRoute?: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    examId: Exam['id']
+    /** Trasa tej samej strony dla drugiego egzaminu; bez niej link się nie pojawia. */
+    otherRoute?: string
+    /** W koncie nagłówkiem strony są dni do matury nad zakładkami, więc tu stoi h2. */
+    level?: 1 | 2
+  }>(),
+  { level: 1 },
+)
 
 const exam = computed(() => EXAMS.find((item) => item.id === props.examId)!)
 const other = computed(() =>
@@ -21,10 +26,14 @@ const other = computed(() =>
 
 <template>
   <div class="exam-heading">
-    <h1 class="exam-heading__title" :style="{ '--marker-fill': `var(--exam-${exam.id})` }">
+    <component
+      :is="`h${level}`"
+      class="exam-heading__title"
+      :style="{ '--marker-fill': `var(--exam-${exam.id})` }"
+    >
       <StationMarker :shape="exam.solid" class="exam-heading__marker" />
       {{ exam.name }}
-    </h1>
+    </component>
     <RouterLink
       v-if="otherRoute"
       class="exam-heading__other"

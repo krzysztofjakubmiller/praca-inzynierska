@@ -1,5 +1,6 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { API_URL, authorization } from '@/access'
+import type { Exam } from '@/config/exams'
 
 export type Level = 'podstawowa' | 'rozszerzona'
 export type DailyReviews = 'malo' | 'srednio' | 'duzo'
@@ -71,6 +72,13 @@ export async function loadStats(exam: string): Promise<StatsIn> {
 // Profil zalogowanego ucznia, wspólny dla całej aplikacji: motyw, ustawienia i strony konta
 // czytają i zmieniają ten sam obiekt. null, gdy nikt nie jest zalogowany.
 export const profile = ref<Profile | null>(null)
+
+// Egzamin, który konto pokazuje i na który liczy postęp. Uczeń rozszerzenia uczy się obu
+// poziomów, ale jego mapą i postępem jest rozszerzenie. Zmiana poziomu w ustawieniach zmienia go
+// od razu, bo profil jest wspólny.
+export const profileExamId = computed<Exam['id']>(() =>
+  profile.value?.level === 'rozszerzona' ? 'matura-rozszerzona' : 'matura-podstawowa',
+)
 
 let loading: Promise<void> | null = null
 

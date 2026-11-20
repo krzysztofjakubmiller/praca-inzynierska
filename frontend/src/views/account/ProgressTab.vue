@@ -16,7 +16,7 @@ const { stats, loaded } = useStudentStats(() => props.exam)
 
 <template>
   <div class="progress-tab">
-    <ExamHeading :exam-id="exam" :other-route="both ? 'account-progress' : undefined" />
+    <ExamHeading :exam-id="exam" :other-route="both ? 'account-progress' : undefined" :level="2" />
     <ProgressCharts
       v-if="stats"
       :stats="stats"

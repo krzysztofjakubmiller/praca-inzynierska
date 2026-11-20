@@ -73,6 +73,12 @@ const router = createRouter({
           meta: { title: 'Postęp' },
         },
         {
+          path: 'platnosci',
+          name: 'account-payments',
+          component: () => import('@/views/account/PaymentsTab.vue'),
+          meta: { title: 'Płatności' },
+        },
+        {
           path: 'ustawienia',
           name: 'account-settings',
           component: () => import('@/views/account/SettingsTab.vue'),

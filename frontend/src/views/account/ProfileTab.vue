@@ -1,28 +1,24 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, inject, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { logOut, type Account } from '@/account'
 import AccountSecurity from '@/components/account/AccountSecurity.vue'
-import ExamCountdown from '@/components/profile/ExamCountdown.vue'
 import NoDataYet from '@/components/profile/NoDataYet.vue'
 import ActivityHeatmap from '@/components/stats/ActivityHeatmap.vue'
 import ForecastRange from '@/components/stats/ForecastRange.vue'
 import LineProgress from '@/components/stats/LineProgress.vue'
 import StatCard from '@/components/stats/StatCard.vue'
 import WeekNumbers from '@/components/stats/WeekNumbers.vue'
-import { profile } from '@/profile'
-import { localToday, useStudentStats } from '@/stats/stats'
+import { profile, profileExamId } from '@/profile'
+import { ACCOUNT_STATS } from '@/stats/stats'
 
 defineProps<{ account: Account }>()
 
 const router = useRouter()
 const problem = ref('')
 
-const level = computed(() => profile.value?.level ?? 'podstawowa')
-const examId = computed(() =>
-  level.value === 'rozszerzona' ? 'matura-rozszerzona' : 'matura-podstawowa',
-)
-const { stats, loaded } = useStudentStats(() => examId.value)
+// Dni do matury są w polu na górze konta, które pobiera też statystyki dla tej zakładki.
+const { stats, loaded } = inject(ACCOUNT_STATS)!
 const lastSheet = computed(() => {
   const done = stats.value?.sheets.filter((sheet) => sheet.percent !== undefined) ?? []
   return done[done.length - 1]?.percent
@@ -41,15 +37,6 @@ async function logOutAndGoToLogin() {
 
 <template>
   <div class="profile-tab">
-    <ExamCountdown
-      v-if="profile"
-      :exam-id="examId"
-      :exam-date="profile.exam_dates[level]"
-      :today="localToday()"
-      :target="profile.target_percent"
-    />
-    <h1 v-else class="profile-tab__title">Profil</h1>
-
     <div v-if="stats" class="profile-tab__charts">
       <StatCard
         v-slot="{ width }"
@@ -85,12 +72,12 @@ async function logOutAndGoToLogin() {
       </StatCard>
       <RouterLink
         class="button button--quiet profile-tab__more"
-        :to="{ name: 'account-progress', params: { exam: examId } }"
+        :to="{ name: 'account-progress', params: { exam: profileExamId } }"
       >
         Cały postęp
       </RouterLink>
     </div>
-    <NoDataYet v-else-if="loaded" :exam-id="examId" />
+    <NoDataYet v-else-if="loaded" :exam-id="profileExamId" />
 
     <section class="profile-tab__account" aria-labelledby="account-heading">
       <h2 id="account-heading" class="profile-tab__heading">Konto</h2>
@@ -109,11 +96,6 @@ async function logOutAndGoToLogin() {
   display: grid;
   gap: 1.75rem;
   container-type: inline-size;
-}
-
-.profile-tab__title {
-  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
-  font-weight: 750;
 }
 
 .profile-tab__charts {

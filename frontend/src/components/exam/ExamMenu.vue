@@ -75,7 +75,7 @@ const groups = computed<{ title: string; items: MenuItem[] }[]>(() => [
     title: 'Konto',
     items: [
       { label: 'Profil', to: { name: 'account' } },
-      soon('Bilet'),
+      { label: 'Bilet', to: { name: 'account-payments' } },
       { label: 'Ustawienia', to: { name: 'account-settings' } },
       soon('Wyloguj'),
     ],

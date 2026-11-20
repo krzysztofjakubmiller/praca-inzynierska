@@ -119,8 +119,6 @@ function chooseDifficulties(event: Event) {
 
 <template>
   <div v-if="profile" class="settings">
-    <h1 class="settings__title">Ustawienia</h1>
-
     <section class="settings__group" aria-labelledby="settings-learning">
       <h2 id="settings-learning" class="settings__heading">Matura</h2>
 
@@ -307,13 +305,6 @@ function chooseDifficulties(event: Event) {
   display: grid;
   gap: 1.25rem;
   max-width: 34rem;
-}
-
-.settings__title {
-  font-size: clamp(1.6rem, 1.2rem + 1.6vw, 2.25rem);
-  font-weight: 750;
-  font-variation-settings: 'wdth' 90;
-  letter-spacing: -0.02em;
 }
 
 .settings__group {

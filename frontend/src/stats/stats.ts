@@ -1,4 +1,4 @@
-import { ref, watch, type Ref } from 'vue'
+import { ref, watch, type InjectionKey, type Ref } from 'vue'
 import type { Exam } from '@/config/exams'
 import { BASIC_MAP, EXTENDED_MAP } from '@/maps'
 import { listGroups } from '@/maps/order'
@@ -226,3 +226,10 @@ export function useStudentStats(examId: () => Exam['id']) {
   )
   return { stats, loaded }
 }
+
+/**
+ * Statystyki egzaminu, które konto pobiera raz dla pola z dniami do matury. Zakładka Profil
+ * bierze je stąd, zamiast pytać backend drugi raz o to samo.
+ */
+export const ACCOUNT_STATS: InjectionKey<ReturnType<typeof useStudentStats>> =
+  Symbol('statystyki konta')

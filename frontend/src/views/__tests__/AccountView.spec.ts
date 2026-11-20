@@ -116,14 +116,48 @@ describe('account page', () => {
     expect(link?.attributes('href')).toBe('/demo/postep/matura-podstawowa')
   })
 
-  it('has tabs for the profile, progress and settings', async () => {
+  it('has tabs for the profile, progress, payments and settings', async () => {
     backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
 
     const page = await renderAt('/konto/ustawienia')
 
     const tabs = page.findAll('nav[aria-label="Konto"] a')
-    expect(tabs.map((tab) => tab.text())).toEqual(['Profil', 'Postęp', 'Ustawienia'])
+    expect(tabs.map((tab) => tab.text())).toEqual(['Profil', 'Postęp', 'Płatności', 'Ustawienia'])
     expect(page.find('[aria-current="page"]').text()).toBe('Ustawienia')
+  })
+
+  it('takes the colour and the exam of the account from the level', async () => {
+    backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
+    const page = await renderAt('/konto/ustawienia')
+    const station = () => page.find('.station')
+    expect(station().attributes('style')).toContain('--exam-matura-podstawowa')
+    expect(station().text()).toContain('Matura podstawowa, 5 maja 2027')
+
+    await page.find('input[value="rozszerzona"]').setValue(true)
+    await flushPromises()
+
+    expect(station().attributes('style')).toContain('--exam-matura-rozszerzona')
+    expect(station().text()).toContain('Matura rozszerzona, 11 maja 2027')
+  })
+})
+
+describe('payments', () => {
+  it('offers a ticket for the exam of the account and leads to the payment', async () => {
+    backend({ '/api/account': [200, ACCOUNT], '/api/profile': [200, PROFILE] })
+    const page = await renderAt('/konto/platnosci')
+
+    expect(page.text()).toContain('jeszcze nie kupiony')
+    // Kwotę od waluty dzieli twarda spacja.
+    expect(page.text()).toMatch(/49\szł miesięcznie/)
+    expect(page.text()).toContain('Nie ma jeszcze żadnej płatności.')
+
+    await button(page, 'Kup bilet').trigger('click')
+
+    await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('payment'))
+    expect(router.currentRoute.value.query).toEqual({
+      egzamin: 'matura-podstawowa',
+      okres: 'miesieczny',
+    })
   })
 })
 
