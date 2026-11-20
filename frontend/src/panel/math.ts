@@ -19,3 +19,26 @@ export function splitMath(text: string): Piece[] {
   if (last < text.length) pieces.push(textPiece(text.slice(last)))
   return pieces
 }
+
+// Ułamek w zdaniu KaTeX zmniejsza do ok. 70%, przez co na telefonie był nieczytelny. Arkusze CKE
+// drukują ułamki w pełnej wielkości, więc \frac zmienia się w \dfrac. Ułamek w wykładniku albo
+// indeksie zostaje mały, bo pełny byłby wyższy od podstawy potęgi.
+export function fullSizeFractions(tex: string): string {
+  let out = ''
+  // Dla każdej otwartej klamry: czy otwiera wykładnik albo indeks.
+  const groups: boolean[] = []
+  for (let index = 0; index < tex.length; index++) {
+    const char = tex[index]!
+    const inScript = groups.includes(true) || /[\^_]\s*$/.test(out)
+    if (char === '\\') {
+      const command = /^\\(?:[a-zA-Z]+|.)/.exec(tex.slice(index))?.[0] ?? char
+      out += command === '\\frac' && !inScript ? '\\dfrac' : command
+      index += command.length - 1
+      continue
+    }
+    if (char === '{') groups.push(inScript)
+    if (char === '}') groups.pop()
+    out += char
+  }
+  return out
+}

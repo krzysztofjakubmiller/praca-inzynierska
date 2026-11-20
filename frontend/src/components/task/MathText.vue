@@ -2,23 +2,20 @@
 import { computed } from 'vue'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
-import { splitMath } from '@/panel/math'
+import { fullSizeFractions, splitMath } from '@/panel/math'
 
 const props = defineProps<{ text: string }>()
 
 // Błędny LaTeX nie przerywa strony: KaTeX pokazuje go na czerwono, co ułatwia kontrolę.
-// Ułamek w zdaniu KaTeX zmniejsza do ok. 70%, przez co na telefonie był nieczytelny. Arkusze CKE
-// drukują ułamki w pełnej wielkości, więc \frac działa tu jak \dfrac.
 const pieces = computed(() =>
   splitMath(props.text).map((piece) =>
     piece.kind === 'text'
       ? { text: piece.text, html: null }
       : {
           text: null,
-          html: katex.renderToString(piece.tex, {
+          html: katex.renderToString(fullSizeFractions(piece.tex), {
             displayMode: piece.display,
             throwOnError: false,
-            macros: { '\\frac': '\\dfrac' },
           }),
         },
   ),
