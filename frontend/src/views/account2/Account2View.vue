@@ -3,10 +3,11 @@ import { computed } from 'vue'
 import AccountBoard from './AccountBoard.vue'
 import AccountRoute from './AccountRoute.vue'
 import AccountStation from './AccountStation.vue'
+import AccountStationTicket from './AccountStationTicket.vue'
 import AccountTicket from './AccountTicket.vue'
 
-// Cztery wersje wyglądu konta do wyboru, na wymyślonych danych. Przełącznik u góry nie jest
-// częścią żadnej z nich.
+// Wersje wyglądu konta do wyboru, na wymyślonych danych. Piąta łączy dwie najlepiej ocenione,
+// więc otwiera się jako pierwsza. Przełącznik u góry nie jest częścią żadnej z nich.
 const props = defineProps<{ variant: string }>()
 
 const VARIANTS = [
@@ -14,6 +15,7 @@ const VARIANTS = [
   { id: '2', name: 'Bilet', component: AccountTicket },
   { id: '3', name: 'Tablica', component: AccountBoard },
   { id: '4', name: 'Trasa', component: AccountRoute },
+  { id: '5', name: 'Stacja z biletem', component: AccountStationTicket },
 ]
 
 const current = computed(() => VARIANTS.find((item) => item.id === props.variant) ?? VARIANTS[0]!)

@@ -26,7 +26,12 @@ export const LAST_SHEET = [...STATS.sheets]
   .find((sheet) => sheet.percent !== undefined)?.percent
 export const NEXT_SHEET = STATS.sheets.find((sheet) => sheet.percent === undefined)
 
-export const TICKET = { name: 'Bilet miesięczny', until: longDate(shiftDay(STATS.today, 23)) }
+const TICKET_DAYS = 23
+export const TICKET = {
+  name: 'Bilet miesięczny',
+  until: longDate(shiftDay(STATS.today, TICKET_DAYS)),
+  left: `${TICKET_DAYS} ${plural(TICKET_DAYS, 'dzień', 'dni', 'dni')}`,
+}
 
 // Odcinek trasy od początku roku szkolnego do matury, jak w odliczaniu na obecnym profilu.
 export const ROUTE_START = `${Number(STATS.examDate.slice(0, 4)) - 1}-09-01`

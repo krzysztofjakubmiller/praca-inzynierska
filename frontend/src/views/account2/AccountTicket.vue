@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import ArrowIcon from '@/components/landing/ArrowIcon.vue'
-import StationMarker from '@/components/landing/StationMarker.vue'
 import ProgressCharts from '@/components/stats/ProgressCharts.vue'
 import { PRODUCT_NAME } from '@/config/product'
 import ProfileCharts from './ProfileCharts.vue'
 import SettingsPreview from './SettingsPreview.vue'
+import TicketPass from './TicketPass.vue'
 import {
   DAYS_LEFT_TEXT,
-  EMAIL,
   EXAM,
   EXAM_DATE,
   LIMIT,
@@ -26,6 +25,13 @@ import {
 // Wersja 2: konto zaczyna się od biletu ucznia, takiego jak w kasowniku na wizytówce. Bilet
 // zbiera to, co stałe (egzamin, ważność, adres), a obok jest to, co zmienia się co dzień.
 const tab = ref<Tab>('profil')
+
+const FACTS = [
+  { name: 'Bilet', value: TICKET.name },
+  { name: 'Ważny do', value: TICKET.until },
+  { name: 'Matura', value: EXAM_DATE },
+  { name: 'Zostało', value: DAYS_LEFT_TEXT },
+]
 </script>
 
 <template>
@@ -49,43 +55,7 @@ const tab = ref<Tab>('profil')
 
     <div class="pass__layout">
       <aside class="pass__side">
-        <article
-          class="pass__ticket"
-          :style="{ '--exam': `var(--exam-${EXAM.id})` }"
-          aria-labelledby="pass-exam"
-        >
-          <div class="pass__main">
-            <div class="pass__line" aria-hidden="true">
-              <span class="pass__track" />
-              <StationMarker :shape="EXAM.solid" class="pass__marker" />
-            </div>
-            <h1 id="pass-exam" class="pass__exam">{{ EXAM.name }}</h1>
-            <dl class="pass__facts">
-              <div>
-                <dt>Bilet</dt>
-                <dd>{{ TICKET.name }}</dd>
-              </div>
-              <div>
-                <dt>Ważny do</dt>
-                <dd>{{ TICKET.until }}</dd>
-              </div>
-              <div>
-                <dt>Matura</dt>
-                <dd>{{ EXAM_DATE }}</dd>
-              </div>
-              <div>
-                <dt>Zostało</dt>
-                <dd>{{ DAYS_LEFT_TEXT }}</dd>
-              </div>
-            </dl>
-          </div>
-          <div class="pass__stub">
-            <p class="pass__owner">{{ EMAIL }}</p>
-            <RouterLink class="button button--quiet" :to="{ name: 'coming-soon' }">
-              Przedłuż bilet
-            </RouterLink>
-          </div>
-        </article>
+        <TicketPass :facts="FACTS" :level="1" />
         <div class="pass__account">
           <button type="button" class="pass__link">Zmień hasło</button>
           <button type="button" class="pass__link">Wyloguj</button>
@@ -210,104 +180,6 @@ const tab = ref<Tab>('profil')
   gap: 1rem;
   align-content: start;
   width: min(100%, 24rem);
-}
-
-/* Bilet: biały papier z linią w kolorze egzaminu i oddzielonym kuponem na dole. */
-.pass__ticket {
-  --pad: clamp(1.25rem, 1rem + 1vw, 1.75rem);
-  --notch: 0.7rem;
-  position: relative;
-  display: grid;
-  border-radius: 1.25rem;
-  background: var(--surface);
-  box-shadow: var(--card-shadow);
-}
-
-.pass__main {
-  display: grid;
-  gap: 1.1rem;
-  padding: var(--pad);
-}
-
-/* Linia dochodzi do środka znacznika, a jego wypełnienie zakrywa jej koniec. */
-.pass__line {
-  display: flex;
-  align-items: center;
-  margin-left: calc(-1 * var(--pad));
-}
-
-.pass__track {
-  flex: 0 0 min(45%, 10rem);
-  height: 0.5rem;
-  background: var(--exam);
-}
-
-.pass__ticket .pass__marker {
-  --marker-fill: var(--exam);
-  --marker-stroke: var(--exam);
-  margin-left: -0.8rem;
-  font-size: 1.6rem;
-}
-
-.pass__exam {
-  font-size: clamp(2.1rem, 1.6rem + 2vw, 2.75rem);
-  font-weight: 800;
-  font-stretch: 75%;
-  line-height: 0.92;
-  text-transform: uppercase;
-}
-
-.pass__facts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem 1rem;
-  margin: 0;
-}
-
-.pass__facts dt {
-  color: var(--ink-soft);
-  font-size: 0.8125rem;
-  font-weight: 650;
-}
-
-.pass__facts dd {
-  margin: 0;
-  font-weight: 700;
-}
-
-/* Kupon oddziela perforacja z dwoma wycięciami w kolorze tła strony. */
-.pass__stub {
-  position: relative;
-  display: grid;
-  gap: 0.75rem;
-  justify-items: start;
-  padding: var(--pad);
-  border-top: 2px dashed var(--hairline);
-}
-
-.pass__stub::before,
-.pass__stub::after {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--notch) - 1px);
-  width: calc(2 * var(--notch));
-  height: calc(2 * var(--notch));
-  border-radius: 50%;
-  background: var(--ground);
-}
-
-.pass__stub::before {
-  left: calc(-1 * var(--notch));
-}
-
-.pass__stub::after {
-  right: calc(-1 * var(--notch));
-}
-
-.pass__owner {
-  color: var(--ink-soft);
-  font-size: 0.9375rem;
-  overflow-wrap: anywhere;
 }
 
 .pass__account {

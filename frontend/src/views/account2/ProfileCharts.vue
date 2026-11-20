@@ -58,9 +58,9 @@ import { LAST_SHEET, STATS, TARGET } from './demo'
   gap: 1rem;
 }
 
-/* Dwie kolumny zależą od miejsca na wykresy, a nie od ekranu: w wersji z biletem obok jest
+/* Dwie kolumny zależą od miejsca na wykresy, a nie od ekranu: w wersjach z biletem obok jest
    jeszcze kolumna z biletem. */
-@container (min-width: 40rem) {
+@container (min-width: 36rem) {
   .profile-charts__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
